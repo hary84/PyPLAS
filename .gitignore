@@ -1,0 +1,5 @@
+flask/
+venv/ 
+dev/
+.ipynb_checkpoints/
+

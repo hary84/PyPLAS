@@ -1,0 +1,33 @@
+body {
+    background-color: azure;
+    height: 100%
+}
+
+.container {
+    border-top: 10rem;
+    margin: 0 auto;
+    width: 75%;
+    background-color: white;
+}
+
+
+.node {
+    display: flex;
+    .node-number {
+        padding: 0rem 0.5rem;
+        text-align: center;
+    }
+    .node-prime {
+        width: 100%;
+        .node-code {
+            position: relative;
+            height: 100px;
+            width: 100%;
+            font-size: 1rem;
+            
+        }
+        .return-box {
+            padding-top: 1rem;
+        }
+    }
+}

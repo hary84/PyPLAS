@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>サンプルフォームです。</h1>
+    <div>
+        <button id="kernel-restart">再起動</button>
+        <!-- <button id="kernel-interrupt">中断</button> -->
+        <button id="kernel-interrupt">中断</button>
+    </div>
+    <textarea name="code" rows="10" cols="200" id="code"></textarea>
+    <button id="send-code">送信</button>
+    </form>
+
+    <pre class="result-form"></pre>
+</div>
+
+{% end %}
