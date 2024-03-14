@@ -1,0 +1,102 @@
+{% extends "../layout.html" %}
+
+{% block content %}
+
+<h2 id="statement">1</h2>
+<div class="description">
+<p>scikit-learn機械学習モデルの使い方(1)</p>
+
+<a href="./reference/Machine_Learning.pdf" target="_blank" rel="noopener noreferrer">機械学習の基礎 (別タブ)</a>
+</div>
+
+<h2 id="code">The Source Code</h2>
+
+<div class="src_code" id="scoring-res">
+
+<div class="node">
+    <div class="node-number">[1]</div>
+    <div class="node-prime">
+        <div class="node-code readonly" id="editor1">%matplotlib inline
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt  
+        </div>
+        <div class="return-box">
+            <pre class="return-value"></pre>
+        </div>            
+    </div>
+</div>
+
+<div class='explain'>
+<h5><b>データについて</b></h5>
+</div>
+    
+<div class='explain'>
+<p><i>x</i>の値から、<i>y</i>の値を予測する。
+
+<p>目的変数: <i>y</i></p>
+
+<p>説明変数: <i>x</i></p>
+</div>
+
+
+<div class="node">
+    <div class="node-number">[2]</div>
+    <div class="node-prime">
+        <div class="node-code" id="editor2"></div>
+        <div class="return-box">
+            <pre class="return-value"></pre>
+        </div>     
+        <a class="btn" onclick="execute_code()">実行</a>
+        <a class="btn" onclick="kernel_interrupt(sessionStorage['kernel_id'])">中断</a>
+       
+    </div>
+</div>
+
+<div class='explain'>
+<h5><b>1. モデルのインスタンス化</b></h5>
+</div>
+    
+<div class='explain'>
+<p><b><i>hyperparameter</i>(ハイパーパラメータ)</b>はモデル内で操作することができるパラメーターで、これを変えることでデータによってモデルを最適化する。</p>
+</div>
+    
+<div class="node">
+    <div class="node-number">[3]</div>
+    <div class="node-prime">
+        <div class="node-code" id="editor3"></div>
+        <div class="return-box">
+            <pre class="return-value"></pre>
+        </div>            
+    </div>
+</div>
+
+
+    
+<div class='explain'>
+<p><b>scikit-learnを使った機械学習の流れ</b></p>
+
+<p>1. モデルの選択: <b><i>import Model</b></i></p>
+
+<p>2. ハイパーパラメータを決めてモデルのインスタンス化: <b><i>model = Model(hyperparameters)</b></i></p>
+
+<p>3. 訓練データの用意: <b><i>X.shape = (m_samples, n_feature), y.shape = (m_samples)</b></i></p>
+
+<p>4. モデルの訓練: <b><i>model.fit(X, y)</b></i></p>
+
+<p>5. 予測: <b><i>predict_result = model.predict(X_new)</b></i></p>
+</div>
+    
+</div>
+
+<div class="popup">
+    <div class="content">
+        <button id="close">X</button>
+    </div>
+</div>
+
+
+<script src="{{ static_url('javascript/editor.js') }}"></script>
+<script src="{{ static_url('javascript/kernelapp.js')  }}"></script>
+<script src="{{ static_url('javascript/websocket.js') }}"></script>
+{% end %}

@@ -79,3 +79,7 @@ $("#kernel-interrupt").on("click", function() {
     kernel_interrupt(kernel_id, async=true)
 })
 
+
+$(".node").on("click", function() {
+    $current_node = $(this)
+})

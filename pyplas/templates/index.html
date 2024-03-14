@@ -1,18 +1,19 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="container">
-    <h1>サンプルフォームです。</h1>
-    <div>
-        <button id="kernel-restart">再起動</button>
-        <!-- <button id="kernel-interrupt">中断</button> -->
-        <button id="kernel-interrupt">中断</button>
-    </div>
-    <textarea name="code" rows="10" cols="200" id="code"></textarea>
-    <button id="send-code">送信</button>
-    </form>
+<h2 id="list">Problems</h2>
 
-    <pre class="result-form"></pre>
-</div>
 
+<!-- Problem Table -->
+<table class="table table-striped table-bordered table-hover">
+<tr><th>Problem No</th><th>ProblemName</th><th>Remark</th></tr>
+
+{% for i, file in enumerate(problem_files, 1) %}
+    <tr onclick="location.href='{{ file }}'">
+    <td width="20%">{{ i }}</td>
+    <td width="50%">{{ file.split("/")[-1] }}</td>
+    <td id="p0116" width="30%"></td></tr>
+{% end %}
+
+</table>
 {% end %}

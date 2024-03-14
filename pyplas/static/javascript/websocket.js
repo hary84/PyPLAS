@@ -17,7 +17,8 @@ ws.onmessage = function(event) {
     var data = JSON.parse(event.data)
     console.log(`[LOG] ws reseaved: ${data}`)
     if (data.msg_type == "execute_result") {
-        $("pre").append(`<p>${data.output}</p>`)
+        $current_node.find(".return-value").append(`<p>${data.output}<\p>`)
+        // $("pre").append(`<p>${data.output}</p>`)
     } 
 }
 
@@ -32,4 +33,14 @@ $("#send-code").on("click", function(){
     ws.send(msg)
 })
 
+function execute_code() {
+    var $parent = $(".btn").parent()
+    $parent.find(".return-value").empty()
+
+    var id = $parent.find(".node-code").attr("id")
+    var editor = ace.edit(id)
+    var code = editor.getValue()
+    var msg = JSON.stringify({"ops": "exec", "code": code})
+    ws.send(msg)
+}
 

@@ -5,6 +5,7 @@ import tornado.websocket
 import tornado.ioloop as ioloop
 import os  
 import json
+import glob
 from jupyter_client import MultiKernelManager, KernelManager, KernelClient
 
 mult_km = MultiKernelManager()
@@ -13,9 +14,17 @@ mult_km.updated = tornado.locks.Event()
 
 class MainHandler(tornado.web.RequestHandler):
 
-    async def get(self):
-        self.render("index.html")
+    def get(self):
+        problem_files = glob.glob("./templates/problems/*.html")
+        problem_files = [ f"/problems/{os.path.splitext(os.path.basename(file))[0]}" 
+                        for file in problem_files]
+        print(problem_files)
+        self.render("index.html", problem_files=problem_files)
 
+class ProblemHandler(tornado.web.RequestHandler):
+
+    def get(self, p_id):
+        self.render(f"./problems/{p_id}.html")
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
 
@@ -136,6 +145,7 @@ class KernelHandler(tornado.web.RequestHandler):
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
+        (r"/problems/(?P<p_id>[\w-]+)/?", ProblemHandler),
         (r'/ws/([\w-]+)/?', ExecutionHandler),
         (r"/kernel/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/?", KernelHandler),
@@ -143,7 +153,6 @@ def make_app():
     template_path=os.path.join(os.getcwd(), "templates"),
     static_path=os.path.join(os.getcwd(), "static"),
     debug=True,
-    websocket_ping_interval=1
     )
 
     
