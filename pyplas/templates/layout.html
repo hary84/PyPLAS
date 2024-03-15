@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="{{ static_url('css/docs.css') }}"/>
     <link rel="stylesheet" href="{{ static_url('css/problem-page.css') }}"/>
 
-    <script src="{{ static_url('javascript/jquery.js' )}}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
+    <script src="{{ static_url('javascript/jquery.js') }}"></script>
     
     <title>PyPLAS</title>
 </head>
@@ -25,14 +25,34 @@
     <div class="col md-3">
       <div class="sidemenu js-sidemenu">
         <h5>Sidemenu</h5>
+        <div class="internal-link-box"></div>
+
+        {% if is_problem_page %}
+        <div class="side-btn">
+            <div>
+                <div class="btn-list">
+                    <a class="btn res-ans" href="javascript:newScoring()">Answer</a>
+                    <a class="btn save" href="javascript:save()" style="width: 100%">save</a>
+                    <a class="btn-success" onClick="toTop()">TOP</a> 
+                    <div class="jump">
+                        <a class="btn prev">prev</a>
+                        <a class="btn next">next</a>
+                    </div>
+                </div>  
+            </div>
+        </div>
+        {% else %}
+        {% end %}
       </div>
     </div>
+    
     <div class="col md-9 float-right jplas">
       {% block content %}
       {% end %}
     </div>
   </div>
 </div>
+<script sre="{{ static_url('javascript/plas.js') }}"></script>
 </body>
 
 </html>

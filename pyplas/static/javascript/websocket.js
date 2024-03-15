@@ -15,29 +15,28 @@ ws.onopen = function() {
 
 ws.onmessage = function(event) {
     var data = JSON.parse(event.data)
-    console.log(`[LOG] ws reseaved: ${data}`)
-    if (data.msg_type == "execute_result") {
-        $current_node.find(".return-value").append(`<p>${data.output}<\p>`)
-        // $("pre").append(`<p>${data.output}</p>`)
-    } 
+    var $return_form = $current_node.find(".return-value")
+
+    if (data.msg_type == "text") {
+        $return_form.append(`<p class="exec-res">${data.msg}</p>`)
+    } else if (data.msg_type == "image/png") {
+        $return_form.append(`<img src="data:image/png;base64,${data.msg}" />`)
+    } else if (data.msg_type == "error") {
+        console.log("error")
+        $return_form.append(`<p class="exec-error">${data.msg}</p>`)
+    }
 }
 
 ws.onclose = function() {
     console.log("[LOG] ws disconnecting ... ")
 }
 
-$("#send-code").on("click", function(){
-    var code = $("#code").val()
-    var msg = JSON.stringify({"ops": "exec", "code": code})
-    console.log("[LOG] ws send: " + msg)
-    ws.send(msg)
-})
-
 function execute_code() {
-    var $parent = $(".btn").parent()
-    $parent.find(".return-value").empty()
+    kernel_interrupt(sessionStorage["kernel_id"], async=false)
 
-    var id = $parent.find(".node-code").attr("id")
+    var $prime= $current_node.find(".node-prime")
+    $prime.find(".return-value").empty()
+    var id = $prime.find(".node-code").attr("id")
     var editor = ace.edit(id)
     var code = editor.getValue()
     var msg = JSON.stringify({"ops": "exec", "code": code})
