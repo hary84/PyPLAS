@@ -15,44 +15,54 @@ mult_km.updated = tornado.locks.Event()
 problems = []
 
 class MainHandler(tornado.web.RequestHandler):
-
+        
     def get(self):
         problem_files = glob.glob("./templates/problems/*.html")
         problem_files = [ f"/problems/{os.path.splitext(os.path.basename(file))[0]}" 
                         for file in problem_files]
         self.render("index.html", problem_files=problem_files,
                     is_problem_page=False)
-        
 
 class ProblemHandler(tornado.web.RequestHandler):
 
     def get(self, p_id):
         self.render(f"./problems/{p_id}.html", 
                     is_problem_page=True)
-
+    
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
 
     async def open(self, id: str):
         global mult_km
+
+
         self.kernel_id = id
-        print(f"[LOG] ws is connecting with {self.kernel_id}")
+        self.exec = tornado.locks.Event()
+        self.exec.set()
+        self.que = tornado.queues.Queue()
         await mult_km.updated.wait()
         self.km: KernelManager = mult_km.get_kernel(self.kernel_id)
         self.kc: KernelClient = self.km.client()
         self.kc.start_channels()        
+        print(f"[LOG] ws is connecting with {self.kernel_id}")
 
         self.pcallback = ioloop.PeriodicCallback(self.messaging,
                                                  callback_time=5) # ms
 
 
     async def on_message(self, reseaved_msg: dict):
-        if self.pcallback.is_running:
-            self.pcallback.stop()
         reseaved_msg = json.loads(reseaved_msg)
         print(f"[LOG] ws reseaved : {reseaved_msg}")
         code = reseaved_msg.get("code", None)
-        self.kc.execute(code)
-        self.pcallback.start()
+        self.que.put(code)
+        while True:
+            await self.exec.wait()
+            try:
+                code = await self.que.get(timeout=1)
+            except:
+                break
+            self.kc.execute(code)
+            self.exec.clear()
+            self.pcallback.start()
 
 
     def messaging(self):
@@ -75,12 +85,16 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
                 msg = self.decode_anci("\n".join(content["traceback"]))
                 self.send_msg("error", msg)
             elif outputs["msg_type"] == "status" and outputs["content"]['execution_state'] == "idle":
+                self.send_msg("status", "end")
                 self.pcallback.stop()
+                self.exec.set()
+                print("execute complete")
                 break
 
     def send_msg(self, msg_type: str, msg: str, escape:bool = True):
         if escape:
             msg = tornado.escape.xhtml_escape(msg)
+        # print(f"[LOG] kernel outputs msg-type: {msg_type}")
         self.write_message({
             "msg_type": msg_type,
             "msg": msg

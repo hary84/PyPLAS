@@ -54,6 +54,14 @@ sup {
             }
         }
     }
+    .exec-node {
+        border-left: solid 0.5rem green;
+        border-radius: 1rem;
+    }
+    .curr-node {
+        border-left: solid 0.5rem rgb(56, 224, 56);
+        border-radius: 1rem;
+    }
 }
 
 /* node */
