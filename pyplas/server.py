@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date, datetime
 import signal
 import tornado 
 import tornado.websocket 
@@ -34,7 +35,6 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
 
     async def open(self, id: str):
         global mult_km
-
 
         self.kernel_id = id
         self.exec = tornado.locks.Event()
@@ -74,35 +74,17 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             except:
                 break
             print(f"[LOG] kernel outputs msg-type: {outputs['msg_type']}")
-            content = outputs["content"]
-            if outputs["msg_type"] == "execute_result":
-                self.send_msg("text", content["data"]["text/plain"])
-            elif outputs["msg_type"] == "stream":
-                self.send_msg("text", content["text"])
-            elif outputs["msg_type"] == "display_data":
-                self.send_msg("text", content["data"]["text/plain"])
-                self.send_msg("image/png", content["data"]["image/png"], escape=False)
-            elif outputs["msg_type"] == "error":
-                msg = self.decode_anci("\n".join(content["traceback"]))
-                self.send_msg("error", msg)
-            elif outputs["msg_type"] == "status" and outputs["content"]['execution_state'] == "idle":
-                self.send_msg("status", "end")
+            if outputs["msg_type"] == "status" and outputs["content"]['execution_state'] == "idle":
                 self.pcallback.stop()
+                self.write_message({"msg_type": "exec-end-sig"})
                 self.exec.set()
                 print("execute complete")
                 break
+            self.write_message(json.dumps(outputs, default=self.datetime_encoda))
 
-    def send_msg(self, msg_type: str, msg: str, escape:bool = True):
-        if escape:
-            msg = tornado.escape.xhtml_escape(msg)
-        self.write_message({
-            "msg_type": msg_type,
-            "msg": msg
-        })
-
-    def decode_anci(self, msg: str):
-        ANSI_TAG = r"\u001b\[[;\d]+m"
-        return re.sub(ANSI_TAG, "", msg)
+    def datetime_encoda(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
     
     def on_close(self):
         print("[LOG] websocket is closing")

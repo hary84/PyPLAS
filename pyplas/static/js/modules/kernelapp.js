@@ -15,15 +15,27 @@ function setUpKernel(kernel_start=true) {
         // execute_node_q: The global que containing the node that sent the execution order
         var $exec_node = execute_node_q[0]
         var $return_form = $exec_node.find(".return-value")
-        if (data.msg_type == "text") {
-            $return_form.append(`<p class="exec-res">${data.msg}</p>`)
-        } else if (data.msg_type == "image/png") {
-            $return_form.append(`<img src="data:image/png;base64,${data.msg}" />`)
-        } else if (data.msg_type == "error") {
-            console.log("error")
-            $return_form.append(`<p class="exec-error">${data.msg}</p>`)
-        } else if (data.msg_type == "status") {
-            execute_node_q.shift()
+
+        var content = data.content
+        console.log(data)
+        switch (data.msg_type) {
+            case "execute_result":
+                renderResult(content["data"]["text/plain"], $return_form)
+                break;
+            case "stream":
+                renderResult(content["text"], $return_form)
+                break;
+            case "display_data":
+                renderResult(content["data"]["text/plain"], $return_form)
+                renderResult(content["data"]["image/png"], $return_form, type="img")
+                break;
+            case "error":
+                var error_msg = content["traceback"].join("\n")
+                renderResult(error_msg, $return_form, type="error")
+                break;
+            case "exec-end-sig":
+                execute_node_q.shift()
+                break;
         }
     }
     ws.onclose = function() {
@@ -31,6 +43,32 @@ function setUpKernel(kernel_start=true) {
     }
 
     return ws
+}
+
+function renderResult(res, $form, type="text") {
+    console.log(type)
+    switch (type) {
+        case "text":
+            var res = escapeHTML(res)
+            $form.append(`<p class="exec-res">${res}</p>`)
+            break;
+        case "img":
+            $form.append(`<img src="data:image/png;base64,${res}"/>`)
+            break;
+        case "error":
+            var res = escapeHTML(res, ansi=true)
+            $form.append(`<p class="exec-error">${res}</p>`)
+            break;
+        default:
+            throw new Error('"type" argument can be one of "text", "img", or "error".')
+    }
+}
+
+function escapeHTML(str, ansi=false) {
+    if (ansi) {
+        str =  str.replace(/\x1B[[;\d]+m/g, "")
+    }
+    return $("<p/>").text(str).html()
 }
 
 // Execute code in $node using websocket.
