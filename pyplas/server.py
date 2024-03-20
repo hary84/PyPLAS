@@ -8,6 +8,7 @@ import re
 import json
 import glob
 from jupyter_client import MultiKernelManager, KernelManager, KernelClient
+from jupyter_client.multikernelmanager import DuplicateKernelError
 import uimodules
 
 mult_km = MultiKernelManager()
@@ -94,7 +95,6 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
     def send_msg(self, msg_type: str, msg: str, escape:bool = True):
         if escape:
             msg = tornado.escape.xhtml_escape(msg)
-        # print(f"[LOG] kernel outputs msg-type: {msg_type}")
         self.write_message({
             "msg_type": msg_type,
             "msg": msg
@@ -137,13 +137,13 @@ class KernelHandler(tornado.web.RequestHandler):
         """
         カーネルを起動する.
         k_idが存在する場合, 
-        [query]action == restartの時, カーネルの再起動
-        [query]action == interruptの時, カーネルの中断
+        [query]None: 指定されたk_idでカーネルの起動
+        [query]action==restart: カーネルの再起動
+        [query]action==interrupt: カーネルの中断
         """
-        if k_id:
+        if k_id is not None:
             self.kernel_id = k_id
             action = self.get_query_argument(name="action", default=None)
-            print(f"[KernelHandler-post] kernel_id: {self.kernel_id}")
             if action == "interrupt":
                 print(f"[KernelHandler-post] Interrupt kernel")
                 mult_km.interrupt_kernel(self.kernel_id)
@@ -152,6 +152,17 @@ class KernelHandler(tornado.web.RequestHandler):
                 print(f"[KernelHandler-post] Restart kernel")
                 mult_km.restart_kernel(self.kernel_id)
                 self.write({"status": "success"})
+            elif action is None:
+                print(f"[KernelHandler-post] Start kernel with {self.kernel_id}")
+                try:
+                    mult_km.start_kernel(kernel_id=self.kernel_id)
+                except DuplicateKernelError as e:
+                    print(e)
+                    self.write({"status": "error",
+                                "DESCR": f"{self.kernel_id} is already exist"})
+                else:
+                    self.write({"status": "success",
+                                "kernel_id": self.kernel_id})
         else:
             self.kernel_id = mult_km.start_kernel()
             print(f"[KernelHandler-post] Create new kernel({self.kernel_id})")

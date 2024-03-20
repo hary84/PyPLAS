@@ -1,16 +1,12 @@
 
 // Websocket connection and initial kernel start-up
-function setUpKernel() {
+function setUpKernel(kernel_start=true) {
     var host = window.location.host
     var kernel_id = sessionStorage["kernel_id"]
-    if (!kernel_id) {
-        kernelStart()
-    }else {
-        kernelRestart(kernel_id)
-    }
+
+    if (kernel_start) kernelStart(kernel_id)
 
     var ws = new WebSocket(`ws://${host}/ws/${sessionStorage["kernel_id"]}`)
-
     ws.onopen = function() {
         console.log("[LOG] ws connecting ...")
     }
@@ -65,17 +61,21 @@ function getKernelIds(kernel_id, async=true) {
     })
 }
 
-// Start kernel with random id
-function kernelStart(logging=true) {
+// Start kernel 
+function kernelStart(kernel_id, logging=true) {
     var origin = window.location.origin
+    if (!kernel_id) var kernel_id = ""
     $.ajax({
-        url: `${origin}/kernel`,
+        url: `${origin}/kernel/${kernel_id}`,
         type: "POST",
         async: false,
         success: function(data) {
-            var kernel_id = data["kernel_id"]
-            sessionStorage["kernel_id"] = kernel_id
-            if (logging) console.log(`[kernel] kernel(${kernel_id}) start`)
+            if (data.status == "success") {
+                var kernel_id = data["kernel_id"]
+                sessionStorage["kernel_id"] = kernel_id
+                if (logging) console.log(`[kernel] kernel(${kernel_id}) start`)
+            } else if (data.status == "error") {
+                console.log(data.DESCR)}
         }
     })
 }

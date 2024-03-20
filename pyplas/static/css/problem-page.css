@@ -191,13 +191,13 @@ div.explain {
         margin-bottom: 0.5em;
         border: none;
     }
-    & a.res-ans {
+    & a.btn-interrupt {
         background-color: brown;
         &:hover {
             background-color: #7a1414;
         }
     }
-    & a.save:hover {
+    & a.btn-restart:hover {
         background-color: #1f83c6;
     }
     & a.fold {

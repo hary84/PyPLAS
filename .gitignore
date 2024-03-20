@@ -1,7 +1,4 @@
-/flask/
 /venv/ 
 /dev/
-/.ipynb_checkpoints/
-
-/pyplas/demos/
+__pycache__/
 

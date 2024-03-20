@@ -1,3 +1,4 @@
+// global variable:  execute task que
 execute_node_q = []
 
 $(function() {
@@ -25,6 +26,14 @@ $(function() {
 
     $(".node").on("click", function() {
         $current_node = $(this)
+    })
+
+    $(".btn-restart").on("click", function() {
+        var kernel_id = sessionStorage["kernel_id"]
+        ws.close()
+        kernelRestart(kernel_id, async=false)
+        execute_node_q = []
+        ws = setUpKernel(kernel_start=false)
     })
     
     $(window).on("keydown", async function(e) {
