@@ -41,7 +41,8 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         await mult_km.updated.wait()
         self.km: KernelManager = mult_km.get_kernel(self.kernel_id)
         self.kc: KernelClient = self.km.client()
-        self.kc.start_channels()        
+        if not self.kc.channels_running:
+            self.kc.start_channels()
         print(f"[LOG] WS is connecting with {self.kernel_id}")
 
         self.pcallback = ioloop.PeriodicCallback(self.messaging,
@@ -126,7 +127,8 @@ class KernelHandler(tornado.web.RequestHandler):
                 self.write({"status": "success"})
             elif action == "restart":
                 print(f"[KernelHandler-post] Restart kernel")
-                mult_km.restart_kernel(self.kernel_id)
+                mult_km.shutdown_kernel(kernel_id=self.kernel_id)
+                mult_km.start_kernel(kernel_id=self.kernel_id)
                 self.write({"status": "success"})
             elif action is None:
                 print(f"[KernelHandler-post] Start kernel with {self.kernel_id}")

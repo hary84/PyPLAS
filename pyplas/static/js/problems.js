@@ -46,14 +46,16 @@ $(function() {
                 var $cnode = $current_node.find(".node-code")
                 if (execute_node_q[0]){
                     if ($cnode.attr("id") == execute_node_q[0].find(".node-code").attr("id")){
-                        kernelInterrupt(sessionStorage["kernel_id"], async=false)
+                        kernelInterrupt(sessionStorage["kernel_id"])
                         return false
                     }
                 } 
                 exec_count += 1
                 $current_node.find(".node-number").text(exec_count)
                 execute_node_q.push($current_node)
-                executeCode($current_node, ws)
+                if (execute_node_q.length == 1) {
+                    executeCode($current_node, ws)
+                }
                 return false
             } 
         }

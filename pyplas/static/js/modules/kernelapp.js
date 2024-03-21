@@ -44,6 +44,9 @@ function setUpKernel() {
                 break;
             case "exec-end-sig":
                 execute_node_q.shift()
+                if (execute_node_q[0]) {
+                    executeCode(execute_node_q[0], ws)
+                }
                 break;
         }
     }
@@ -123,7 +126,7 @@ function kernelStart(kernel_id, logging=true) {
 }
 
 // Restart kernel with specified id
-function kernelRestart(kernel_id, async=true, logging=false) {
+function kernelRestart(kernel_id, async=false, logging=false) {
     var origin = window.location.origin
     $.ajax({
         url: `${origin}/kernel/${kernel_id}?action=restart`,
@@ -140,7 +143,7 @@ function kernelRestart(kernel_id, async=true, logging=false) {
 }
 
 // Suspend the specified kernel
-function kernelInterrupt(kernel_id, async=true, logging=false) {
+function kernelInterrupt(kernel_id, async=false, logging=false) {
     var origin = window.location.origin
     $.ajax({
         url: `${origin}/kernel/${kernel_id}?action=interrupt`,
@@ -149,6 +152,7 @@ function kernelInterrupt(kernel_id, async=true, logging=false) {
         success: function(data) {
             if (data["status"] == "success") {
                 if(logging)  alert("kernel interrupt")
+                execute_node_q = execute_node_q.slice(0,1)
             }
         }
     })
