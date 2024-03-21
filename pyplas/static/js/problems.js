@@ -14,7 +14,7 @@ $(function() {
         if ($(this).attr("class").includes("readonly")) {
             editor.setReadOnly(true)
         }
-        console.log(id)
+
         editor.getSession().on("change", function(delta) {
             var line = editor.session.getLength()
             if (line > 4) {
@@ -31,11 +31,9 @@ $(function() {
     })
 
     $(".btn-restart").on("click", function() {
-        var kernel_id = sessionStorage["kernel_id"]
         ws.close()
-        kernelRestart(kernel_id, async=false)
         execute_node_q = []
-        ws = setUpKernel(kernel_start=false)
+        ws = setUpKernel()
         exec_count = 0
         $(".node-number").each(function(idx) {
             $(this).text(" * ")
@@ -45,6 +43,13 @@ $(function() {
     $(window).on("keydown", async function(e) {
         if (e.ctrlKey) {
             if (e.keyCode == 13) { // Ctrl-Enter
+                var $cnode = $current_node.find(".node-code")
+                if (execute_node_q[0]){
+                    if ($cnode.attr("id") == execute_node_q[0].find(".node-code").attr("id")){
+                        kernelInterrupt(sessionStorage["kernel_id"], async=false)
+                        return false
+                    }
+                } 
                 exec_count += 1
                 $current_node.find(".node-number").text(exec_count)
                 execute_node_q.push($current_node)

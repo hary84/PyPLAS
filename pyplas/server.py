@@ -42,16 +42,17 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         self.km: KernelManager = mult_km.get_kernel(self.kernel_id)
         self.kc: KernelClient = self.km.client()
         self.kc.start_channels()        
-        print(f"[LOG] ws is connecting with {self.kernel_id}")
+        print(f"[LOG] WS is connecting with {self.kernel_id}")
 
         self.pcallback = ioloop.PeriodicCallback(self.messaging,
                                                  callback_time=5) # ms
 
 
-    async def on_message(self, reseaved_msg: dict):
-        reseaved_msg = json.loads(reseaved_msg)
-        print(f"[LOG] ws reseaved : {reseaved_msg}")
-        _code = reseaved_msg.get("code", None)
+    async def on_message(self, received_msg: dict):
+        received_msg = json.loads(received_msg)
+        print(f"[LOG] WS received : {received_msg}")
+        _code = received_msg.get("code", None)
+        self._ops_flag = received_msg.get("ops", None)
         await self.exec.wait()
         self.kc.execute(_code)
         self.exec.clear()
@@ -70,8 +71,8 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             if outputs["msg_type"] == "status" and outputs["content"]['execution_state'] == "idle":
                 self.pcallback.stop()
                 self.write_message({"msg_type": "exec-end-sig"})
-                self.exec.set()
                 print("execute complete")
+                self.exec.set()
                 break
             self.write_message(json.dumps(outputs, default=self._datetime_encoda))
 

@@ -1,10 +1,19 @@
 
 // Websocket connection and initial kernel start-up
-function setUpKernel(kernel_start=true) {
+function setUpKernel() {
     var host = window.location.host
     var kernel_id = sessionStorage["kernel_id"]
 
-    if (kernel_start) kernelStart(kernel_id)
+    if (kernel_id) {
+        var id_list = getKernelIds()
+        if (id_list.includes(kernel_id)) {
+            kernelRestart(kernel_id)
+        } else {
+            kernelStart(kernel_id)
+        }
+    } else {
+        kernelStart()
+    }
 
     var ws = new WebSocket(`ws://${host}/ws/${sessionStorage["kernel_id"]}`)
     ws.onopen = function() {
@@ -84,19 +93,14 @@ function executeCode($node, ws) {
 }
 
 // Get the ID of the kernel you are running.
-function getKernelIds(kernel_id, async=true) {
+function getKernelIds() {
     var origin = window.location.origin
-    if (!kernel_id) var kernel_id = ""
-    $.ajax({
-        url: `${origin}/kernel/${kernel_id}`,
-        type: "GET",
-        async: async,
-        success: function(data) {
-            if (data["status"] == "success") {
-                console.log(data["is_alive"])
-            }
-        }
-    })
+    data = $.ajax({
+            url: `${origin}/kernel/`,
+            type: "GET",
+            async: false,
+            }).responseJSON
+    return data["is_alive"]
 }
 
 // Start kernel 
@@ -151,7 +155,7 @@ function kernelInterrupt(kernel_id, async=true, logging=false) {
 }
 
 // Shutdown the specified kernel
-function kernelShutdonw(kernel_id, async=true, logging=true) {
+function kernelShutdonw(kernel_id, async=false, logging=true) {
     var origin = window.location.origin
     $.ajax({
         url: `${origin}/kernel/${kernel_id}`,
