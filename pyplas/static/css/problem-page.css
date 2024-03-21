@@ -29,7 +29,14 @@ sup {
     display: flex;
     .node-number {
         padding: 0rem 0.5rem;
-        text-align: center;
+        text-align: right;
+        width: 3rem;
+    }
+    .node-number::before {
+        content: "["
+    }
+    .node-number::after {
+        content: "]"
     }
     .node-prime {
         width: 100%;
