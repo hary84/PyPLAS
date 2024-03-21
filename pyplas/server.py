@@ -14,7 +14,6 @@ import uimodules
 
 mult_km = MultiKernelManager()
 mult_km.updated = tornado.locks.Event()
-problems = []
 
 class MainHandler(tornado.web.RequestHandler):
         
@@ -39,7 +38,6 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         self.kernel_id = id
         self.exec = tornado.locks.Event()
         self.exec.set()
-        self.que = tornado.queues.Queue()
         await mult_km.updated.wait()
         self.km: KernelManager = mult_km.get_kernel(self.kernel_id)
         self.kc: KernelClient = self.km.client()
@@ -53,22 +51,17 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
     async def on_message(self, reseaved_msg: dict):
         reseaved_msg = json.loads(reseaved_msg)
         print(f"[LOG] ws reseaved : {reseaved_msg}")
-        code = reseaved_msg.get("code", None)
-        self.que.put(code)
-        while True:
-            await self.exec.wait()
-            try:
-                code = await self.que.get(timeout=1)
-            except:
-                break
-            self.kc.execute(code)
-            self.exec.clear()
-            self.pcallback.start()
+        _code = reseaved_msg.get("code", None)
+        await self.exec.wait()
+        self.kc.execute(_code)
+        self.exec.clear()
+        self.pcallback.start()
 
 
     def messaging(self):
         print("periodic callback")
-        while(1):
+        _try_limit = 10
+        for _ in range(_try_limit):
             try:
                 outputs  = self.kc.iopub_channel.get_msg(timeout=0.5)
             except:
@@ -80,9 +73,9 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
                 self.exec.set()
                 print("execute complete")
                 break
-            self.write_message(json.dumps(outputs, default=self.datetime_encoda))
+            self.write_message(json.dumps(outputs, default=self._datetime_encoda))
 
-    def datetime_encoda(self, obj):
+    def _datetime_encoda(self, obj):
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
     
