@@ -189,6 +189,7 @@ async def main():
         mult_km.shutdown_all()
         shutdown_event.set()
 
+    signal.signal(signal.SIGTERM, shutdown_server)
     signal.signal(signal.SIGINT, shutdown_server)
     await shutdown_event.wait()
     print("[LOG] Server has been safely shut down.")
