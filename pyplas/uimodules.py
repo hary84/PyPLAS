@@ -2,12 +2,14 @@ from tornado.web import UIModule
 import uuid 
 
 class Node(UIModule):
-    def render(self, code:str="", 
-               editor_id:str=None, readonly: bool=False) -> str:
-        if editor_id is None:
-            editor_id = str(uuid.uuid4())
-        readonly = "readonly" if readonly else ""
+    def render(self, code:str="", readonly:bool=False, testing:bool=False) -> str:
+        added_class = []
+        if testing:
+            added_class.append("testing")  
+        if testing or readonly:
+            added_class.append("readonly")
+
         return self.render_string("modules/node.html", 
-                                  editor_id=str(editor_id),
+                                  editor_id=str(uuid.uuid4()),
                                   code=code,
-                                  readonly=readonly) 
+                                  added_class=" ".join(added_class)) 

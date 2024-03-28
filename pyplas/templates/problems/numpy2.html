@@ -14,7 +14,11 @@
 
 {% module Node() %}
 
-{% module Node() %}
+<div class="question">
+    {% module Node() %}
+    {% module Node(code="assert a==100, 'test clear'", testing=True) %}
+    <a class="button-success" onclick="answer()">answer</a>
+</div>
 
 <div class='explain'>
 <h5><b>データについて</b></h5>

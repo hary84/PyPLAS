@@ -41,6 +41,7 @@ function setUpKernel() {
             case "error":
                 var error_msg = content["traceback"].join("\n")
                 renderResult(error_msg, $return_form, type="error")
+                execute_node_q = []
                 break;
             case "exec-end-sig":
                 execute_node_q.shift()
