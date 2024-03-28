@@ -21,11 +21,9 @@ function setUpKernel() {
     }
     ws.onmessage = function(event) {
         var data = JSON.parse(event.data)
-        // execute_node_q: The global que containing the node that sent the execution order
-        var $exec_node = execute_node_q[0]
-        var $return_form = $exec_node.find(".return-value")
-
         var content = data.content
+        var $return_form = $(`#${data.id}`).parent().find(".return-value")
+
         console.log(data)
         switch (data.msg_type) {
             case "execute_result":
@@ -48,6 +46,15 @@ function setUpKernel() {
                 if (execute_node_q[0]) {
                     executeCode(execute_node_q[0], ws)
                 }
+                if (data.ops == "test" & !data.has_error) {
+                    $(".popup").addClass("show").fadeIn()
+                    $(".popup .content").append("<h1>Complete</h1>")
+                    $(".popup .content").css({"border": "solid 5px #3cb371"})
+                } else if (data.ops == "test" & data.has_error) {
+                    $(".popup").addClass("show").fadeIn()
+                    $(".popup .content").append("<h1>Test Failure</h1>")
+                    $(".popup .content").css({"border": "solid 5px #c83737"})
+                }
                 break;
         }
     }
@@ -59,7 +66,6 @@ function setUpKernel() {
 }
 
 function renderResult(res, $form, type="text") {
-    console.log(type)
     switch (type) {
         case "text":
             var res = escapeHTML(res)
@@ -87,13 +93,16 @@ function escapeHTML(str, ansi=false) {
 // Execute code in $node using websocket.
 function executeCode($node, ws) {
     var $prime = $node.find(".node-prime")
+    var ops = "exec"
     $prime.find(".return-value").empty()
+    if ($prime.find(".node-code").attr("class").includes("testing")) {
+        ops = "test"
+    }
     var id = $prime.find(".node-code").attr("id")
     var editor = ace.edit(id)
     var code = editor.getValue()
-    var msg = JSON.stringify({"ops": "exec", "code": code})
+    var msg = JSON.stringify({"ops": ops, "code": code, "id": id})
     ws.send(msg)
-    console.log(msg)
 }
 
 // Get the ID of the kernel you are running.

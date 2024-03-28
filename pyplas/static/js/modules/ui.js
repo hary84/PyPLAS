@@ -36,3 +36,8 @@ function fixSidemenu(top){
     }
     $sidemenu.width($sidemenu.parent().width());
 }
+
+function removePopUp() {
+    $(".popup .content > h1").remove()
+    $(".popup").removeClass("show")
+}

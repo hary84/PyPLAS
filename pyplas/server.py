@@ -52,9 +52,11 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
     async def on_message(self, received_msg: dict):
         received_msg = json.loads(received_msg)
         print(f"[LOG] WS received : {received_msg}")
-        _code = received_msg.get("code", None)
-        self._ops_flag = received_msg.get("ops", None)
         await self.exec.wait()
+        _code = received_msg.get("code", None)
+        self.msg_meta = {"ops": received_msg.get("ops"), # ops: exec, test
+                         "id": received_msg.get("id")} # id to identify node 
+        self.has_error = False
         self.kc.execute(_code)
         self.exec.clear()
         self.pcallback.start()
@@ -69,13 +71,16 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             except:
                 break
             print(f"[LOG] kernel outputs msg-type: {outputs['msg_type']}")
+            if outputs["msg_type"] == "error":
+                self.has_error = True
             if outputs["msg_type"] == "status" and outputs["content"]['execution_state'] == "idle":
                 self.pcallback.stop()
-                self.write_message({"msg_type": "exec-end-sig"})
-                print("execute complete")
+                self.write_message(json.dumps({"msg_type": "exec-end-sig", 
+                                               "has_error": self.has_error} 
+                                               | self.msg_meta))
                 self.exec.set()
                 break
-            self.write_message(json.dumps(outputs, default=self._datetime_encoda))
+            self.write_message(json.dumps(outputs | self.msg_meta , default=self._datetime_encoda))
 
     def _datetime_encoda(self, obj):
         if isinstance(obj, (datetime, date)):

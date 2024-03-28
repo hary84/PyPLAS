@@ -17,4 +17,13 @@ $(function() {
 			fixSidemenu(top);
 		});
 	fixSidemenu(top);
+
+	$("#close").on("click", function() {
+		removePopUp()
+	}) 
+    $(".popup").click(function(event) {
+        if (event.target.closest(".content") == null) {
+            $("#close").trigger("click")
+        }
+    })
 })

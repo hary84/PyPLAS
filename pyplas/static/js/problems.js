@@ -60,6 +60,11 @@ $(function() {
             } 
         }
     })
+
+    $(".answer").on("click", function() {
+        $(this).parent().find(".node").each(function() {
+            execute_node_q.push($(this))
+        })
+        executeCode(execute_node_q[0], ws, ops="test")
+    })
 })
-
-
