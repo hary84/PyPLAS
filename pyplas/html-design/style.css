@@ -1,0 +1,6 @@
+@media (min-width: 993px) {
+  #SideMenu {
+    position: sticky;
+    top: 100px;
+  }
+}

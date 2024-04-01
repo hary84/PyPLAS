@@ -8,8 +8,10 @@ class Node(UIModule):
             added_class.append("testing")  
         if testing or readonly:
             added_class.append("readonly")
-
         return self.render_string("modules/node.html", 
                                   editor_id=str(uuid.uuid4()),
                                   code=code,
                                   added_class=" ".join(added_class)) 
+
+    # def embedded_javascript(self):
+    #     return f"console.log('{self.id}')"
