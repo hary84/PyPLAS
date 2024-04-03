@@ -3,19 +3,23 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
+    <title>PyPLAS</title>
+    <link rel="icon" type="image/x-icon" href="logo.jpg">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-      <header class="navbar bg-dark d-frex flex-wrap py-2 px-5 justify-content-center sticky-top">
+      <header class="navbar bg-dark d-frex flex-wrap py-2 px-5 justify-content-center">
           <a href="/" class="d-frex text-decoration-none me-md-auto">
               <img src="logo.jpg" alt="logo" height=45 class="align-middle rounded">
               <span class="text-light fs-2 px-2 d-inline-block align-middle">PyPLAS</span>
               <span class="text-light fs-4 d-none d-xxl-inline-block align-bottom">Python Programming Learning Assistant System</span>
           </a>
-          <ul class="nav fs-4 text-light h-100">
+          <ul class="nav fs-4 text-light">
               <li class="nav-item px-4">
                   <a href="" class="nav-link text-light">Home</a>
               </li>
@@ -121,32 +125,105 @@
                                             </a>
                                         </li>
                                     </ul>
-                                    <div class="card-footer d-frex">
-                                        <p class="mb-0">
-                                            <i class="bi bi-circle-fill text-success"></i>
-                                            : Completed
-                                        </p>
-                                        <p class="mb-0">
-                                            <i class="bi bi-circle-fill text-danger"></i>
-                                            : tried
-                                        </p>
-                                        <p class="mb-0">
-                                            <i class="bi bi-circle"></i>
-                                            : untried
-                                        </p>
-    
-                                    </div>
+                                </div>
+                                <div class="card-footer d-frex">
+                                    <p class="mb-0">
+                                        <i class="bi bi-circle-fill text-success"></i>
+                                        : Completed
+                                    </p>
+                                    <p class="mb-0">
+                                        <i class="bi bi-circle-fill text-danger"></i>
+                                        : Tried
+                                    </p>
+                                    <p class="mb-0">
+                                        <i class="bi bi-circle"></i>
+                                        : Untried
+                                    </p>
                                 </div>
                             </div>
                         </div> 
                 </div>
             </div>
-            <main class="main col" style="height: 100vh;">
-                <h1>Hello, world!</h1>
+            <main class="col px-3">
+                <div class="" id="summary">
+                    <p class="fs-3 border-bottom border-dark">Problem 1: numpy usage</p>
+                    <nav>
+                        <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                          <button class="nav-link active" id="nav-summary-tab" data-bs-toggle="tab" data-bs-target="#navSummary" type="button" role="tab" aria-controls="navSummary" aria-selected="true">Summary</button>
+                          <button class="nav-link" id="nav-data-tab" data-bs-toggle="tab" data-bs-target="#navData" type="button" role="tab" aria-controls="navData" aria-selected="false">Data Source</button>
+                          <button class="nav-link" id="nav-env-tab" data-bs-toggle="tab" data-bs-target="#navEnv" type="button" role="tab" aria-controls="navEnv" aria-selected="false">Environment</button>
+                        </div>
+                    </nav>
+                    <div class="tab-content" id="nav-tabContent">
+                    <div class="tab-pane fade show active" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
+                        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                    </div>
+                    <div class="tab-pane fade" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
+                        bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                    </div>
+                    <div class="tab-pane fade" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
+                        ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+                    </div>
+                    </div>
+                </div>
+                <div id="sourceCode">
+                    <p class="fs-3 border-bottom border-dark">The Source Code</p>
+                    <div id="">
+
+                        <div class="node">
+                            <div class="node-side">
+                                <div class="node-number"></div>
+                                <div class="node-sidebutton">
+                                    <a href="">
+                                        <i class="bi bi-caret-right-fill text-dark"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="node-prime">
+                                <div class="node-code"></div>
+                                <div class="return-box"></div>            
+                            </div>
+                        </div>
+
+                        <div class="explain pb-2" style="padding-left: 3.6rem;">
+                            aaaaaaaaaaaaaaaaaaaaaaaaaaaa<br>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                            aaaaaa<br>aaaaaaaaaaaaaaaaaaaaaa
+                        </div>
+
+                        <div class="node">
+                            <div class="node-side">
+                                <div class="node-number"></div>
+                                <div class="node-sidebutton">
+                                    <a href="">
+                                        <i class="bi bi-caret-right-fill text-dark"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="node-prime">
+                                <div class="node-code"></div>
+                                <div class="return-box"></div>            
+                            </div>
+                        </div>
+
+                        <div class="card" style="margin-left: 2.5rem;">
+                            <div class="card-header bg-success-subtle">
+                              Question
+                            </div>
+                            <div class="card-body">
+                            </div>
+                            <div class="card-footer">
+                              <button type="button" class="btn btn-success">Answer</button>
+                            </div>
+                        </div>
+
+
+                </div>
             </main>
-            <div class="col-2 bg-dark"></div>
+            <div class="col-xl-2 bg-dark">
+            </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="plas.js"></script>
   </body>
-</html>
+</html
