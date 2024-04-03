@@ -1,0 +1,17 @@
+<div class="card" style="margin-left: 2.5rem;">
+    <div class="card-header bg-success-subtle">
+      Question
+    </div>
+    <div class="card-body">
+      {% for d in conponent %}
+        {% if d["type"] == "explain" %}
+          {% module Explain(**d) %}
+        {% elif d["type"] == "code" %}
+          {% module Node(**d) %}
+        {% end %}
+      {% end %}
+    </div>
+    <div class="card-footer">
+      <button type="button" class="btn btn-success">Answer</button>
+    </div>
+</div>

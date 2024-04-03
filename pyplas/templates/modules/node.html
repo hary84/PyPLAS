@@ -1,9 +1,14 @@
 <div class="node">
-    <div class="node-number"> * </div>
+    <div class="node-side">
+        <div class="node-number"></div>
+        <div class="node-sidebutton">
+            <a href="">
+                <i class="bi bi-caret-right-fill text-dark"></i>
+            </a>
+        </div>
+    </div>
     <div class="node-prime">
-        <div class="node-code {{ added_class }}" id="{{ editor_id }}">{{ code }}</div>
-        <div class="return-box">
-            <pre class="return-value"></pre>
-        </div>            
+        <div class="node-code border {{ added_class }}">{{ code }}</div>
+        <div class="return-box"></div>            
     </div>
 </div>

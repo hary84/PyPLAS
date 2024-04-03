@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{{ static_url('css/skyblue.css') }}"/>
+    <link rel="stylesheet" href="{{ static_url('css/docs.css') }}"/>
+    <link rel="stylesheet" href="{{ static_url('css/problem-page.css') }}"/>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
+    <script src="{{ static_url('js/jquery.js') }}"></script>
+    <script src="{{ static_url('js/modules/ui.js') }}"></script>
+    <script src="{{ static_url('js/modules/kernelapp.js') }}"></script>
+    
+    <title>PyPLAS</title>
+</head>
+<body>
+<div class="bg-dark padding-y-10">
+  <div class="container text-center">
+    <h1 style="margin-bottom: 0em;"><a href="/" style="color: white;">Offline PyPLAS</a></h1>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <div class="col md-3">
+      <div class="sidemenu js-sidemenu">
+        <h5>Sidemenu</h5>
+        <div class="internal-link-box"></div>
+
+        {% if is_problem_page %}
+        <div class="side-btn">
+            <div>
+                <div class="btn-list">
+                    <a class="btn btn-interrupt" onclick="kernelInterrupt(sessionStorage['kernel_id'])">Interrupt</a>
+                    <a class="btn btn-restart" style="width: 100%">Restart</a>
+                    <a class="btn-success" href="/">TOP</a> 
+                    <div class="jump">
+                        <a class="btn prev">prev</a>
+                        <a class="btn next">next</a>
+                    </div>
+                </div>  
+            </div>
+        </div>
+        {% else %}
+        {% end %}
+      </div>
+    </div>
+    
+    <div class="col md-9 float-right jplas">
+      {% block content %}
+      {% end %}
+    </div>
+  </div>
+</div>
+<script src="{{ static_url('js/plas.js') }}"></script>
+</body>
+
+</html>

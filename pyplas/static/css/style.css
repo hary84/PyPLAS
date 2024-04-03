@@ -1,0 +1,9 @@
+/* when offcanvas show */
+@media (min-width: 993px) { 
+  .sidebar {
+    position: sticky;
+    top: 75px;
+    overflow-y: scroll;
+    max-height: calc(100vh - 75px);
+  }
+}

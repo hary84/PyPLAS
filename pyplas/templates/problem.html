@@ -1,0 +1,149 @@
+{% extends "layout.html" %}
+
+{% block head-nav-li %}
+<li class="nav-item px-4">
+    <a href="/" class="nav-link text-light">Home</a>
+</li>
+<li class="nav-item px-4">
+    <a href="" class="nav-link text-light disabled">prev</a>
+</li>
+<li class="nav-item px-4">
+    <a href="" class="nav-link text-light disabled">next</a>
+</li>
+{% end %}
+
+{% block side-content %}
+<div class="card mb-3" id="kernel-ops">
+    <div class="card-header">
+        <i class="bi bi-cpu"></i>
+        Kernels
+    </div>
+    <div class="card-body">
+        <div class="card-title">
+            <p>Operation</p>
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+                <a href="" class="text-decoration-none text-dark">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    Restart
+                </a>
+            </li>
+            <li class="list-group-item">
+                <a href="" class="text-decoration-none text-danger">
+                    <i class="bi bi-stop-circle"></i>
+                    Interrupt
+                </a>
+            </li>
+            <li class="list-group-item">
+                <a href="" class="text-decoration-none text-success">
+                    <i class="bi bi-save"></i>
+                    Save
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div class="card" id="progress-list">
+    <div class="card-header">
+        <i class="bi bi-hourglass-split"></i>
+        Progress
+    </div>
+    <div class="card-body">
+        <p class="card-title">Problem Progress</p>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+                <a class="text-decoration-none fw-bold ps-0">
+                    <i class="bi bi-circle-fill text-success"></i>
+                    Problem1
+                </a>
+            </li>
+            <li class="list-group-item">
+                <a class="text-decoration-none fw-bold ps-0">
+                    <i class="bi bi-circle-fill text-success"></i>
+                    Problem1
+                </a>
+            </li>
+            <li class="list-group-item">
+                <a class="text-decoration-none fw-bold ps-0">
+                    <i class="bi bi-circle-fill text-success"></i>
+                    Problem1
+                </a>
+            </li>
+            <li class="list-group-item">
+                <a class="text-decoration-none fw-bold ps-0">
+                    <i class="bi bi-circle-fill text-success"></i>
+                    Problem1
+                </a>
+            </li>
+            <li class="list-group-item">
+                <a class="text-decoration-none fw-bold ps-0">
+                    <i class="bi bi-circle-fill text-danger"></i>
+                    Problem1
+                </a>
+            </li>
+            <li class="list-group-item">
+                <a class="text-decoration-none fw-bold ps-0">
+                    <i class="bi bi-circle text-dark"></i>
+                    Problem1
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="card-footer d-frex">
+        <p class="mb-0">
+            <i class="bi bi-circle-fill text-success"></i>
+            : Completed
+        </p>
+        <p class="mb-0">
+            <i class="bi bi-circle-fill text-danger"></i>
+            : Tried
+        </p>
+        <p class="mb-0">
+            <i class="bi bi-circle"></i>
+            : Untried
+        </p>
+    </div>
+</div>
+{% end %}
+
+{% block main %}
+<main class="col px-3">
+    <div class="mb-3" id="summary">
+        <p class="fs-3 border-bottom border-dark">Problem {{ conponent["problem_id"]}}: {{ conponent["problem_name"]}}</p>
+        <nav>
+            <div class="nav nav-tabs" id="nav-tab" role="tablist">
+              <button class="nav-link active" id="nav-summary-tab" data-bs-toggle="tab" data-bs-target="#navSummary" type="button" role="tab" aria-controls="navSummary" aria-selected="true">Summary</button>
+              <button class="nav-link" id="nav-data-tab" data-bs-toggle="tab" data-bs-target="#navData" type="button" role="tab" aria-controls="navData" aria-selected="false">Data Source</button>
+              <button class="nav-link" id="nav-env-tab" data-bs-toggle="tab" data-bs-target="#navEnv" type="button" role="tab" aria-controls="navEnv" aria-selected="false">Environment</button>
+            </div>
+        </nav>
+        <div class="tab-content border bg-light" id="nav-tabContent">
+        <div class="tab-pane fade show active" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
+            {{ conponent["header"]["summary"]}}
+        </div>
+        <div class="tab-pane fade" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
+            {{ conponent["header"]["source"] }}
+        </div>
+        <div class="tab-pane fade" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
+            {{ conponent["header"]["env"] }}
+        </div>
+        </div>
+    </div>
+    <div id="sourceCode">
+        <p class="fs-3 border-bottom border-dark">The Source Code</p>
+        <div id="">
+            {% for d in conponent["body"]%}
+                {% if d["type"] == "code" %}
+                    {% module Node(**d) %}
+                {% elif d["type"] == "explain" %}
+                    {% module Explain(**d) %}
+                {% elif d["type"] == "question" %}
+                    {% module Question(**d) %}
+                {% end %}
+            {% end %}
+    </div>
+</main>
+<div class="col-xl-2 bg-dark">
+</div>
+{% end %}

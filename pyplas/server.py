@@ -18,17 +18,38 @@ mult_km.updated = tornado.locks.Event()
 class MainHandler(tornado.web.RequestHandler):
         
     def get(self):
-        problem_files = glob.glob("./templates/problems/*.html")
-        problem_files = [ f"/problems/{os.path.splitext(os.path.basename(file))[0]}" 
-                        for file in problem_files]
-        self.render("index.html", problem_files=problem_files,
-                    is_problem_page=False)
+        problem_list = [
+            {"No": 1, "name": "numpy usage 1", "status": 0}, # status 0: Complete, 1: Tried, 2: Untried
+            {"No": 2, "name": "numpy usage 2", "status": 0},
+            {"No": 3, "name": "numpy usage 3", "status": 1},
+            {"No": 4, "name": "pandas usage 1", "status": 2} 
+        ]
+        self.render("index.html", problem_list=problem_list)
 
 class ProblemHandler(tornado.web.RequestHandler):
 
     def get(self, p_id):
-        self.render(f"./problems/{p_id}.html", 
-                    is_problem_page=True)
+        page_conponent = {"problem_id": 1,
+                          "problem_name": "numpy usage 1",
+                          "header": {"summary": "numpy is a python library",
+                                     "source": "https://numpy.org/ja/",
+                                     "env": "python 3.9.18\nnumpy version 1"},
+                          "body": [
+                              {"type": "code",
+                               "code": "import numpy as np\n\nnp.arange(10)",
+                               "readonly": 1},
+                              {"type": "explain",
+                                "content": "numpy is a python library."},
+                              {"type": "question", 
+                               "body": [
+                                   {"type": "explain",
+                                    "content": "<p>make a array</p>"},
+                                   {"type": "code"}
+                               ],},
+                              {"type": "code"},
+                              {"type": "code"}
+                          ]}
+        self.render(f"./problem.html", conponent=page_conponent)
     
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
 
