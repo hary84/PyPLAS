@@ -37,7 +37,7 @@
           position: relative;
           height: 100px;
           width: 100%;
-          font-size: 1rem;
+          /* font-size: 1rem; */
       }
       .return-box {
           padding-top: 0.1rem;

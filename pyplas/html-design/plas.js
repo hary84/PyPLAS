@@ -5,7 +5,7 @@ document.querySelectorAll(".node-code").forEach(function(elem) {
     elem.id = id
     var editor = ace.edit(id, {
         mode: "ace/mode/python",
-        theme: "ace/theme/twilight"
+        // theme: "ace/theme/twilight"
     });
     editor.setOptions({
         autoScrollEditorIntoView: true,
