@@ -1,13 +1,13 @@
 import asyncio
+from contextlib import closing
 from datetime import date, datetime
 import signal
+import sqlite3
 import tornado 
 import tornado.websocket 
 import tornado.ioloop as ioloop
 import os  
-import re
 import json
-import glob
 from jupyter_client import MultiKernelManager, KernelManager, KernelClient
 from jupyter_client.multikernelmanager import DuplicateKernelError
 import uimodules
@@ -16,41 +16,38 @@ mult_km = MultiKernelManager()
 mult_km.updated = tornado.locks.Event()
 
 class MainHandler(tornado.web.RequestHandler):
-        
+
     def get(self):
-        problem_list = [
-            {"No": 1, "name": "numpy usage 1", "status": 0}, # status 0: Complete, 1: Tried, 2: Untried
-            {"No": 2, "name": "numpy usage 2", "status": 0},
-            {"No": 3, "name": "numpy usage 3", "status": 1},
-            {"No": 4, "name": "pandas usage 1", "status": 2} 
-        ]
-        self.render("index.html", problem_list=problem_list)
+        with closing(sqlite3.connect("pyplas.db")) as conn:
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            sql = "SELECT id, title, status FROM pages"
+            cur.execute(sql)
+            res = cur.fetchall()
+
+        p_list = [dict(r) for r in res]
+        self.render("index.html", problem_list=p_list)
+    
 
 class ProblemHandler(tornado.web.RequestHandler):
 
     def get(self, p_id):
-        page_conponent = {"problem_id": 1,
-                          "problem_name": "numpy usage 1",
-                          "header": {"summary": "numpy is a python library",
-                                     "source": "https://numpy.org/ja/",
-                                     "env": "python 3.9.18\nnumpy version 1"},
-                          "body": [
-                              {"type": "code",
-                               "code": "import numpy as np\n\nnp.arange(10)",
-                               "readonly": 1},
-                              {"type": "explain",
-                                "content": "numpy is a python library."},
-                              {"type": "question", 
-                               "body": [
-                                   {"type": "explain",
-                                    "content": "<p>make a array</p>"},
-                                   {"type": "code"}
-                               ],},
-                              {"type": "code"},
-                              {"type": "code"}
-                          ]}
-        self.render(f"./problem.html", conponent=page_conponent)
+        with closing(sqlite3.connect("pyplas.db")) as conn:
+            conn.row_factory = sqlite3.Row 
+            cur = conn.cursor()
+            sql = f"SELECT * FROM pages where id = {p_id}"
+            cur.execute(sql)
+            page = cur.fetchone()
+
+            sql = f"SELECT id, title, status FROM pages"
+            cur.execute(sql)
+            progress = cur.fetchall()
+
+        page = {key: page[key] if key!="page" else json.loads(page[key]) for key in page.keys()}
+        progress = [dict(p) for p in progress]
+        self.render(f"./problem.html", conponent=page, progress=progress)
     
+
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
 
     async def open(self, id: str):

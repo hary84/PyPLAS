@@ -2,7 +2,8 @@ document.querySelectorAll(".node-code").forEach(function(elem) {
     var id = crypto.randomUUID()
     elem.id = id
     var editor = ace.edit(id, {
-        mode: "ace/mode/python"
+        mode: "ace/mode/python",
+        theme: "ace/theme/twilight"
     });
     editor.setOptions({
         autoScrollEditorIntoView: true,

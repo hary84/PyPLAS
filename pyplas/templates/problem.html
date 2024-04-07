@@ -52,42 +52,14 @@
     <div class="card-body">
         <p class="card-title">Problem Progress</p>
         <ul class="list-group list-group-flush">
-            <li class="list-group-item">
-                <a class="text-decoration-none fw-bold ps-0">
-                    <i class="bi bi-circle-fill text-success"></i>
-                    Problem1
-                </a>
-            </li>
-            <li class="list-group-item">
-                <a class="text-decoration-none fw-bold ps-0">
-                    <i class="bi bi-circle-fill text-success"></i>
-                    Problem1
-                </a>
-            </li>
-            <li class="list-group-item">
-                <a class="text-decoration-none fw-bold ps-0">
-                    <i class="bi bi-circle-fill text-success"></i>
-                    Problem1
-                </a>
-            </li>
-            <li class="list-group-item">
-                <a class="text-decoration-none fw-bold ps-0">
-                    <i class="bi bi-circle-fill text-success"></i>
-                    Problem1
-                </a>
-            </li>
-            <li class="list-group-item">
-                <a class="text-decoration-none fw-bold ps-0">
-                    <i class="bi bi-circle-fill text-danger"></i>
-                    Problem1
-                </a>
-            </li>
-            <li class="list-group-item">
-                <a class="text-decoration-none fw-bold ps-0">
-                    <i class="bi bi-circle text-dark"></i>
-                    Problem1
-                </a>
-            </li>
+            {% for d in progress %}
+                <li class="list-group-item">
+                    <a class="text-decoration-none fw-bold ps-0" href="/problems/{{ d['id'] }}">
+                        <i class="bi bi-circle-fill text-success" status="{{ d['status'] }}"></i>
+                        {{ d['title'] }}
+                    </a>
+                </li>
+            {% end %}
         </ul>
     </div>
     <div class="card-footer d-frex">
@@ -110,7 +82,7 @@
 {% block main %}
 <main class="col px-3">
     <div class="mb-3" id="summary">
-        <p class="fs-3 border-bottom border-dark">Problem {{ conponent["problem_id"]}}: {{ conponent["problem_name"]}}</p>
+        <p class="fs-3 border-bottom border-dark">Problem {{ conponent["id"]}}: {{ conponent["title"] }}</p>
         <nav>
             <div class="nav nav-tabs" id="nav-tab" role="tablist">
               <button class="nav-link active" id="nav-summary-tab" data-bs-toggle="tab" data-bs-target="#navSummary" type="button" role="tab" aria-controls="navSummary" aria-selected="true">Summary</button>
@@ -119,21 +91,21 @@
             </div>
         </nav>
         <div class="tab-content border bg-light" id="nav-tabContent">
-        <div class="tab-pane fade show active" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
-            {{ conponent["header"]["summary"]}}
+        <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
+            {{ conponent["page"]["header"]["summary"]}}
         </div>
-        <div class="tab-pane fade" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
-            {{ conponent["header"]["source"] }}
+        <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
+            {{ conponent["page"]["header"]["source"] }}
         </div>
-        <div class="tab-pane fade" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-            {{ conponent["header"]["env"] }}
+        <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
+            {{ conponent["page"]["header"]["env"] }}
         </div>
         </div>
     </div>
     <div id="sourceCode">
         <p class="fs-3 border-bottom border-dark">The Source Code</p>
         <div id="">
-            {% for d in conponent["body"]%}
+            {% for d in conponent["page"]["body"]%}
                 {% if d["type"] == "code" %}
                     {% module Node(**d) %}
                 {% elif d["type"] == "explain" %}
@@ -144,6 +116,6 @@
             {% end %}
     </div>
 </main>
-<div class="col-xl-2 bg-dark">
+<div class="col-xxl-2 bg-white">
 </div>
 {% end %}

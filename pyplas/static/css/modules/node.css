@@ -1,11 +1,10 @@
 .node {
     display: flex;
-    margin-bottom: 1rem;
     .node-side {
         padding: 0rem 0.3rem;
         text-align: right;
-        width: 3rem;
         position: relative;
+        font-size: 0.7rem;
         .node-sidebutton {
           position: absolute;
           bottom: 3%;
