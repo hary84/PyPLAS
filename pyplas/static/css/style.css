@@ -2,8 +2,19 @@
 @media (min-width: 993px) { 
   .sidebar {
     position: sticky;
-    top: 75px;
-    overflow-y: scroll;
-    max-height: calc(100vh - 75px);
+    top: 0px;
+    overflow-y: auto;
+    max-height: calc(100vh);
   }
+}
+
+/* accordion status controll */
+.accordion-button:focus {
+  box-shadow: none;
+  border-color: rgba(0,0,0,.125);
+}
+
+.accordion-button:not(.collapsed) {
+  opacity: 100%;
+  background-color: white;
 }

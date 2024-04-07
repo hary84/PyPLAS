@@ -32,7 +32,17 @@
             <tr onclick="location.href='problems/{{ d["id"] }}'">
               <th scope="row">{{ d['id'] }}</th>
               <td>{{ d['title'] }}</td>
-              <td><i class="bi bi-check2-circle text-success" status="{{d['status']}}"></i>{{ ["Complete", "Tried", "Untried"][d['status']]}}</td>
+              <td>
+                {% if d["status"] == 0 %}
+                    <i class="bi bi-circle text-dark"></i>
+                    Untried
+                {% elif d["status"] == 1 %} 
+                    <i class="bi bi-triangle text-warning"></i>
+                    Tried
+                {% elif d["status"] == 2 %}
+                    <i class="bi bi-check2-circle text-success"></i>
+                    Completed
+                {% end %}
             </tr>
           {% end %}
           </tbody>
@@ -55,6 +65,6 @@
         </form>
   </div>
 </main>
-<div class="col-xl-2"></div>
+<div class="col-xl-2 border-start"></div>
 {% end %}
 
