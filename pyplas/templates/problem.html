@@ -15,26 +15,20 @@
 {% block side-content %}
 <p class="fs-5 fw-bold border-bottom px-2">SideMenu</p>
 <div class="mb-3" id="kernel-ops">
-    <ul class="list-group list-group-flush">
-        <li class="list-group-item list-group-item-action">
-            <a href="" class="text-decoration-none text-dark">
-                <i class="bi bi-arrow-counterclockwise"></i>
-                Restart
-            </a>
-        </li>
-        <li class="list-group-item list-group-item-action">
-            <a href="" class="text-decoration-none text-danger">
-                <i class="bi bi-stop-circle"></i>
-                Interrupt
-            </a>
-        </li>
-        <li class="list-group-item list-group-item-action">
-            <a href="" class="text-decoration-none text-success">
-                <i class="bi bi-save"></i>
-                Save
-            </a>
-        </li>
-    </ul>
+    <div class="list-group list-group-flush">
+        <a class="list-group-item list-group-item-action text-decoration-none text-dark btn-restart">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            Restart
+        </a>
+        <a class="list-group-item list-group-item-action text-decoration-none text-danger btn-interrupt">
+            <i class="bi bi-stop-circle"></i>
+            Interrupt
+        </a>
+        <a class="list-group-item list-group-item-action text-decoration-none text-success" id="btn-save">
+            <i class="bi bi-save"></i>
+            Save
+        </a>
+    </div>
 </div>
 <div class="accordion" id="accordionExample">
     <div class="accordion-item">
@@ -143,4 +137,6 @@
         </nav>
     </div>
 </div>
+
+<script src="{{ static_url('js/problems_test.js') }}"></script>
 {% end %}

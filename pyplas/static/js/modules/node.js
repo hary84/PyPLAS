@@ -10,11 +10,10 @@ document.querySelectorAll(".node-code").forEach(function(elem) {
         maxLines: 100,
         minLines: 5
     });
-    editor.container.style.lineHeight = "1rem";
+    editor.container.style.lineHeight = "1.3rem";
     editor.renderer.updateFontSize()
 
     if (elem.classList.contains("readonly")) {
         editor.setReadOnly(true)
     }
-    console.log(id)
 })

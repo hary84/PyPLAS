@@ -22,7 +22,7 @@ function setUpKernel() {
     ws.onmessage = function(event) {
         var data = JSON.parse(event.data)
         var content = data.content
-        var $return_form = $(`#${data.id}`).parent().find(".return-value")
+        var $return_form = $(`#${data.id}`).parent().find(".return-box")
 
         console.log(data)
         switch (data.msg_type) {
@@ -46,15 +46,15 @@ function setUpKernel() {
                 if (execute_node_q[0]) {
                     executeCode(execute_node_q[0], ws)
                 }
-                if (data.ops == "test" & !data.has_error) {
-                    $(".popup").addClass("show").fadeIn()
-                    $(".popup .content").append("<h1>Complete</h1>")
-                    $(".popup .content").css({"border": "solid 5px #3cb371"})
-                } else if (data.ops == "test" & data.has_error) {
-                    $(".popup").addClass("show").fadeIn()
-                    $(".popup .content").append("<h1>Test Failure</h1>")
-                    $(".popup .content").css({"border": "solid 5px #c83737"})
-                }
+                // if (data.ops == "test" & !data.has_error) {
+                //     $(".popup").addClass("show").fadeIn()
+                //     $(".popup .content").append("<h1>Complete</h1>")
+                //     $(".popup .content").css({"border": "solid 5px #3cb371"})
+                // } else if (data.ops == "test" & data.has_error) {
+                //     $(".popup").addClass("show").fadeIn()
+                //     $(".popup .content").append("<h1>Test Failure</h1>")
+                //     $(".popup .content").css({"border": "solid 5px #c83737"})
+                // }
                 break;
         }
     }
@@ -75,8 +75,8 @@ function renderResult(res, $form, type="text") {
             $form.append(`<img src="data:image/png;base64,${res}"/>`)
             break;
         case "error":
-            var res = escapeHTML(res, ansi=true)
-            $form.append(`<p class="exec-error">${res}</p>`)
+            var res = escapeHTML(res, ansi=true).replace(/\n/g, "<br>")
+            $form.append(`<p class="text-danger">${res}</p>`)
             break;
         default:
             throw new Error('"type" argument can be one of "text", "img", or "error".')
@@ -94,7 +94,7 @@ function escapeHTML(str, ansi=false) {
 function executeCode($node, ws) {
     var $prime = $node.find(".node-prime")
     var ops = "exec"
-    $prime.find(".return-value").empty()
+    $prime.find(".return-box").empty()
     if ($prime.find(".node-code").attr("class").includes("testing")) {
         ops = "test"
     }

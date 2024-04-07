@@ -5,14 +5,6 @@
         text-align: right;
         position: relative;
         font-size: 0.7rem;
-        .node-sidebutton {
-          position: absolute;
-          bottom: 3%;
-          right: 0;
-          i {
-            padding-right: 0.1rem;
-          }
-        }
         .node-number::before {
             content: "[";
         }
@@ -23,21 +15,25 @@
     .node-prime {
         width: 100%;
         .node-code {
-            position: relative;
             height: 110px;
             width: 100%;
         }
         .return-box {
-            padding-top: 0.1rem;
-            .exec-res {
-                padding: 0rem 0.3rem;
+            position: relative;
+            padding: 0.1rem 0 1rem 0;
+            .node-sidebutton {
+              position: absolute;
+              transform: translate(-100%, -100%);
+              top: 0;
+              left: 0;
+            }
+            p {
+                padding: 0 1rem;
                 margin-bottom: 0rem;
+                white-space: pre;
+                font-size: 0.7rem;
             }
-            .exec-error {
-                border: 1.5px solid red;
-                padding: 0.3rem;
-                color: red;
-            }
+
         }
     }
   }

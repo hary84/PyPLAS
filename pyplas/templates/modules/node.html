@@ -1,14 +1,15 @@
 <div class="node p-2">
     <div class="node-side">
         <div class="node-number"></div>
-        <div class="node-sidebutton">
-            <a href="">
-                <i class="bi bi-caret-right-fill text-dark"></i>
-            </a>
-        </div>
     </div>
     <div class="node-prime">
         <div class="node-code border rounded {{ added_class }}">{{ code }}</div>
-        <div class="return-box"></div>            
+        <div class="return-box border rounded">
+            <div class="node-sidebutton">
+                <a class="btn-exec">
+                    <i class="bi bi-caret-right-fill text-dark"></i>
+                </a>
+            </div>
+        </div>            
     </div>
 </div>
