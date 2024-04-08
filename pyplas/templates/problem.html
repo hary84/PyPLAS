@@ -92,13 +92,13 @@
             </nav>
             <div class="tab-content border bg-light" id="nav-tabContent">
                 <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
-                    {{ conponent["page"]["header"]["summary"]}}
+                    {% raw conponent["page"]["header"]["summary"] %}
                 </div>
                 <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
-                    {{ conponent["page"]["header"]["source"] }}
+                    {% raw conponent["page"]["header"]["source"] %}
                 </div>
                 <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-                    {{ conponent["page"]["header"]["env"] }}
+                    {% raw conponent["page"]["header"]["env"] %}
                 </div>
             </div>
         </div>
@@ -118,7 +118,7 @@
     </div>
 </main>
 <div class="col-xxl-2 bg-white border-start">
-    <div class="sticky-top" id="sideItem">
+    <div class="sticky-top d-none d-xxl-block" id="sideItem">
         <p class="fw-bold border-bottom mb-1 mt-3">Items</p>
         <nav id="navbar-example3" class="flex-column align-items-stretch pe-4">
             <nav class="nav nav-pills flex-column">

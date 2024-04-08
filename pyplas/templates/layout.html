@@ -11,7 +11,12 @@
     <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
-    <script src="{{ static_url('js/modules/jquery.js') }}"></script>
+    <!-- <script src="{{ static_url('js/modules/jquery.js') }}"></script> -->
+    <script
+        src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous">
+    </script>
     <!-- <script src="{{ static_url('js/modules/ui.js') }}"></script> -->
     <script src="{{ static_url('js/modules/kernel.js') }}"></script>
   </head>
@@ -35,7 +40,7 @@
       </header>
     <div class="container-xxl">
         <div class="row">
-            <div class="sidebar bg-white col-md-3 col-xxl-2 offcanvas-lg z-0 mt-3 border-end">
+            <div class="sidebar bg-white col-md-3 col-xxl-2 offcanvas-lg mt-3 border-end">
                 <div class="offcanvas-lg offcanvas-start" tabindex="-1" id="SideMenu">
                     <div class="offcanvas-header">
                         <p class="offcanvas-title fs-1 fw-bold">

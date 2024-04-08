@@ -15,7 +15,6 @@
     .node-prime {
         width: 100%;
         .node-code {
-            height: 110px;
             width: 100%;
         }
         .return-box {
@@ -30,7 +29,7 @@
             p {
                 padding: 0 1rem;
                 margin-bottom: 0rem;
-                white-space: pre;
+                white-space: pre-wrap;
                 font-size: 0.7rem;
             }
 
