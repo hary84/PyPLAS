@@ -34,6 +34,7 @@ class ProblemHandler(tornado.web.RequestHandler):
     def prepare(self):
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.j = json.loads(self.request.body)
+            self.j["content"] = json.dumps(self.j["content"])
 
     def get(self, p_id):
         with closing(sqlite3.connect("pyplas.db")) as conn:
@@ -52,12 +53,30 @@ class ProblemHandler(tornado.web.RequestHandler):
         self.render(f"./problem.html", conponent=page, progress=progress)
 
     def post(self, p_id):
-        with closing(sqlite3.connect("pyplas")) as conn:
+        with closing(sqlite3.connect("pyplas.db")) as conn:
             cur = conn.cursor()
+
             sql = "INSERT INTO log(pid, qid, content, status) SELECT :pid, :qid, :content, :status " +\
                   "WHERE NOT EXISTS(SELECT * FROM log WHERE qid=:qid AND status=1)"
             cur.execute(sql, (self.j | {"pid": p_id}))
             conn.commit()
+
+            sql = "SELECT qid FROM log where pid=? AND status=1"
+            cur.execute(sql, (p_id,))
+            logs = set([row[0] for row in cur.fetchall()])
+
+            sql = "SELECT page FROM pages where id=?"
+            cur.execute(sql, (p_id,))
+            page = json.loads(cur.fetchone()[0])
+
+            q_id_list = set([q_dict["qid"] for q_dict in page["body"] 
+                            if q_dict["type"]=="quesiton"])
+            
+            if len(q_id_list - logs) == 0:
+                sql = "UPDATE pages SET status=2 WHERE id=?"
+                cur.execute(sql, (p_id,))
+                conn.commit()
+
         print(f"[LOG] SAVE QUESTION INFORMATION")
         
 
@@ -85,7 +104,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         print(f"[LOG] WS received : {received_msg}")
         await self.exec.wait()
         _code = received_msg.get("code", None)
-        self.msg_meta = {"ops": received_msg.get("ops"), # ops: exec, test
+        self.msg_meta = {"qid": received_msg.get("qid"), # identify question node
                          "id": received_msg.get("id")} # id to identify node 
         self.has_error = False
         self.kc.execute(_code)

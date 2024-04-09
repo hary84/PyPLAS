@@ -17,7 +17,7 @@ $(function() {
 
     $(".btn-testing").on("click", function() {
         kh.kernelInterrupt()
-        $(this).parent().prev().find(".node-code").each(function() {
+        $(this).parents(".question").find(".node-code").each(function() {
             kh.execute_task_q.push($(this).parents(".node"))
         })
         kh.executeCode()
@@ -87,14 +87,25 @@ function renderMessage(kh, newValue) {
                 if (kh.execute_task_q[0]) {
                     kh.executeCode()
                 }
-                // if(newValue.ops == "test") {
-                //     $.ajax({
-                //         url: window.location.href,
-                //         type: "POST",
-                //         dataType: "json",
-                //         data: {"qid": "", "content": ace.edit(newValue.id).getValue(), status: newValue.has_error}
-                //     })
-                // }
+                if($(`#${newValue.id}`).hasClass("is_testcode")) {
+                    var content = {}
+                    $(`div[q-id=${newValue.qid}]`).find(".node-code").each(function() {
+                        var editor_id = $(this).attr("id")
+                        content[editor_id] = ace.edit(editor_id).getValue()
+                    })
+                    $.ajax({
+                        url: window.location.href,
+                        type: "POST",
+                        contentType: "application/json",
+                        dataType: "json",
+                        data: JSON.stringify({"qid": newValue.qid, 
+                                              "content": content, 
+                                              "status": !newValue.has_error}),
+                        success: (data) => {
+                            console.log("SEND YOUR ANSWER")
+                        }
+                    })
+                }
                 break;
         }
     }

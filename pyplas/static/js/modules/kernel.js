@@ -82,24 +82,20 @@ class KernelHandler {
             async: false,
             success: (data) => {
                 console.log("Kernel Interrupted")
+                this.running = false
             }
         })
     }
 
     executeCode = () => {
         this.running = true
-        var $prime = this.execute_task_q[0].find(".node-prime")
-        var id = $prime.find(".node-code").attr("id")
-        $prime.find(".return-box").children().remove(".exec-res")
-        if ($prime.parents(".question").length) {
-            var ops = "test"
-            var qid = $prime.parents(".question").attr("q-id")
-        } else {
-            var ops = "exec"
-            var qid = ""
-        }
-        var code = ace.edit(id).getValue()
-        var msg = JSON.stringify({"ops": ops, "code": code, "id": id, "q-id": qid})
+        var $node = this.execute_task_q[0]
+        var id = $node.find(".node-code").attr("id")
+        $node.find(".exec-res").remove()
+        var qid = ($node.parents(".question").length) ? $node.parents(".question").attr("q-id") : ""
+        var msg = JSON.stringify({"id": id, 
+                                  "qid": qid,
+                                  "code": ace.edit(id).getValue()})
         this.ws.send(msg)
     }
 
