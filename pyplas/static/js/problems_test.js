@@ -87,8 +87,13 @@ function renderMessage(kh, newValue) {
                 if (kh.execute_task_q[0]) {
                     kh.executeCode()
                 }
-                // if(newValue.ops == "test" && !newValue.has_error) {
-                //     $.ajax()
+                // if(newValue.ops == "test") {
+                //     $.ajax({
+                //         url: window.location.href,
+                //         type: "POST",
+                //         dataType: "json",
+                //         data: {"qid": "", "content": ace.edit(newValue.id).getValue(), status: newValue.has_error}
+                //     })
                 // }
                 break;
         }

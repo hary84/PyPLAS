@@ -31,12 +31,16 @@ class MainHandler(tornado.web.RequestHandler):
 
 class ProblemHandler(tornado.web.RequestHandler):
 
+    def prepare(self):
+        if self.request.headers.get("Content-Type", None) == "application/json":
+            self.j = json.loads(self.request.body)
+
     def get(self, p_id):
         with closing(sqlite3.connect("pyplas.db")) as conn:
             conn.row_factory = sqlite3.Row 
             cur = conn.cursor()
-            sql = f"SELECT * FROM pages where id = {p_id}"
-            cur.execute(sql)
+            sql = f"SELECT * FROM pages where id = ?"
+            cur.execute(sql, (p_id,))
             page = cur.fetchone()
 
             sql = f"SELECT id, title, status FROM pages"
@@ -46,7 +50,16 @@ class ProblemHandler(tornado.web.RequestHandler):
         page = {key: page[key] if key!="page" else json.loads(page[key]) for key in page.keys()}
         progress = [dict(p) for p in progress]
         self.render(f"./problem.html", conponent=page, progress=progress)
-    
+
+    def post(self, p_id):
+        with closing(sqlite3.connect("pyplas")) as conn:
+            cur = conn.cursor()
+            sql = "INSERT INTO log(pid, qid, content, status) SELECT :pid, :qid, :content, :status " +\
+                  "WHERE NOT EXISTS(SELECT * FROM log WHERE qid=:qid AND status=1)"
+            cur.execute(sql, (self.j | {"pid": p_id}))
+            conn.commit()
+        print(f"[LOG] SAVE QUESTION INFORMATION")
+        
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
 

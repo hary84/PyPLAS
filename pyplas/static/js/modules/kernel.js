@@ -29,65 +29,12 @@ class KernelHandler {
 
         this.ws.onmessage = (event) => {
             var data = JSON.parse(event.data)
-            // var content = data.content
-            // var $return_form = $(`#${data.id}`).parent().find(".return-box")
-    
-            // switch (data.msg_type) {
-            //     case "execute_result":
-            //         this._renderResult(content["data"]["text/plain"], $return_form)
-            //         break;
-            //     case "stream":
-            //         this._renderResult(content["text"], $return_form)
-            //         break;
-            //     case "display_data":
-            //         this._renderResult(content["data"]["text/plain"], $return_form)
-            //         this._renderResult(content["data"]["image/png"], $return_form, "img")
-            //         break;
-            //     case "error":
-            //         var error_msg = content["traceback"].join("\n")
-            //         this._renderResult(error_msg, $return_form, "error")
-            //         this.execute_task_q = []
-            //         break;
-            //     case "exec-end-sig":
-            //         this.running = false
-            //         this.execute_task_q.shift()
-            //         if (this.execute_task_q[0]) {
-            //             this.executeCode()
-            //         }
-            //         break;
-            // }
             this.msg = data
         }
         this.ws.onclose = function() {
             console.log("[LOG] ws disconnecting ...")
         }
     }
-
-    // _renderResult = (res, $form, type="text") => {
-    //     switch (type) {
-    //         case "text":
-    //             var res = this._escapeHTML(res)
-    //             $form.append(`<p class="exec-res">${res}</p>`)
-    //             break;
-    //         case "img":
-    //             $form.append(`<img class="exec-res" src="data:image/png;base64,${res}"/>`)
-    //             break;
-    //         case "error":
-    //             var res = this._escapeHTML(res, true).replace(/\n/g, "<br>")
-    //             $form.append(`<p class="text-danger exec-res">${res}</p>`)
-    //             break;
-    //         default:
-    //             throw new Error('"type" argument can be one of "text", "img", or "error".')
-    //     }
-    // }
-    
-    // _escapeHTML = (str, ansi=false) => {
-    //     if (ansi) {
-    //         var str =  str.replace(/\x1B[[;\d]+m/g, "")
-    //     }
-    //     return $("<p/>").text(str).html()
-    // }
-
     
     getKernelIds = () => {
         var data = $.ajax({
@@ -144,14 +91,20 @@ class KernelHandler {
         var $prime = this.execute_task_q[0].find(".node-prime")
         var id = $prime.find(".node-code").attr("id")
         $prime.find(".return-box").children().remove(".exec-res")
-        var ops = ($prime.parents(".card").length) ? "test" : "exec"
+        if ($prime.parents(".question").length) {
+            var ops = "test"
+            var qid = $prime.parents(".question").attr("q-id")
+        } else {
+            var ops = "exec"
+            var qid = ""
+        }
         var code = ace.edit(id).getValue()
-        var msg = JSON.stringify({"ops": ops, "code": code, "id": id})
+        var msg = JSON.stringify({"ops": ops, "code": code, "id": id, "q-id": qid})
         this.ws.send(msg)
     }
 
     execute = ($node) => {
-        if (this.execute_task_q[0] && this.execute_task_q[0].find(".node-code").attr("id") == $node.find(".node-code").attr("id")) {
+        if (this.execute_task_q[0] && this.execute_task_q[0].attr("node-id") == $node.attr("node-id")) {
             this.kernelInterrupt()
             return false 
         }
