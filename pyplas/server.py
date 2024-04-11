@@ -1,13 +1,13 @@
 import asyncio
+from contextlib import closing
 from datetime import date, datetime
 import signal
+import sqlite3
 import tornado 
 import tornado.websocket 
 import tornado.ioloop as ioloop
 import os  
-import re
 import json
-import glob
 from jupyter_client import MultiKernelManager, KernelManager, KernelClient
 from jupyter_client.multikernelmanager import DuplicateKernelError
 import uimodules
@@ -16,20 +16,70 @@ mult_km = MultiKernelManager()
 mult_km.updated = tornado.locks.Event()
 
 class MainHandler(tornado.web.RequestHandler):
-        
+
     def get(self):
-        problem_files = glob.glob("./templates/problems/*.html")
-        problem_files = [ f"/problems/{os.path.splitext(os.path.basename(file))[0]}" 
-                        for file in problem_files]
-        self.render("index.html", problem_files=problem_files,
-                    is_problem_page=False)
+        with closing(sqlite3.connect("pyplas.db")) as conn:
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            sql = "SELECT id, title, status FROM pages"
+            cur.execute(sql)
+            res = cur.fetchall()
+
+        p_list = [dict(r) for r in res]
+        self.render("index.html", problem_list=p_list)
+    
 
 class ProblemHandler(tornado.web.RequestHandler):
 
+    def prepare(self):
+        if self.request.headers.get("Content-Type", None) == "application/json":
+            self.j = json.loads(self.request.body)
+            self.j["content"] = json.dumps(self.j["content"])
+
     def get(self, p_id):
-        self.render(f"./problems/{p_id}.html", 
-                    is_problem_page=True)
-    
+        with closing(sqlite3.connect("pyplas.db")) as conn:
+            conn.row_factory = sqlite3.Row 
+            cur = conn.cursor()
+            sql = f"SELECT * FROM pages where id = ?"
+            cur.execute(sql, (p_id,))
+            page = cur.fetchone()
+
+            sql = f"SELECT id, title, status FROM pages"
+            cur.execute(sql)
+            progress = cur.fetchall()
+
+        page = {key: page[key] if key!="page" else json.loads(page[key]) for key in page.keys()}
+        progress = [dict(p) for p in progress]
+        self.render(f"./problem.html", conponent=page, progress=progress)
+
+    def post(self, p_id):
+        with closing(sqlite3.connect("pyplas.db")) as conn:
+            cur = conn.cursor()
+
+            sql = "INSERT INTO log(pid, qid, content, status) SELECT :pid, :qid, :content, :status " +\
+                  "WHERE NOT EXISTS(SELECT * FROM log WHERE qid=:qid AND status=1)"
+            cur.execute(sql, (self.j | {"pid": p_id}))
+            conn.commit()
+
+            sql = "SELECT qid FROM log where pid=? AND status=1"
+            cur.execute(sql, (p_id,))
+            logs = set([row[0] for row in cur.fetchall()])
+
+            sql = "SELECT page FROM pages where id=?"
+            cur.execute(sql, (p_id,))
+            page = json.loads(cur.fetchone()[0])
+
+            q_id_list = set([q_dict["qid"] for q_dict in page["body"] 
+                            if q_dict["type"]=="quesiton"])
+            
+            if len(q_id_list - logs) == 0:
+                sql = "UPDATE pages SET status=2 WHERE id=?"
+                cur.execute(sql, (p_id,))
+                conn.commit()
+
+        print(f"[LOG] SAVE QUESTION INFORMATION")
+        
+
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
 
     async def open(self, id: str):
@@ -54,7 +104,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         print(f"[LOG] WS received : {received_msg}")
         await self.exec.wait()
         _code = received_msg.get("code", None)
-        self.msg_meta = {"ops": received_msg.get("ops"), # ops: exec, test
+        self.msg_meta = {"qid": received_msg.get("qid"), # identify question node
                          "id": received_msg.get("id")} # id to identify node 
         self.has_error = False
         self.kc.execute(_code)

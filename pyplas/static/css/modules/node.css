@@ -1,0 +1,38 @@
+.node {
+    display: flex;
+    .node-side {
+        padding: 0rem 0.3rem;
+        text-align: right;
+        position: relative;
+        font-size: 0.7rem;
+        .node-number::before {
+            content: "[";
+        }
+        .node-number::after {
+            content: "]";
+        }
+    }
+    .node-prime {
+        width: 100%;
+        .node-code {
+            width: 100%;
+        }
+        .return-box {
+            position: relative;
+            padding: 0.1rem 0 1rem 0;
+            .node-sidebutton {
+              position: absolute;
+              transform: translate(-100%, -100%);
+              top: 0;
+              left: 0;
+            }
+            p {
+                padding: 0 1rem;
+                margin-bottom: 0rem;
+                white-space: pre-wrap;
+                font-size: 0.7rem;
+            }
+
+        }
+    }
+  }
