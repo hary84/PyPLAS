@@ -34,7 +34,6 @@ class ProblemHandler(tornado.web.RequestHandler):
     def prepare(self):
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.j = json.loads(self.request.body)
-            self.j["content"] = json.dumps(self.j["content"])
 
     def get(self, p_id):
         with closing(sqlite3.connect("pyplas.db")) as conn:
@@ -53,31 +52,64 @@ class ProblemHandler(tornado.web.RequestHandler):
         self.render(f"./problem.html", conponent=page, progress=progress)
 
     def post(self, p_id):
+        global  mult_km
+
+        print(f"[LOG] POST msg = {self.j}")
+        self.p_id = p_id
+        self.kernel_id = mult_km.start_kernel()
+        self.km = mult_km.get_kernel(self.kernel_id)
+        self.kc = self.km.client()
+        if (not self.kc.channels_running):
+            self.kc.start_channels()
+        self.scoring()
+        # ioloop.IOLoop.current().spawn_callback(self.scoring)
+        
+
+    def scoring(self):
+        code = ""
+        for key, value in self.j["code"].items():
+            code = code + f"\n#?node-id={key}?\n" + value
+        
         with closing(sqlite3.connect("pyplas.db")) as conn:
             cur = conn.cursor()
 
+            sql = "SELECT answers FROM answer WHERE pid=?"
+            cur.execute(sql, (self.p_id,))
+            answers = json.loads(cur.fetchone()[0])
+
+            test_code = answers[self.j["qid"]]
+            code = code + f"\n#?node-id=TESTING?\n" + test_code
+
+            print(f"CODE = {code}")
+            self.kc.execute(code)
+            has_error = False
+            while 1:
+                output = self.kc.iopub_channel.get_msg()
+                print(f"[LOG] scoring output msg_type: {output['msg_type']}")
+                if output["msg_type"] == "error":
+                    self.error = "\n".join(output["content"]["traceback"])
+                    has_error = True
+                if output["msg_type"] == "status" and output["content"]["execution_state"] == "idle":
+                    break
+
+            status = 1 if not has_error else 0
+
             sql = "INSERT INTO log(pid, qid, content, status) SELECT :pid, :qid, :content, :status " +\
                   "WHERE NOT EXISTS(SELECT * FROM log WHERE qid=:qid AND status=1)"
-            cur.execute(sql, (self.j | {"pid": p_id}))
+            cur.execute(sql, ({"pid": self.p_id,
+                               "qid": self.j["qid"],
+                               "content": json.dumps(self.j["code"]),
+                               "status": status}))
             conn.commit()
 
-            sql = "SELECT qid FROM log where pid=? AND status=1"
-            cur.execute(sql, (p_id,))
-            logs = set([row[0] for row in cur.fetchall()])
-
-            sql = "SELECT page FROM pages where id=?"
-            cur.execute(sql, (p_id,))
-            page = json.loads(cur.fetchone()[0])
-
-            q_id_list = set([q_dict["qid"] for q_dict in page["body"] 
-                            if q_dict["type"]=="quesiton"])
-            
-            if len(q_id_list - logs) == 0:
-                sql = "UPDATE pages SET status=2 WHERE id=?"
-                cur.execute(sql, (p_id,))
-                conn.commit()
-
-        print(f"[LOG] SAVE QUESTION INFORMATION")
+        print(f"[LOG] POST RESULT SEND")
+        self.write({"status": status,
+                    "error": self.error if has_error else None})
+        
+    def on_finish(self):
+        global mult_km
+        self.kc.stop_channels()
+        mult_km.shutdown_kernel(self.kernel_id)
         
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):

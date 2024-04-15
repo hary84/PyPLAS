@@ -17,10 +17,24 @@ $(function() {
 
     $(".btn-testing").on("click", function() {
         kh.kernelInterrupt()
+        var code = {}
         $(this).parents(".question").find(".node-code").each(function() {
-            kh.execute_task_q.push($(this).parents(".node"))
+            var id = $(this).attr("id")
+            code[id] = ace.edit(id).getValue()
         })
-        kh.executeCode()
+        $.ajax({
+            url: window.location.href,
+            type: "POST",
+            contentType: "application/json",
+            dataType: "json",
+            data: JSON.stringify({"qid": $(this).parents(".question").attr("q-id"), 
+                                  "code": code, 
+                                  "kernel_id": kh.kernel_id}),
+            success: (data) => {
+                console.log("SAVE YOUR ANSWER")
+                console.log(data)
+            }
+        })
     })
 
     $(".node").on("click", function() {
@@ -79,32 +93,13 @@ function renderMessage(kh, newValue) {
                 var error_msg = content["traceback"].join("\n")
                 _renderResult(error_msg, $return_form, "error")
                 kh.running = false
-                kh.execute_task_q = []
+                kh.execute_task_q = [kh.execute_task_q[0]]
                 break;
             case "exec-end-sig":
                 kh.running = false
                 kh.execute_task_q.shift()
                 if (kh.execute_task_q[0]) {
                     kh.executeCode()
-                }
-                if($(`#${newValue.id}`).hasClass("is_testcode")) {
-                    var content = {}
-                    $(`div[q-id=${newValue.qid}]`).find(".node-code").each(function() {
-                        var editor_id = $(this).attr("id")
-                        content[editor_id] = ace.edit(editor_id).getValue()
-                    })
-                    $.ajax({
-                        url: window.location.href,
-                        type: "POST",
-                        contentType: "application/json",
-                        dataType: "json",
-                        data: JSON.stringify({"qid": newValue.qid, 
-                                              "content": content, 
-                                              "status": !newValue.has_error}),
-                        success: (data) => {
-                            console.log("SEND YOUR ANSWER")
-                        }
-                    })
                 }
                 break;
         }
