@@ -8,11 +8,12 @@ import tornado.websocket
 import tornado.ioloop as ioloop
 import os  
 import json
-from jupyter_client import MultiKernelManager, KernelManager, KernelClient
+from jupyter_client import AsyncMultiKernelManager, AsyncKernelManager, AsyncKernelClient
 from jupyter_client.multikernelmanager import DuplicateKernelError
+from jupyter_client.utils import run_sync
 import uimodules
 
-mult_km = MultiKernelManager()
+mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
 
 class MainHandler(tornado.web.RequestHandler):
@@ -32,6 +33,7 @@ class MainHandler(tornado.web.RequestHandler):
 class ProblemHandler(tornado.web.RequestHandler):
 
     def prepare(self):
+        self.kc = None 
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.j = json.loads(self.request.body)
 
@@ -51,21 +53,20 @@ class ProblemHandler(tornado.web.RequestHandler):
         progress = [dict(p) for p in progress]
         self.render(f"./problem.html", conponent=page, progress=progress)
 
-    def post(self, p_id):
+    async def post(self, p_id):
         global  mult_km
 
         print(f"[LOG] POST msg = {self.j}")
         self.p_id = p_id
-        self.kernel_id = mult_km.start_kernel()
-        self.km = mult_km.get_kernel(self.kernel_id)
-        self.kc = self.km.client()
+        self.kernel_id = await mult_km.start_kernel()
+        self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
+        self.kc: AsyncKernelClient = self.km.client()
         if (not self.kc.channels_running):
             self.kc.start_channels()
-        self.scoring()
-        # ioloop.IOLoop.current().spawn_callback(self.scoring)
+        await self.scoring()
         
 
-    def scoring(self):
+    async def scoring(self):
         code = ""
         for key, value in self.j["code"].items():
             code = code + f"\n#?node-id={key}?\n" + value
@@ -84,7 +85,10 @@ class ProblemHandler(tornado.web.RequestHandler):
             self.kc.execute(code)
             has_error = False
             while 1:
-                output = self.kc.iopub_channel.get_msg()
+                try:
+                    output = await self.kc.get_iopub_msg()
+                except:
+                    break
                 print(f"[LOG] scoring output msg_type: {output['msg_type']}")
                 if output["msg_type"] == "error":
                     self.error = "\n".join(output["content"]["traceback"])
@@ -106,10 +110,8 @@ class ProblemHandler(tornado.web.RequestHandler):
         self.write({"status": status,
                     "error": self.error if has_error else None})
         
-    def on_finish(self):
-        global mult_km
         self.kc.stop_channels()
-        mult_km.shutdown_kernel(self.kernel_id)
+        await mult_km.shutdown_kernel(self.kernel_id)
         
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
@@ -121,15 +123,11 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         self.exec = tornado.locks.Event()
         self.exec.set()
         await mult_km.updated.wait()
-        self.km: KernelManager = mult_km.get_kernel(self.kernel_id)
-        self.kc: KernelClient = self.km.client()
+        self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
+        self.kc: AsyncKernelClient = self.km.client()
         if not self.kc.channels_running:
             self.kc.start_channels()
         print(f"[LOG] WS is connecting with {self.kernel_id}")
-
-        self.pcallback = ioloop.PeriodicCallback(self.messaging,
-                                                 callback_time=5) # ms
-
 
     async def on_message(self, received_msg: dict):
         received_msg = json.loads(received_msg)
@@ -141,28 +139,27 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         self.has_error = False
         self.kc.execute(_code)
         self.exec.clear()
-        self.pcallback.start()
+        ioloop.IOLoop.current().spawn_callback(self.messaging)
 
-
-    def messaging(self):
-        print("periodic callback")
-        _try_limit = 10
-        for _ in range(_try_limit):
+    async def messaging(self):
+        print("=====spawn callback=====")
+        while 1:
             try:
-                outputs  = self.kc.iopub_channel.get_msg(timeout=0.5)
+                output = await self.kc.get_iopub_msg()
             except:
+                # ioloop.IOLoop.current().spawn_callback(self.messaging2)
                 break
-            print(f"[LOG] kernel outputs msg-type: {outputs['msg_type']}")
-            if outputs["msg_type"] == "error":
+
+            print("get msg = " , output["msg_type"])
+            if output["msg_type"] == "error":
                 self.has_error = True
-            if outputs["msg_type"] == "status" and outputs["content"]['execution_state'] == "idle":
-                self.pcallback.stop()
+            if output["msg_type"] == "status" and output["content"]['execution_state'] == "idle":
                 self.write_message(json.dumps({"msg_type": "exec-end-sig", 
-                                               "has_error": self.has_error} 
-                                               | self.msg_meta))
+                                                "has_error": self.has_error} 
+                                                | self.msg_meta))
                 self.exec.set()
                 break
-            self.write_message(json.dumps(outputs | self.msg_meta , default=self._datetime_encoda))
+            self.write_message(json.dumps(output | self.msg_meta , default=self._datetime_encoda))
 
     def _datetime_encoda(self, obj):
         if isinstance(obj, (datetime, date)):
@@ -170,8 +167,6 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
     
     def on_close(self):
         print("[LOG] websocket is closing")
-        if self.pcallback.is_running():
-            self.pcallback.stop()
 
 
 class KernelHandler(tornado.web.RequestHandler):
@@ -197,7 +192,7 @@ class KernelHandler(tornado.web.RequestHandler):
             self.write({"status": "success",
                         "is_alive": kernel_ids})
 
-    def post(self, k_id=None):
+    async def post(self, k_id=None):
         """
         カーネルを起動する.
         k_idが存在する場合, 
@@ -210,17 +205,20 @@ class KernelHandler(tornado.web.RequestHandler):
             action = self.get_query_argument(name="action", default=None)
             if action == "interrupt":
                 print(f"[KernelHandler-post] Interrupt kernel")
-                mult_km.interrupt_kernel(self.kernel_id)
+                km = mult_km.get_kernel(self.kernel_id)
+                await km.interrupt_kernel()
                 self.write({"status": "success"})
+
             elif action == "restart":
                 print(f"[KernelHandler-post] Restart kernel")
-                mult_km.shutdown_kernel(kernel_id=self.kernel_id)
-                mult_km.start_kernel(kernel_id=self.kernel_id)
+                await mult_km.shutdown_kernel(kernel_id=self.kernel_id)
+                await mult_km.start_kernel(kernel_id=self.kernel_id)
                 self.write({"status": "success"})
+
             elif action is None:
                 print(f"[KernelHandler-post] Start kernel with {self.kernel_id}")
                 try:
-                    mult_km.start_kernel(kernel_id=self.kernel_id)
+                    await mult_km.start_kernel(kernel_id=self.kernel_id)
                 except DuplicateKernelError as e:
                     print(e)
                     self.write({"status": "error",
@@ -229,22 +227,22 @@ class KernelHandler(tornado.web.RequestHandler):
                     self.write({"status": "success",
                                 "kernel_id": self.kernel_id})
         else:
-            self.kernel_id = mult_km.start_kernel()
+            self.kernel_id = await mult_km.start_kernel()
             print(f"[KernelHandler-post] Create new kernel({self.kernel_id})")
             self.write({"status": "success",
                         "kernel_id": self.kernel_id})
      
-    def delete(self, k_id=None):
+    async def delete(self, k_id=None):
         """
         すべてのカーネルを停止する.
         k_idが存在する場合, そのカーネルのみを停止する.
         """
         if k_id:
             print(f"[KernelHandler-delete] Stop kernel({k_id})")
-            mult_km.shutdown_kernel(k_id, now=True)
+            await mult_km.shutdown_kernel(k_id, now=True)
             self.write({"status": "success"})
         else:
-            mult_km.shutdown_all(now=True)
+            await mult_km.shutdown_all(now=True)
             self.write({"status": "success"})   
             
     def on_finish(self):
@@ -273,13 +271,13 @@ async def main():
     shutdown_event = asyncio.Event()
 
     def shutdown_server(signum, frame):
-        mult_km.shutdown_all()
+        run_sync(mult_km._async_shutdown_all)()
         shutdown_event.set()
+        print("[LOG] Server has been safely shut down.")
 
     signal.signal(signal.SIGTERM, shutdown_server)
     signal.signal(signal.SIGINT, shutdown_server)
     await shutdown_event.wait()
-    print("[LOG] Server has been safely shut down.")
 
     
 if __name__ == "__main__":

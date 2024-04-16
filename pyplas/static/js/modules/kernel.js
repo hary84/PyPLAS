@@ -76,10 +76,11 @@ class KernelHandler {
     }
 
     kernelInterrupt = () => {
+        console.log("send kernel interrupt signal")
         $.ajax({
             url: `${window.location.origin}/kernel/${this.kernel_id}?action=interrupt`,
             type: "POST",
-            async: false,
+            async: true,
             success: (data) => {
                 console.log("Kernel Interrupted")
                 this.running = false
