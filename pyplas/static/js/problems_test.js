@@ -17,27 +17,33 @@ $(function() {
 
     $(".btn-testing").on("click", function() {
         kh.kernelInterrupt()
-        var code = {}
+        var code = []
         var $question = $(this).parents(".question")
         $question.find(".node-code").each(function() {
             var id = $(this).attr("id")
-            code[id] = ace.edit(id).getValue()
+            code.push(ace.edit(id).getValue())
         })
+        $(".btn-testing").addClass("disabled")
         $.ajax({
             url: window.location.href,
             type: "POST",
             contentType: "application/json",
             dataType: "json",
             data: JSON.stringify({"qid": $question.attr("q-id"), 
-                                  "code": code, 
-                                  "kernel_id": kh.kernel_id}),
+                                  "code": code,
+                                  "kernel_id": kh.test_kernel_id}),
             success: (data) => {
                 $toast = $question.find(".for-toast")
                 $toast.empty()
                 $toast.append(data.html.replace(/\x1B[[;\d]+m/g, ""))
                 $toast.find(".toast").toast("show")
+                $(".btn-testing").removeClass("disabled")
             }
         })
+    })
+
+    $(".btn-cancel").on("click", function() {
+        kh.kernelInterrupt(kh.test_kernel_id)
     })
 
     $(".node").on("click", function() {
@@ -95,7 +101,6 @@ function renderMessage(kh, newValue) {
             case "error":
                 var error_msg = content["traceback"].join("\n")
                 _renderResult(error_msg, $return_form, "error")
-                kh.running = false
                 kh.execute_task_q = [kh.execute_task_q[0]]
                 break;
             case "exec-end-sig":

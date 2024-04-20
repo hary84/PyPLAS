@@ -55,20 +55,29 @@ class ProblemHandler(tornado.web.RequestHandler):
 
     async def post(self, p_id):
         global  mult_km
-
         self.p_id = p_id
-        self.kernel_id = await mult_km.start_kernel()
-        self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
+        try:
+            self.kernel_id = await mult_km.start_kernel(kernel_id=self.j["kernel_id"])
+            self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
+        except (DuplicateKernelError, KeyError) as e:
+            self._return_error_msg(e)
+            return 
         self.kc: AsyncKernelClient = self.km.client()
         if (not self.kc.channels_running):
             self.kc.start_channels()
         await self.scoring()
         
+    def _return_error_msg(self, e):
+        prop = {"result_status": "status-error",
+                "result_content": str(e)}
+        html = tornado.escape.to_unicode(
+            self.render_string("./modules/toast.html", **prop))
+        self.write({"html": html})
 
     async def scoring(self):
         code = ""
-        for key, value in self.j["code"].items():
-            code = code + f"\n" + value
+        for value in self.j["code"]:
+            code = code + "\n" + value
         
         with closing(sqlite3.connect("pyplas.db")) as conn:
             cur = conn.cursor()
@@ -76,12 +85,11 @@ class ProblemHandler(tornado.web.RequestHandler):
             sql = "SELECT answers FROM answer WHERE pid=?"
             cur.execute(sql, (self.p_id,))
             answers = json.loads(cur.fetchone()[0])
-
-            test_code = answers[self.j["qid"]]
-            code = code + f"\n" + test_code
-
+            test_code = answers[self.j["qid"]].get("code", None)
+            code = code + "\n" + test_code
             self.kc.execute(code)
-            has_error = False
+
+            status = 1
             while 1:
                 try:
                     output = await self.kc.get_iopub_msg()
@@ -90,17 +98,15 @@ class ProblemHandler(tornado.web.RequestHandler):
                 print(f"[LOG] scoring output msg_type: {output['msg_type']}")
                 if output["msg_type"] == "error":
                     error = "\n".join(output["content"]["traceback"])
-                    has_error = True
+                    status = 0
                 if output["msg_type"] == "status" and output["content"]["execution_state"] == "idle":
                     break
-
-            status = 1 if not has_error else 0
 
             sql = "INSERT INTO log(pid, qid, content, status) SELECT :pid, :qid, :content, :status " +\
                   "WHERE NOT EXISTS(SELECT * FROM log WHERE qid=:qid AND status=1)"
             cur.execute(sql, ({"pid": self.p_id,
                                "qid": self.j["qid"],
-                               "content": json.dumps(self.j["code"]),
+                               "content": str(self.j["code"]),
                                "status": status}))
             conn.commit()
 
@@ -169,9 +175,8 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
     
-    def on_close(self):
+    async def on_close(self):
         print("[LOG] websocket is closing")
-
 
 class KernelHandler(tornado.web.RequestHandler):
 

@@ -2,6 +2,7 @@
 class KernelHandler {
     constructor() {
         this.setUpKernel()
+        this.test_kernel_id = crypto.randomUUID()
     }
     
     setUpKernel = () => {
@@ -75,15 +76,15 @@ class KernelHandler {
         })
     }
 
-    kernelInterrupt = () => {
+    kernelInterrupt = (id) => {
         console.log("send kernel interrupt signal")
+        var kernel_id = (id) ? id : this.kernel_id
         $.ajax({
-            url: `${window.location.origin}/kernel/${this.kernel_id}?action=interrupt`,
+            url: `${window.location.origin}/kernel/${kernel_id}?action=interrupt`,
             type: "POST",
             async: true,
             success: (data) => {
                 console.log("Kernel Interrupted")
-                this.running = false
             }
         })
     }

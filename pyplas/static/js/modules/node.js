@@ -1,3 +1,4 @@
+
 document.querySelectorAll(".node-code").forEach(function(elem) {
     var id = crypto.randomUUID()
     const lh = 1.3
@@ -26,4 +27,9 @@ document.querySelectorAll(".node-code").forEach(function(elem) {
         }
         editor.resize()
     })
+})
+
+document.querySelectorAll(".node").forEach(function(elem) {
+    var id = crypto.randomUUID()
+    elem.setAttribute("node-id", id)
 })
