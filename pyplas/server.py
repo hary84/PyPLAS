@@ -56,7 +56,6 @@ class ProblemHandler(tornado.web.RequestHandler):
     async def post(self, p_id):
         global  mult_km
 
-        print(f"[LOG] POST msg = {self.j}")
         self.p_id = p_id
         self.kernel_id = await mult_km.start_kernel()
         self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
@@ -69,7 +68,7 @@ class ProblemHandler(tornado.web.RequestHandler):
     async def scoring(self):
         code = ""
         for key, value in self.j["code"].items():
-            code = code + f"\n#?node-id={key}?\n" + value
+            code = code + f"\n" + value
         
         with closing(sqlite3.connect("pyplas.db")) as conn:
             cur = conn.cursor()
@@ -79,9 +78,8 @@ class ProblemHandler(tornado.web.RequestHandler):
             answers = json.loads(cur.fetchone()[0])
 
             test_code = answers[self.j["qid"]]
-            code = code + f"\n#?node-id=TESTING?\n" + test_code
+            code = code + f"\n" + test_code
 
-            print(f"CODE = {code}")
             self.kc.execute(code)
             has_error = False
             while 1:
@@ -91,7 +89,7 @@ class ProblemHandler(tornado.web.RequestHandler):
                     break
                 print(f"[LOG] scoring output msg_type: {output['msg_type']}")
                 if output["msg_type"] == "error":
-                    self.error = "\n".join(output["content"]["traceback"])
+                    error = "\n".join(output["content"]["traceback"])
                     has_error = True
                 if output["msg_type"] == "status" and output["content"]["execution_state"] == "idle":
                     break
@@ -107,8 +105,14 @@ class ProblemHandler(tornado.web.RequestHandler):
             conn.commit()
 
         print(f"[LOG] POST RESULT SEND")
-        self.write({"status": status,
-                    "error": self.error if has_error else None})
+
+        prop = {"result_status": "status-success" if status else "status-error",
+                "result_content": "Complete" if status else error}
+        
+        html = tornado.escape.to_unicode(
+            self.render_string("./modules/toast.html", **prop)
+        )
+        self.write({"html": html})
         
         self.kc.stop_channels()
         await mult_km.shutdown_kernel(self.kernel_id)

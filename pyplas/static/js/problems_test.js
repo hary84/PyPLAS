@@ -18,7 +18,8 @@ $(function() {
     $(".btn-testing").on("click", function() {
         kh.kernelInterrupt()
         var code = {}
-        $(this).parents(".question").find(".node-code").each(function() {
+        var $question = $(this).parents(".question")
+        $question.find(".node-code").each(function() {
             var id = $(this).attr("id")
             code[id] = ace.edit(id).getValue()
         })
@@ -27,12 +28,14 @@ $(function() {
             type: "POST",
             contentType: "application/json",
             dataType: "json",
-            data: JSON.stringify({"qid": $(this).parents(".question").attr("q-id"), 
+            data: JSON.stringify({"qid": $question.attr("q-id"), 
                                   "code": code, 
                                   "kernel_id": kh.kernel_id}),
             success: (data) => {
-                console.log("SAVE YOUR ANSWER")
-                console.log(data)
+                $toast = $question.find(".for-toast")
+                $toast.empty()
+                $toast.append(data.html.replace(/\x1B[[;\d]+m/g, ""))
+                $toast.find(".toast").toast("show")
             }
         })
     })
