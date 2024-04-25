@@ -1,0 +1,16 @@
+
+.editor-toolbar {
+    font-size: 0.7rem;
+    padding: 4px 6px;
+    button {
+        height: initial;
+    }
+}
+
+.add-buttons {
+    display: none;
+}
+
+.add-buttons:has(+ .p-content:empty) {
+    display: flex;
+}

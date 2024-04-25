@@ -1,0 +1,89 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+<link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
+<script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+{% end %}
+
+{% block head-nav-li %}
+{% end %}
+
+{% block side-content %}
+<p class="fs-5 fw-bold border-bottom px-2">SideMenu</p>
+<div class="mb-3" id="kernel-ops">
+    <div class="list-group list-group-flush">
+        <a class="list-group-item list-group-item-action text-decoration-none text-dark btn-restart">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            Restart
+        </a>
+        <a class="list-group-item list-group-item-action text-decoration-none text-danger btn-interrupt">
+            <i class="bi bi-stop-circle"></i>
+            Interrupt
+        </a>
+        <a class="list-group-item list-group-item-action text-decoration-none text-success" id="btn-save">
+            <i class="bi bi-save"></i>
+            Save
+        </a>
+    </div>
+</div>
+{% end %}
+
+{% block main %}
+<main class="col px-3">
+    <div class="my-3" id="summary">
+        <p class="fs-3 border-bottom border-dark ps-1">Create New Problem</p>
+        <div class="ps-3">
+            <nav>
+                <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                  <button class="nav-link active" id="nav-summary-tab" data-bs-toggle="tab" data-bs-target="#navSummary" type="button" role="tab" aria-controls="navSummary" aria-selected="true">Summary</button>
+                  <button class="nav-link" id="nav-data-tab" data-bs-toggle="tab" data-bs-target="#navData" type="button" role="tab" aria-controls="navData" aria-selected="false">Data Source</button>
+                  <button class="nav-link" id="nav-env-tab" data-bs-toggle="tab" data-bs-target="#navEnv" type="button" role="tab" aria-controls="navEnv" aria-selected="false">Environment</button>
+                </div>
+            </nav>
+            <div class="tab-content border bg-light" id="nav-tabContent">
+                <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
+                    <textarea class="MD" name="summary"></textarea>
+                </div>
+                <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
+                    <textarea class="MD" name="data"></textarea>
+                </div>
+                <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
+                    <textarea class="MD" name="env"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="sourceCode">
+        <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
+        <div class="add-buttons justify-content-center">
+            <button type="button" class="btn btn-secondary btn-addMD mx-2"> + add Markdown</button>
+            <button type="button" class="btn btn-success btn-addCode mx-2"> + add Code</button>
+            <button type="button" class="btn btn-danger btn-addQ mx-2"> + add Question</button>
+        </div>
+        <div class="p-content"></div>
+    </div>
+</main>
+<div class="col-xxl-2 bg-white border-start">
+    <div class="sticky-top d-none d-xxl-block" id="sideItem">
+        <p class="fw-bold border-bottom mb-1 mt-3">Items</p>
+        <nav id="navbar-example3" class="flex-column align-items-stretch pe-4">
+            <nav class="nav nav-pills flex-column">
+                <a class="nav-link" href="#item-1">Item 1</a>
+                <nav class="nav nav-pills flex-column">
+                    <a class="nav-link ms-3 my-1" href="#item-1-1">Item 1-1</a>
+                    <a class="nav-link ms-3 my-1" href="#item-1-2">Item 1-2</a>
+                </nav>
+                <a class="nav-link" href="#item-2">Item 2</a>
+                <a class="nav-link" href="#item-3">Item 3</a>
+                <nav class="nav nav-pills flex-column">
+                    <a class="nav-link ms-3 my-1" href="#item-3-1">Item 3-1</a>
+                    <a class="nav-link ms-3 my-1" href="#item-3-2">Item 3-2</a>
+                </nav>
+            </nav>
+        </nav>
+    </div>
+</div>
+
+<script src="{{ static_url('js/create_test.js') }}"></script>
+{% end %}

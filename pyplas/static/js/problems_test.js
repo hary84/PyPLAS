@@ -20,8 +20,7 @@ $(function() {
         var code = []
         var $question = $(this).parents(".question")
         $question.find(".node-code").each(function() {
-            var id = $(this).attr("id")
-            code.push(ace.edit(id).getValue())
+            code.push(ace.edit($(this)[0]).getValue())
         })
         $(".btn-testing").addClass("disabled")
         $.ajax({
@@ -85,8 +84,8 @@ function setExecuteAnimation(kh, newValue) {
 function renderMessage(kh, newValue) {
     if (newValue) {
         var content = newValue.content
-        var $return_form = $(`#${newValue.id}`).parent().find(".return-box")
-
+        var $return_form = $(`div[node-id='${newValue.id}']`).find(".return-box")
+        console.log(newValue.id)
         switch (newValue.msg_type) {
             case "execute_result":
                 _renderResult(content["data"]["text/plain"], $return_form)

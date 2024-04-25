@@ -3,6 +3,7 @@ from contextlib import closing
 from datetime import date, datetime
 import signal
 import sqlite3
+import uuid
 import tornado 
 import tornado.websocket 
 import tornado.ioloop as ioloop
@@ -180,7 +181,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
 
 class KernelHandler(tornado.web.RequestHandler):
 
-    def initialize(self):
+    def prepare(self):
         global mult_km
         mult_km.updated.clear()
 
@@ -257,6 +258,40 @@ class KernelHandler(tornado.web.RequestHandler):
     def on_finish(self):
         mult_km.updated.set()
 
+class ProblemCreateHandler(tornado.web.RequestHandler):
+
+    def prepare(self):
+        self.action = self.get_query_argument("action", None)
+
+    def get(self, p_id=None):
+        if p_id is None:
+            self.write("in preparation")
+        else:
+            self.render("create.html")
+
+    def post(self, p_id=None):
+        if p_id is None:
+            if self.action == "addMD":
+                self.write({"html": self._strfhtml("./modules/explain_form.html")})
+            elif self.action == "addCode":
+                self.write({"html": self._strfhtml("./modules/node.html",
+                                                    bottom_bar=True,
+                                                    added_class=None,
+                                                    code="")})
+            elif self.action == "addQ":
+                self.write({"html": self._strfhtml("./modules/question.html",
+                                                   qid=uuid.uuid4(),
+                                                   conponent={})})
+            else:
+                self.write_error()
+        else:
+            self.write("in preparation")
+
+    def _strfhtml(self, path, **kwargs):
+        return tornado.escape.to_unicode(
+            self.render_string(path, **kwargs)
+        )
+
 
 def make_app():
     return tornado.web.Application([
@@ -265,6 +300,8 @@ def make_app():
         (r'/ws/([\w-]+)/?', ExecutionHandler),
         (r"/kernel/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/?", KernelHandler),
+        (r"/create/?", ProblemCreateHandler),
+        (r"/create/(?P<p_id>[\w-]+)/?", ProblemCreateHandler)
     ],
     template_path=os.path.join(os.getcwd(), "templates"),
     static_path=os.path.join(os.getcwd(), "static"),

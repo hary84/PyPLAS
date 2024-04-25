@@ -22,12 +22,11 @@ class KernelHandler {
         } else {
             this.kernelStart()
         }
-        this.ws = new WebSocket(`ws://${window.location.host}/ws/${this.kernel_id}`)
 
+        this.ws = new WebSocket(`ws://${window.location.host}/ws/${this.kernel_id}`)
         this.ws.onopen = () => {
             console.log("[LOG] ws connecting ...")
         }
-
         this.ws.onmessage = (event) => {
             var data = JSON.parse(event.data)
             this.msg = data
@@ -92,12 +91,12 @@ class KernelHandler {
     executeCode = () => {
         this.running = true
         var $node = this.execute_task_q[0]
-        var id = $node.find(".node-code").attr("id")
+        var id = $node.attr("node-id")
         $node.find(".exec-res").remove()
         var qid = ($node.parents(".question").length) ? $node.parents(".question").attr("q-id") : ""
         var msg = JSON.stringify({"id": id, 
                                   "qid": qid,
-                                  "code": ace.edit(id).getValue()})
+                                  "code": ace.edit($node.find('.node-code')[0]).getValue()})
         this.ws.send(msg)
     }
 

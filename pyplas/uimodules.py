@@ -17,9 +17,7 @@ class Node(UIModule):
 
     def javascript_files(self) :
         return ["js/modules/node.js"]
-    
-    def css_files(self):
-        return ["css/modules/node.css"]
+
 
 class Explain(UIModule):
     def render(self, content:str="", **kwargs) -> str:
