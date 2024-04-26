@@ -1,4 +1,4 @@
-<div class="card my-2 ms-3 me-2 question position-relative" q-id="{{ qid }}">
+<div class="node question card my-2 ms-3 me-2 position-relative" q-id="{{ qid }}">
 	<div class="for-toast"></div>
     <div class="card-header bg-success-subtle">
       Question
@@ -8,7 +8,7 @@
         {% if d["type"] == "explain" %}
           {% module Explain(**d) %}
         {% elif d["type"] == "code" %}
-          {% module Node(**d) %}
+          {% module Node(allow_add=editable, **d) %}
         {% end %}
       {% end %}
     </div>
@@ -16,4 +16,7 @@
       <button type="button" class="btn btn-success btn-testing">Answer</button>
       <button type="button" class="btn btn-danger btn-cancel">Cancel</button>
     </div>
+    {% if allow_add %}
+      {% module Template('./modules/node-control.html') %}
+    {% end %}
 </div>

@@ -1,3 +1,6 @@
+.row {
+    height: 100vh;
+}
 
 .editor-toolbar {
     font-size: 0.7rem;
@@ -7,10 +10,24 @@
     }
 }
 
-.add-buttons {
-    display: none;
+.p-content:has(> :is(.explain, .code, .question)) {
+    .node-control {
+        height: 1rem;
+        button {
+            display: none;
+            --bs-btn-padding-x: 0.5rem;
+            --bs-btn-font-size: 0.6rem;
+            --bs-btn-padding-y: 0.1rem;
+        }
+    }
+    .node-control:hover {
+        button {
+            display: inline-block;
+        }
+    }
 }
 
-.add-buttons:has(+ .p-content:empty) {
+.node-control {
     display: flex;
 }
+

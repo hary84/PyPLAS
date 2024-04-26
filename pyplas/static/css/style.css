@@ -67,7 +67,7 @@
 }
 
 /* code node */
-.node {
+.code {
   display: flex;
   .node-side {
       padding: 0rem 0.3rem;

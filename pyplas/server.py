@@ -176,7 +176,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
     
-    async def on_close(self):
+    def on_close(self):
         print("[LOG] websocket is closing")
 
 class KernelHandler(tornado.web.RequestHandler):
@@ -274,14 +274,12 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
             if self.action == "addMD":
                 self.write({"html": self._strfhtml("./modules/explain_form.html")})
             elif self.action == "addCode":
-                self.write({"html": self._strfhtml("./modules/node.html",
-                                                    bottom_bar=True,
-                                                    added_class=None,
-                                                    code="")})
+                self.write({"html": uimodules.strfmodule(uimodules.Node(self),
+                                                         allow_add=True)})
             elif self.action == "addQ":
-                self.write({"html": self._strfhtml("./modules/question.html",
-                                                   qid=uuid.uuid4(),
-                                                   conponent={})})
+                self.write({"html": uimodules.strfmodule(uimodules.Question(self),
+                                                         qid=uuid.uuid4(),
+                                                         allow_add=True,)})
             else:
                 self.write_error()
         else:

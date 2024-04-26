@@ -1,4 +1,4 @@
-<div class="node p-2">
+<div class="code node p-2">
     <div class="node-side">
         <div class="node-number"></div>
     </div>
@@ -11,8 +11,11 @@
                 </a>
                 <div class="spinner-border spinner-border-sm d-none executing" role="status">
                     <span class="visually-hidden">Loading...</span>
-                  </div>
+                </div>
             </div>
         </div>            
+        {% if allow_add %}
+            {% module Template('./modules/node-control.html') %}
+        {% end %}
     </div>
 </div>

@@ -1,5 +1,5 @@
 
-document.querySelectorAll(".node").forEach(function(elem) {
+document.querySelectorAll(".code").forEach(function(elem) {
     var id = crypto.randomUUID()
     elem.setAttribute("node-id", id)
 })

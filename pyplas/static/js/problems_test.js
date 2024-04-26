@@ -45,7 +45,7 @@ $(function() {
         kh.kernelInterrupt(kh.test_kernel_id)
     })
 
-    $(".node").on("click", function() {
+    $(".code").on("click", function() {
         $current_node = $(this)
     })
 
@@ -57,7 +57,7 @@ $(function() {
         }
     })
     $(".btn-exec").on("click", function() {
-        $current_node = $(this).parents(".node")
+        $current_node = $(this).parents(".code")
         kh.execute($current_node)
     })
 
@@ -75,7 +75,7 @@ function setExecuteAnimation(kh, newValue) {
         $side.children(".btn-exec").addClass("d-none")
         $side.children(".executing").removeClass("d-none")
     } else {
-        $side = $(".node").find(".node-sidebutton")
+        $side = $(".code").find(".node-sidebutton")
         $side.children(".btn-exec").removeClass("d-none")
         $side.children(".executing").addClass("d-none")
     }

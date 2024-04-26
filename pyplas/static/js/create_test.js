@@ -5,18 +5,24 @@ $(function() {
     })
 
     $(".btn-addMD").on("click", function(){
-        var $append_tail = $(this).parent()
+        var $append_tail = $(this).parents(".node")
         addMD($append_tail)
     })
 
     $(".btn-addCode").on("click", function() {
-        var $append_tail = $(this).parent()
+        var $append_tail = $(this).parents(".node")
         addCode($append_tail)
     })
 
     $(".btn-addQ").on("click", function() {
-        var $append_tail = $(this).parent()
+        var $append_tail = $(this).parents(".node")
         addQ($append_tail)
+    })
+
+    $(".btn-delU").on("click", function() {
+        console.log($(this))
+        var $target = $(this).parents(".node")
+        $target.remove()
     })
 
 })
@@ -28,8 +34,7 @@ function addMD($append_tail) {
         async: true,
     }).done((data) => {
         $elem = $(data.html)
-        // $append_tail.after($elem)
-        $(".p-content").append($elem)
+        $append_tail.after($elem)
         registerEasyMDE($elem.find(".MD")[0])
     })
 }

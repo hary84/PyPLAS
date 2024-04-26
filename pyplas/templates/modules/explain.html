@@ -1,3 +1,6 @@
-<div class="explain py-2 ps-4">
+<div class="explain node py-2 ps-4">
     {% raw content %}
+    {% if allow_add %}
+        {% module Template('./modules/node-control.html') %}
+    {% end %}
 </div>
