@@ -1,0 +1,23 @@
+<div class="mde">
+    <div class="toolbar">
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedBold($(this))"><i class="bi bi-type-bold"></i></button>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedItalic($(this))"><i class="bi bi-type-italic"></i></button>
+            <div class="vr mx-2 my-1"></div>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedLink($(this))"><i class="bi bi-link-45deg"></i></button>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedImg($(this))"><i class="bi bi-card-image"></i></button>
+            <div class="vr mx-2 my-1"></div>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="addFillInBlankProblem($(this))"><i class="bi bi-input-cursor"></i></button>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="addSelectionProblem($(this))"><i class="bi bi-list-check"></i></button>
+            <div class="vr mx-2 my-1"></div>
+            <button type="button" class="btn btn-outline-dark btn-sm btn-preview" onclick="togglePreview($(this))" data-bs-toggle="button">
+                <i class="bi bi-eye"></i>
+                <i class="bi bi-eye-slash"></i>
+            </button>
+        </div>
+    </div>
+    <div class="mde-container">
+        <div class="node-mde"></div>
+        <div class="for-preview"></div>
+    </div>
+</div>

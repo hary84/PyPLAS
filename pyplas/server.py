@@ -277,9 +277,17 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
                 self.write({"html": uimodules.strfmodule(uimodules.Node(self),
                                                          allow_add=True)})
             elif self.action == "addQ":
+                _type = self.get_query_argument("type", "html")
+                if _type == "html":
+                    mode = 1
+                elif _type == "code":
+                    mode = 2
+                else:
+                    mode = 1
                 self.write({"html": uimodules.strfmodule(uimodules.Question(self),
-                                                         qid=uuid.uuid4(),
-                                                         allow_add=True,)})
+                                                        qid=uuid.uuid4(),
+                                                        allow_add=True,
+                                                        mode=mode)})
             else:
                 self.write_error()
         else:

@@ -1,30 +1,8 @@
 
 $(function() {
-    document.querySelectorAll(".MD").forEach(function(elem) {
-        registerEasyMDE(elem)
+    document.querySelectorAll(".node-mde").forEach(function(elem) {
+        registerAceMDE(elem)
     })
-
-    $(".btn-addMD").on("click", function(){
-        var $append_tail = $(this).parents(".node")
-        addMD($append_tail)
-    })
-
-    $(".btn-addCode").on("click", function() {
-        var $append_tail = $(this).parents(".node")
-        addCode($append_tail)
-    })
-
-    $(".btn-addQ").on("click", function() {
-        var $append_tail = $(this).parents(".node")
-        addQ($append_tail)
-    })
-
-    $(".btn-delU").on("click", function() {
-        console.log($(this))
-        var $target = $(this).parents(".node")
-        $target.remove()
-    })
-
 })
 
 function addMD($append_tail) {
@@ -35,7 +13,7 @@ function addMD($append_tail) {
     }).done((data) => {
         $elem = $(data.html)
         $append_tail.after($elem)
-        registerEasyMDE($elem.find(".MD")[0])
+        registerAceMDE($elem.find(".node-mde")[0])
     })
 }
 
@@ -51,13 +29,28 @@ function addCode($append_tail) {
     })
 }
 
-function addQ($append_tail) {
+function addQ($append_tail, type) {
     $.ajax({
-        url: `${window.location.origin}/create?action=addQ`,
+        url: `${window.location.origin}/create?action=addQ&type=${type}`,
         type: "POST",
         async: true
     }).done((data) => {
         $elem = $(data.html)
         $append_tail.after($elem)
+        if (type == "code") {
+            registerAceEditor($elem.find(".node-code")[0])
+        } else if (type == "html") {
+            registerAceMDE($elem.find('.node-mde')[0])
+        }
     })
+}
+
+function delU($btn) {
+    $btn.parent().prev().remove()
+    $btn.parent().remove()
+}
+
+function delL($btn) {
+    $btn.parent().next().remove()
+    $btn.parent().remove()
 }

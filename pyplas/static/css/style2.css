@@ -5,29 +5,107 @@
 .editor-toolbar {
     font-size: 0.7rem;
     padding: 4px 6px;
+    background-color: #ececed;
     button {
         height: initial;
     }
 }
 
-.p-content:has(> :is(.explain, .code, .question)) {
+.mde {
+    border: solid 0.6px rgb(168, 168, 168);
+    border-radius: 5px;
+    .toolbar {
+        font-size: 1rem;
+        padding-left: 0.5rem;
+        background-color: #ececed;
+        .btn {
+            vertical-align: middle;
+            padding: 0.2rem 0.5rem;
+            line-height: 1rem;
+            border: none;
+            border-radius: 0;
+            i {
+                font-size: 1rem;
+            }
+        }
+        .btn-preview {
+            .bi-eye {
+                display: block;
+            }
+            .bi-eye-slash {
+                display: none;
+            }
+        }
+        .btn-preview.active {
+            .bi-eye {
+                display: none;
+            }
+            .bi-eye-slash {
+                display: block;
+            }
+        }
+    }
+    .node-mde {
+        border: solid 0.6px rgb(168, 168, 168);
+        border-radius: 5px;
+        display: block;
+    }
+
+    .node-mde:has(+ .for-preview.preview-active) {
+        display: none;
+    }
+
+    .for-preview {
+        display: none;
+        padding: 1rem;
+    }
+    .for-preview.preview-active {
+        display: block;
+        border: solid 0.6px rgb(168, 168, 168);
+        border-radius: 5px;
+    }
+}
+
+
+.CodeMirror-scroll:has(+ .editor-preview-active) {
+    min-height: 10px !important;
+}
+
+
+.p-content:not(:has(:is(.explain, .code, .question))) {
+    padding-top: 1rem;
+    text-align: center;
+    height: 350px;
     .node-control {
-        height: 1rem;
-        button {
-            display: none;
-            --bs-btn-padding-x: 0.5rem;
-            --bs-btn-font-size: 0.6rem;
-            --bs-btn-padding-y: 0.1rem;
+        opacity: 1;
+        .btn-group {
+            opacity: 1;
         }
     }
-    .node-control:hover {
-        button {
-            display: inline-block;
-        }
+    .bi-file-earmark-code {
+        display: block;
+        font-size: 200px;
+        margin-top: auto;
+        opacity: 0.6;
     }
 }
 
-.node-control {
-    display: flex;
+.p-content {
+    border: dotted;
+    background-color: rgb(242 243 247);
+    padding: 1rem 0rem;
+    .node-control {
+        margin-left: 1rem;
+        /* opacity: 0.4;
+        .btn-group {
+            opacity: 0.4;
+        } */
+    }
+    .btn-group:hover {
+        opacity: 1;
+    }
+    .bi-file-earmark-code {
+        display: none;
+    }
+    
 }
-

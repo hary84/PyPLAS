@@ -1,22 +1,42 @@
-<div class="node question card my-2 ms-3 me-2 position-relative" q-id="{{ qid }}">
+<div class="node question card my-2 ms-3 me-2 position-relative" q-id="{{ qid }}" mode="{{ mode }}">
 	<div class="for-toast"></div>
-    <div class="card-header bg-success-subtle">
-      Question
-    </div>
-    <div class="card-body py-2">
-      {% for d in conponent %}
-        {% if d["type"] == "explain" %}
-          {% module Explain(**d) %}
-        {% elif d["type"] == "code" %}
-          {% module Node(allow_add=editable, **d) %}
-        {% end %}
-      {% end %}
-    </div>
-    <div class="card-footer position-relative">
-      <button type="button" class="btn btn-success btn-testing">Answer</button>
-      <button type="button" class="btn btn-danger btn-cancel">Cancel</button>
-    </div>
-    {% if allow_add %}
-      {% module Template('./modules/node-control.html') %}
-    {% end %}
+	<div class="card-header bg-success-subtle d-flex">
+		Question
+		{% if mode == 2 %}
+			<div class="form-check form-switch ms-auto">
+				<input class="form-check-input" type="checkbox" role="switch">
+				<label class="form-check-label" >Editable</label>
+			</div>
+		{% end %}
+	</div>
+	<div class="card-body q-content py-2">
+		<div class="node-control node justify-content-center">
+			{% if mode == 1 %}
+				{% module AceMDE() %}
+			{% elif mode == 2 %}
+				{% module NodeControl(question=False, dele=False) %}
+			{% end %}
+		</div>
+
+		{% for d in conponent %}
+			{% if d["type"] == "explain" %}
+				{% module Explain(**d) %}
+			{% elif d["type"] == "code" %}
+				{% module Node(allow_add=editable, **d) %}
+			{% end %}
+		{% end %}
+
+		{% if mode == 2 %}
+			<div class="for-test-code">
+				{% module Node() %}
+			</div>
+		{% end %}
+	</div>
+	<div class="card-footer position-relative d-flex justify-content-end">
+		<button type="button" class="btn btn-success btn-testing me-2">Answer</button>
+		<button type="button" class="btn btn-danger btn-cancel">Cancel</button>
+	</div>
 </div>
+{% if allow_add %}
+	{% module NodeControl() %}
+{% end %}

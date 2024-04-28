@@ -25,13 +25,31 @@ class Explain(UIModule):
     
 
 class Question(UIModule):
-    def render(self, qid:str, body:list=[], editable:bool=False, allow_add:bool=False, **kwargs) -> str:
+    def render(self, qid:str, body:list=[], mode: int=0, editable:bool=False, allow_add:bool=False, **kwargs) -> str:
+        """
+        mode: 0 -> student
+              1 -> create(str match)
+              2 -> create(code test)
+        """
         return self.render_string("modules/question.html",
                                   qid=qid,
                                   conponent=body,
                                   editable=editable,
                                   allow_add=allow_add,
+                                  mode=mode,
                                   **kwargs)
+
+class NodeControl(UIModule):
+    def render(self, code:bool=True, explain:bool=True, question:bool=True, dele:bool=True):
+        return self.render_string("modules/node-control.html",
+                                  code=code,
+                                  explain=explain,
+                                  question=question,
+                                  dele=dele)
+    
+class AceMDE(UIModule):
+    def render(self,):
+        return self.render_string("modules/MDE.html")
 
 def strfmodule(module: UIModule, **kwargs):
     return to_unicode(module.render(**kwargs))

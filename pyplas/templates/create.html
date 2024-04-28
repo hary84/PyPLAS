@@ -1,9 +1,8 @@
 {% extends "layout.html" %}
 
 {% block head %}
-<link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
 <link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
-<script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 {% end %}
 
 {% block head-nav-li %}
@@ -30,9 +29,11 @@
 {% end %}
 
 {% block main %}
-<main class="col px-3">
+<main class="col-xxl-8 col-md-9 px-3">
     <div class="my-3" id="summary">
-        <p class="fs-3 border-bottom border-dark ps-1">Create New Problem</p>
+        <p class="fs-3 border-bottom border-dark ps-1">
+            <input class="form-control mb-1" type="text" placeholder="Title" aria-label="problem title input">
+        </p>
         <div class="ps-3">
             <nav>
                 <div class="nav nav-tabs" id="nav-tab" role="tablist">
@@ -43,25 +44,22 @@
             </nav>
             <div class="tab-content border bg-light" id="nav-tabContent">
                 <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
-                    <textarea class="MD" name="summary"></textarea>
+                    {% module AceMDE() %}
                 </div>
                 <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
-                    <textarea class="MD" name="data"></textarea>
+                    {% module AceMDE() %}
                 </div>
                 <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-                    <textarea class="MD" name="env"></textarea>
+                    {% module AceMDE() %}
                 </div>
             </div>
         </div>
     </div>
     <div id="sourceCode">
         <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
-        <div class="p-content">
-            <div class="node-control node justify-content-center">
-                <button type="button" class="btn btn-secondary btn-addMD mx-2"> + add Markdown</button>
-                <button type="button" class="btn btn-primary btn-addCode mx-2 "> + add Code</button>
-                <button type="button" class="btn btn-success btn-addQ mx-2"> + add Question</button>
-            </div>
+        <div class="p-content position-relative">
+            {% module NodeControl(dele=False) %}
+            <i class="bi bi-file-earmark-code"></i>
         </div>
     </div>
 </main>
