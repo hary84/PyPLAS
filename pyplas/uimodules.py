@@ -2,15 +2,16 @@ from tornado.web import UIModule
 from tornado.escape import to_unicode
 
 class Node(UIModule):
-    def render(self, code:str="", readonly:bool=False, allow_add:bool=False, **kwargs) -> bytes:
-        added_class = []
-        if readonly:
-            added_class.append("readonly")
-
+    """
+    mode: 0 -> student(can NOT add node)
+    mode: 1 -> student(can add node)
+    mode: 2 -> creator
+    """
+    def render(self, code:str="", readonly:bool=False, mode:int=0, **kwargs) -> bytes:
         return self.render_string("modules/node.html", 
                                 code=code,
-                                added_class=" ".join(added_class),
-                                allow_add=allow_add,
+                                readonly=readonly,
+                                mode=mode,
                                 **kwargs) 
 
     def javascript_files(self) :

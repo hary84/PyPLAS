@@ -10,25 +10,23 @@
 		{% end %}
 	</div>
 	<div class="card-body q-content py-2">
-		<div class="node-control node justify-content-center">
-			{% if mode == 1 %}
-				{% module AceMDE() %}
-			{% elif mode == 2 %}
-				{% module NodeControl(question=False, dele=False) %}
-			{% end %}
-		</div>
+		{% if mode == 2 %}
+			{% module NodeControl(question=False, dele=False) %}
+		{% elif mode == 1 %}
+			{% module AceMDE() %}
+		{% end %}
 
 		{% for d in conponent %}
 			{% if d["type"] == "explain" %}
 				{% module Explain(**d) %}
 			{% elif d["type"] == "code" %}
-				{% module Node(allow_add=editable, **d) %}
+				{% module Node(mode=editable, **d) %}
 			{% end %}
 		{% end %}
 
 		{% if mode == 2 %}
 			<div class="for-test-code">
-				{% module Node() %}
+				{% module Node(mode=0) %}
 			</div>
 		{% end %}
 	</div>

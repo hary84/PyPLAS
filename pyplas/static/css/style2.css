@@ -2,15 +2,6 @@
     height: 100vh;
 }
 
-.editor-toolbar {
-    font-size: 0.7rem;
-    padding: 4px 6px;
-    background-color: #ececed;
-    button {
-        height: initial;
-    }
-}
-
 .mde {
     border: solid 0.6px rgb(168, 168, 168);
     border-radius: 5px;
@@ -66,22 +57,41 @@
     }
 }
 
+.p-content {
+    border: dotted;
+    background-color: rgb(242 243 247);
+    padding: 1rem 0rem;
+    .node-control {
+        margin-left: 1rem;
+    }
 
-.CodeMirror-scroll:has(+ .editor-preview-active) {
-    min-height: 10px !important;
 }
 
-
-.p-content:not(:has(:is(.explain, .code, .question))) {
-    padding-top: 1rem;
-    text-align: center;
-    height: 350px;
-    .node-control {
-        opacity: 1;
+.p-content:has(:is(.explain, .code, .question)) {
+    .node-control:hover {
         .btn-group {
-            opacity: 1;
+            .btn {
+                display: inline;
+                padding: 0.2rem 0.5rem;
+                line-height: 1rem;
+                border: none;
+                border-radius: 0;
+            }
         }
     }
+    .node-control .btn-group .btn {
+        display: none;
+
+    }
+    .bi-file-earmark-code {
+        display: none;
+    }
+    
+}
+
+.p-content:not(:has(:is(.explain, .code, .question))) {
+    text-align: center;
+    height: 350px;
     .bi-file-earmark-code {
         display: block;
         font-size: 200px;
@@ -90,22 +100,3 @@
     }
 }
 
-.p-content {
-    border: dotted;
-    background-color: rgb(242 243 247);
-    padding: 1rem 0rem;
-    .node-control {
-        margin-left: 1rem;
-        /* opacity: 0.4;
-        .btn-group {
-            opacity: 0.4;
-        } */
-    }
-    .btn-group:hover {
-        opacity: 1;
-    }
-    .bi-file-earmark-code {
-        display: none;
-    }
-    
-}

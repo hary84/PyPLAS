@@ -83,6 +83,21 @@
   }
   .node-prime {
       width: 100%;
+      .code-config {
+        font-size: 1rem;
+        border-radius: 5px;
+        vertical-align: middle;
+        margin: 0.2rem;
+        background-color: rgb(219, 219, 219);
+        z-index: 1;
+        display: flex;
+        position: absolute;
+        right: 0;
+        top: 0;
+        a {
+          padding: 0.1rem;
+        }
+      }
       .node-code {
           width: 100%;
       }

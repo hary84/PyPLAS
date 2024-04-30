@@ -2,8 +2,20 @@
     <div class="node-side">
         <div class="node-number"></div>
     </div>
-    <div class="node-prime">
-        <div class="node-code border rounded {{ added_class }}">{{ code }}</div>
+    <div class="node-prime position-relative">
+        {% if mode != 0 %}
+            <div class="code-config bg-light">
+                <div class="form-check form-check-inline mx-1 mb-0">
+                    <input class="form-check-input readonly-flag" type="checkbox" value="">
+                    <label class="form-check-label" for="readonly-flag">readonly</label>
+                </div>
+                <div class="vr my-1"></div>
+                <a class="text-danger" onclick="delme($(this))"><i class="bi bi-trash"></i></a>
+            </div>
+        {% end %}
+
+        <div class=""></div>
+        <div class="node-code border rounded {{ readonly if readonly else None }}">{{ code }}</div>
         <div class="return-box border rounded">
             <div class="node-sidebutton">
                 <a class="btn-exec">
@@ -16,6 +28,6 @@
         </div>            
     </div>
 </div>
-{% if allow_add %}
-    {% module NodeControl() %}
+{% if mode != 0 %}
+    {% module NodeControl(dele=False) %}
 {% end %}

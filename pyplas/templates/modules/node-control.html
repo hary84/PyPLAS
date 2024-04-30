@@ -1,23 +1,24 @@
-
-<div class="node-control btn-group btn-group-sm" role="group" aria-label="Button group with nested dropdown">
-    {% if explain %}
-        <button type="button" class="btn btn-secondary btn-addMD" onclick="addMD($(this).parent())"><i class="bi bi-arrow-down"></i> + Markdown</button>
-    {% end %}
-    {% if code %}
-        <button type="button" class="btn btn-primary btn-addCode" onclick="addCode($(this).parent())"><i class="bi bi-arrow-down"></i> + Code</button>
-    {% end %}
-    {% if question %}
-        <div class="btn-group btn-group-sm" role="group">
-            <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-arrow-down"></i>+ Question
-            </button>
-            <ul class="dropdown-menu">
-            <li><a class="dropdown-item" onclick="addQ($(this).parents('.node-control'), type='html')">HTML Problem</a></li>
-            <li><a class="dropdown-item" onclick="addQ($(this).parents('.node-control'), type='code')">Code Problem</a></li>
-            </ul>
-        </div>
-    {% end %}
-    {% if dele %}
-        <button type="button" class="btn btn-danger btn-delU" onclick="delU($(this))"><i class="bi bi-arrow-up"></i> - upper node</button>
-    {% end %}
+<div class="node-control text-center">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Button group with nested dropdown">
+        {% if explain %}
+            <button type="button" class="btn btn-secondary btn-addMD" onclick="addMD($(this).parents('.node-control'))">+  <i class="bi bi-filetype-md"></i></button>
+        {% end %}
+        {% if code %}
+            <button type="button" class="btn btn-primary btn-addCode" onclick="addCode($(this).parents('.node-control'))">+  <i class="bi bi-code-slash"></i></button>
+        {% end %}
+        {% if question %}
+            <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    +  <i class="bi bi-question-octagon"></i>
+                </button>
+                <ul class="dropdown-menu">
+                <li><a class="dropdown-item" onclick="addQ($(this).parents('.node-control'), type='html')">HTML Problem</a></li>
+                <li><a class="dropdown-item" onclick="addQ($(this).parents('.node-control'), type='code')">Code Problem</a></li>
+                </ul>
+            </div>
+        {% end %}
+        {% if dele %}
+            <button type="button" class="btn btn-danger btn-delU" onclick="delU($(this))"><i class="bi bi-arrow-up"></i> - upper node</button>
+        {% end %}
+    </div>
 </div>

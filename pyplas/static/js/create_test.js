@@ -46,11 +46,12 @@ function addQ($append_tail, type) {
 }
 
 function delU($btn) {
-    $btn.parent().prev().remove()
+    $btn.parents(".node-control").prev().remove()
     $btn.parent().remove()
 }
 
-function delL($btn) {
-    $btn.parent().next().remove()
-    $btn.parent().remove()
+function delme($btn) {
+    $node = $btn.parents(".node")
+    $node.next(".node-control").remove()
+    $node.remove()
 }

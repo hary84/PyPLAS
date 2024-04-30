@@ -275,7 +275,7 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
                 self.write({"html": self._strfhtml("./modules/explain_form.html")})
             elif self.action == "addCode":
                 self.write({"html": uimodules.strfmodule(uimodules.Node(self),
-                                                         allow_add=True)})
+                                                         mode=2)})
             elif self.action == "addQ":
                 _type = self.get_query_argument("type", "html")
                 if _type == "html":
