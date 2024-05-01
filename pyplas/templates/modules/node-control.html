@@ -12,13 +12,10 @@
                     +  <i class="bi bi-question-octagon"></i>
                 </button>
                 <ul class="dropdown-menu">
-                <li><a class="dropdown-item" onclick="addQ($(this).parents('.node-control'), type='html')">HTML Problem</a></li>
-                <li><a class="dropdown-item" onclick="addQ($(this).parents('.node-control'), type='code')">Code Problem</a></li>
+                <li><a class="dropdown-item" onclick="addQ($(this).parents('.node-control'), ptype=0)">HTML Problem</a></li>
+                <li><a class="dropdown-item" onclick="addQ($(this).parents('.node-control'), ptype=1)">Code Problem</a></li>
                 </ul>
             </div>
-        {% end %}
-        {% if dele %}
-            <button type="button" class="btn btn-danger btn-delU" onclick="delU($(this))"><i class="bi bi-arrow-up"></i> - upper node</button>
         {% end %}
     </div>
 </div>

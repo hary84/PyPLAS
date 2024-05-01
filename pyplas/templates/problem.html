@@ -111,7 +111,7 @@
         <div id="">
             {% for d in conponent["page"]["body"]%}
                 {% if d["type"] == "code" %}
-                    {% module Node(**d) %}
+                    {% module Code(**d) %}
                 {% elif d["type"] == "explain" %}
                     {% module Explain(**d) %}
                 {% elif d["type"] == "question" %}

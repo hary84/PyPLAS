@@ -1,3 +1,10 @@
-<div class="explain node py-2 ps-4">
-    {% raw content %}
+<div class="explain node my-2 ps-4 pe-2">
+    {% if editor %}
+        {% module Template("modules/MDE.html",
+                           content=content, 
+                           has_del=allow_del,
+                           problem_builder=inQ) %}
+    {% else %}
+        {% raw content %}
+    {% end %}
 </div>

@@ -3,7 +3,7 @@
   --text-success: #198754;
 }
 
-/* when offcanvas show */
+/* when offcanvas show (larger than lg) */
 @media (min-width: 993px) { 
   .sidebar {
     position: sticky;
@@ -24,33 +24,6 @@
   background-color: white;
 }
 
-/* toast */
-.toast {
-  z-index: 10;
-  right: 1%;
-  .toast-body {
-    overflow-y: auto;
-    max-height: 10rem;
-  }
-}
-
-.toast.status-error {
-  border: solid var(--text-danger); 
-  background-color: #ffdddd;
-  .toast-header {
-    i {
-      color: var(--text-danger);
-    }
-    span::before {
-      content: "ERROR";
-      color: var(--text-danger);
-    }
-  }
-  .toast-body {
-    white-space: pre-wrap;
-    font-size: 0.6rem;
-  }
-}
 
 .toast.status-success {
   border: solid var(--text-success);
@@ -84,18 +57,23 @@
   .node-prime {
       width: 100%;
       .code-config {
-        font-size: 1rem;
+        height: 1.7rem;
         border-radius: 5px;
-        vertical-align: middle;
-        margin: 0.2rem;
-        background-color: rgb(219, 219, 219);
         z-index: 1;
         display: flex;
         position: absolute;
         right: 0;
         top: 0;
-        a {
-          padding: 0.1rem;
+        .btn {
+          height: 1.5rem;
+          padding: 0.2rem 0.3rem;
+          margin: 0.1rem;
+          i {
+            font-size: 0.9rem;
+          }
+          i:before {
+            display: block;
+          }
         }
       }
       .node-code {
@@ -118,5 +96,49 @@
           }
 
       }
+  }
+}
+
+.question {
+
+  /* toast */
+  .toast {
+    z-index: 10;
+    right: 1%;
+    .toast-body {
+      overflow-y: auto;
+      max-height: 10rem;
+    }
+  }
+
+  .toast.status-error {
+    border: solid var(--text-danger); 
+    background-color: #ffdddd;
+    .toast-header {
+      i {
+        color: var(--text-danger);
+      }
+      span::before {
+        content: "ERROR";
+        color: var(--text-danger);
+      }
+    }
+    .toast-body {
+      white-space: pre-wrap;
+      font-size: 0.6rem;
+    }
+  }
+
+  .card-header {
+    .btn {
+      height: 1.5rem;
+      padding: 0.2rem;
+      i {
+        font-size: 0.9rem;
+      }
+      i:before {
+        display: block;
+      }
+    }
   }
 }

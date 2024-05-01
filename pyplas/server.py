@@ -262,41 +262,47 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
 
     def prepare(self):
         self.action = self.get_query_argument("action", None)
+        if self.request.headers.get("Content-Type", None) == "application/json":
+            self.j = json.loads(self.request.body)
 
     def get(self, p_id=None):
         if p_id is None:
             self.write("in preparation")
         else:
-            self.render("create.html")
+            self.render("create.html", conponent={}, answers={}, is_new=True)
 
     def post(self, p_id=None):
         if p_id is None:
             if self.action == "addMD":
-                self.write({"html": self._strfhtml("./modules/explain_form.html")})
+                self.write({"html": self._gen_node_string(node="Explain")})
             elif self.action == "addCode":
-                self.write({"html": uimodules.strfmodule(uimodules.Node(self),
-                                                         mode=2)})
+                self.write({"html": self._gen_node_string(node="Code")})
             elif self.action == "addQ":
-                _type = self.get_query_argument("type", "html")
-                if _type == "html":
-                    mode = 1
-                elif _type == "code":
-                    mode = 2
-                else:
-                    mode = 1
-                self.write({"html": uimodules.strfmodule(uimodules.Question(self),
-                                                        qid=uuid.uuid4(),
-                                                        allow_add=True,
-                                                        mode=mode)})
+                self.write({"html": self._gen_node_string(node="Question")})
             else:
                 self.write_error()
         else:
             self.write("in preparation")
 
-    def _strfhtml(self, path, **kwargs):
-        return tornado.escape.to_unicode(
-            self.render_string(path, **kwargs)
-        )
+    def _gen_node_string(self, node:str="Explain", has_nc:bool=True):
+        _nc = ""
+        if node == "Explain":
+            _html = uimodules.strfmodule(uimodules.Explain(self),
+                                         editor=True, allow_del=True, inQ=self.j.get("inQ", False))
+        elif node == "Code":
+            _html = uimodules.strfmodule(uimodules.Code(self),
+                                         allow_del=True, user=self.j.get("user", 0))
+        elif node == "Question":
+            _html = uimodules.strfmodule(uimodules.Question(self),
+                                         qid=uuid.uuid4(),
+                                         user=1, editable=True, ptype=self.j.get("ptype", 0))
+        else:
+            raise KeyError
+        if has_nc:
+            _nc = uimodules.strfmodule(uimodules.NodeControl(self),
+                                       question= not self.j.get("inQ", False))
+            
+        return _html + "\n" + _nc 
 
 
 def make_app():

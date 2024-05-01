@@ -6,17 +6,17 @@
     border: solid 0.6px rgb(168, 168, 168);
     border-radius: 5px;
     .toolbar {
-        font-size: 1rem;
-        padding-left: 0.5rem;
+        height: 1.5rem;
         background-color: #ececed;
         .btn {
-            vertical-align: middle;
             padding: 0.2rem 0.5rem;
-            line-height: 1rem;
             border: none;
             border-radius: 0;
             i {
                 font-size: 1rem;
+            }
+            i:before {
+                display: block;
             }
         }
         .btn-preview {
@@ -57,7 +57,7 @@
     }
 }
 
-.p-content {
+:is(.p-content, .q-content) {
     border: dotted;
     background-color: rgb(242 243 247);
     padding: 1rem 0rem;
@@ -67,7 +67,7 @@
 
 }
 
-.p-content:has(:is(.explain, .code, .question)) {
+:is(.p-content, .q-content):has(:is(.explain, .code, .question)) {
     .node-control:hover {
         .btn-group {
             .btn {
@@ -97,6 +97,16 @@
         font-size: 200px;
         margin-top: auto;
         opacity: 0.6;
+    }
+}
+
+.q-content:not(:has(:is(.explain, .code, .question))) {
+    .node-control .btn-group .btn {
+        display: inline;
+        padding: 0.2rem 0.5rem;
+        line-height: 1rem;
+        border: none;
+        border-radius: 0;
     }
 }
 
