@@ -71,23 +71,23 @@ function addFillInBlankProblem($btn) {
     var editor = ace.edit($btn.parents(".mde").find(".node-mde")[0])
     var tag = [
         '<p class="mb-0 q-text">',
-        '<label class="form-label">?????</label>',
-        '<input type="text" class="form-control q-form" placeholder="answer" ans=?????>',
+        '   <label class="form-label">?????</label>',
+        '   <input type="text" class="form-control q-form" placeholder="answer" ans=?????>',
         '</p>'
     ].join("\n")
     editor.insert(tag)
-    console.log($(this)[0])
 }
 function addSelectionProblem($btn) {
     var editor = ace.edit($btn.parents(".mde").find(".node-mde")[0])
     var tag = [
-        '<p class="mb-0 q-text>',
-        '<label class="form-label">?????</label>',
-        '<select class="form-select" ans=?????>',
-        '<option selected>Open this select menu</option>',
-        '<option value="1">?????</option>',
-        '<option value="2">?????</option>',
-        '</select>'
+        '<p class="mb-0 q-text">',
+        '   <label class="form-label">?????</label>',
+        '   <select class="form-select" ans=?????>',
+        '       <option selected>Open this select menu</option>',
+        '       <option value="1">?????</option>',
+        '       <option value="2">?????</option>',
+        '   </select>',
+        '</p>'
     ].join("\n")
     editor.insert(tag)
 }

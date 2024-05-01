@@ -3,7 +3,100 @@ $(function() {
     document.querySelectorAll(".node-mde").forEach(function(elem) {
         registerAceMDE(elem)
     })
+
+
 })
+
+function save() {
+    var title = $("#titleForm").val()
+
+    var headers = []
+
+    $("#summary").find(".node-mde").each(function(idx) {
+        var editor = ace.edit($(this)[0])
+        headers.push(marked.parse(editor.getValue()))
+    })
+
+    var body = []
+    var answers = {}
+
+    $("#sourceCode > .p-content").children(".node").each(function(idx) {
+        if ($(this).hasClass("explain")) {
+            var editor = ace.edit($(this).find(".node-mde")[0])
+            var content = marked.parse(editor.getValue())
+            body.push({
+                "type": "explain",
+                "content": content
+            })
+        }
+        else if ($(this).hasClass("code")) {
+            var editor = ace.edit($(this).find(".node-code")[0])
+            var content = editor.getValue()
+            var readonly = $(this).find(".readonly-flag").prop("checked")
+            body.push({
+                "type": "code",
+                "content": content,
+                "readonly": readonly
+            })
+        }
+        else if ($(this).hasClass("question")) {
+            var qid = $(this).attr("q-id")
+            var ptype = $(this).attr("ptype")
+            var question = ""
+            var conponent = []
+            answers[qid] = []
+
+            if (ptype == 0) {
+                var editor = ace.edit($(this).find(".node-mde")[0])
+                var html = marked.parse(editor.getValue())
+                var question = ""
+                
+                var arr = []
+                $html.each(function() {
+                    $form = $(this).find("input, select")
+                    answers[qid].push($form.attr("ans"))
+                    $form.removeAttr("ans")
+                    arr.push($(this)[0].outerHTML)
+                })
+                question = arr.join("\n")
+
+                body.push({
+                    "type": "question",
+                    "qid": qid,
+                    "question": question,
+                    "ptype": ptype
+                })
+
+            } else {
+                var editable = $(this).find(".editable-flag").prop("checked")
+                
+                question = marked.parse(
+                    ace.edit($(this).find(".q-text .node-mde")[0]).getValue())
+
+                var test_code = ace.edit($(this).find(".test-code .node-code")[0]).getValue()
+                answers[qid].push(test_code)
+
+                body.push({
+                    "type": "question",
+                    "qid": qid,
+                    "question": question,
+                    "ptype": ptype,
+                    "editable": editable,
+                })
+            }
+        }
+    })
+
+    var pages = {
+        "title": title,
+        "header": {"summary": headers[0],
+                   "source": headers[1],
+                   "env": headers[2]},
+        "body": body
+    }
+    console.log(pages)
+    console.log(answers)
+}
 
 function addMD($append_tail) {
     $.ajax({
