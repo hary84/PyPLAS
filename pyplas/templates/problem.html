@@ -17,22 +17,7 @@
 
 {% block side-content %}
 <p class="fs-5 fw-bold border-bottom px-2">SideMenu</p>
-<div class="mb-3" id="kernel-ops">
-    <div class="list-group list-group-flush">
-        <a class="list-group-item list-group-item-action text-decoration-none text-dark btn-restart">
-            <i class="bi bi-arrow-counterclockwise"></i>
-            Restart
-        </a>
-        <a class="list-group-item list-group-item-action text-decoration-none text-danger btn-interrupt">
-            <i class="bi bi-stop-circle"></i>
-            Interrupt
-        </a>
-        <a class="list-group-item list-group-item-action text-decoration-none text-success" id="btn-save">
-            <i class="bi bi-save"></i>
-            Save
-        </a>
-    </div>
-</div>
+{% module Template("modules/side_kernel_ops.html") %}
 <div class="accordion" id="accordionExample">
     <div class="accordion-item">
         <h2 class="accordion-header">

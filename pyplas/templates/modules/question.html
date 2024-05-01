@@ -46,6 +46,7 @@
 							{% module NodeControl(question=False) %}
 						{% end %}
 					{% end %}
+
 				{% else %}
 					{% for d in conponent %}
 						{% if d["type"] == "explain" %}
@@ -66,7 +67,7 @@
 		{% end %}
 	</div>
 	<div class="card-footer position-relative d-flex justify-content-end">
-		<button type="button" class="btn btn-success btn-testing me-2">Answer</button>
-		<button type="button" class="btn btn-danger btn-cancel">Cancel</button>
+		<button type="button" class="btn btn-success btn-sm btn-testing me-2">Answer</button>
+		<button type="button" class="btn btn-danger btn-sm btn-cancel">Cancel</button>
 	</div>
 </div>

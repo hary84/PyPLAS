@@ -7,58 +7,59 @@ $(function() {
 
 })
 
-function save() {
-    var title = $("#titleForm").val()
+function problemSave() {
+    var title = document.querySelector("#titleForm").value
 
     var headers = []
 
-    $("#summary").find(".node-mde").each(function(idx) {
-        var editor = ace.edit($(this)[0])
+    document.querySelectorAll("#summary .node-mde").forEach(function(elem) {
+        var editor = ace.edit(elem)
         headers.push(marked.parse(editor.getValue()))
     })
 
     var body = []
     var answers = {}
 
-    $("#sourceCode > .p-content").children(".node").each(function(idx) {
-        if ($(this).hasClass("explain")) {
-            var editor = ace.edit($(this).find(".node-mde")[0])
+    const parser = new DOMParser()
+
+    document.querySelectorAll("#sourceCode > .p-content > .node").forEach(function(elem) {
+        if (elem.classList.contains("explain")) {
+            var editor = ace.edit(elem.querySelector(".node-mde"))
             var content = marked.parse(editor.getValue())
             body.push({
                 "type": "explain",
                 "content": content
             })
         }
-        else if ($(this).hasClass("code")) {
-            var editor = ace.edit($(this).find(".node-code")[0])
+        else if (elem.classList.contains("code")) {
+            var editor = ace.edit(elem.querySelector(".node-code"))
             var content = editor.getValue()
-            var readonly = $(this).find(".readonly-flag").prop("checked")
+            var readonly = elem.querySelector(".readonly-flag").checked
             body.push({
                 "type": "code",
                 "content": content,
                 "readonly": readonly
             })
         }
-        else if ($(this).hasClass("question")) {
-            var qid = $(this).attr("q-id")
-            var ptype = $(this).attr("ptype")
+        else if (elem.classList.contains("question")) {
+            var qid = elem.getAttribute("q-id")
+            var ptype = elem.getAttribute("ptype")
             var question = ""
             var conponent = []
             answers[qid] = []
 
             if (ptype == 0) {
-                var editor = ace.edit($(this).find(".node-mde")[0])
-                var html = marked.parse(editor.getValue())
-                var question = ""
-                
-                var arr = []
-                $html.each(function() {
-                    $form = $(this).find("input, select")
-                    answers[qid].push($form.attr("ans"))
-                    $form.removeAttr("ans")
-                    arr.push($(this)[0].outerHTML)
+                var editor = ace.edit(elem.querySelector(".node-mde"))
+                var html_str = marked.parse(editor.getValue())
+
+                var html_dom = parser.parseFromString(html_str, "text/html").querySelector("body")
+                console.log(html_dom)
+                html_dom.querySelectorAll(".q-text > *[ans]").forEach(function(elem) {
+                    answers[qid].push(elem.getAttribute("ans"))
+                    elem.removeAttribute("ans")
                 })
-                question = arr.join("\n")
+
+                question = html_dom.innerHTML
 
                 body.push({
                     "type": "question",
@@ -68,12 +69,12 @@ function save() {
                 })
 
             } else {
-                var editable = $(this).find(".editable-flag").prop("checked")
+                var editable = elem.querySelector(".editable-flag").checked
                 
                 question = marked.parse(
-                    ace.edit($(this).find(".q-text .node-mde")[0]).getValue())
+                    ace.edit(elem.querySelector(".q-text .node-mde")).getValue())
 
-                var test_code = ace.edit($(this).find(".test-code .node-code")[0]).getValue()
+                var test_code = ace.edit(elem.querySelector(".test-code .node-code")).getValue()
                 answers[qid].push(test_code)
 
                 body.push({
@@ -87,15 +88,15 @@ function save() {
         }
     })
 
-    var pages = {
-        "title": title,
+    var page = {
         "header": {"summary": headers[0],
                    "source": headers[1],
                    "env": headers[2]},
         "body": body
     }
-    console.log(pages)
-    console.log(answers)
+
+    // await fetch()
+    return title, page, answers, p_id
 }
 
 function addMD($append_tail) {

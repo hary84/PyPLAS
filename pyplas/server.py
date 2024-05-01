@@ -13,6 +13,7 @@ from jupyter_client import AsyncMultiKernelManager, AsyncKernelManager, AsyncKer
 from jupyter_client.multikernelmanager import DuplicateKernelError
 from jupyter_client.utils import run_sync
 import uimodules
+from uimodules import *
 
 mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
@@ -261,7 +262,6 @@ class KernelHandler(tornado.web.RequestHandler):
 class ProblemCreateHandler(tornado.web.RequestHandler):
 
     def prepare(self):
-        self.action = self.get_query_argument("action", None)
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.j = json.loads(self.request.body)
 
@@ -272,35 +272,60 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
             self.render("create.html", conponent={}, answers={}, is_new=True)
 
     def post(self, p_id=None):
+        """
+        p_id
+            p_idがない時、作成した問題は下書き保存(公開されない)される。
+            p_idがある時、下書き保存された問題は正式な問題として登録される。
+        """
         if p_id is None:
-            if self.action == "addMD":
-                self.write({"html": self._gen_node_string(node="Explain")})
-            elif self.action == "addCode":
-                self.write({"html": self._gen_node_string(node="Code")})
-            elif self.action == "addQ":
-                self.write({"html": self._gen_node_string(node="Question")})
-            else:
-                self.write_error()
+            with closing(sqlite3.connect("pyplas.db")) as conn:
+                cur = conn.cursor()
+                sql = r"INSERT INTO pages(pid, title, page) VALUES(:pid, :title, :page)"
+                cur.execute(sql, ({"pid": self.j["pid"],
+                                   "title": self.j["title"],
+                                   "page": self.j["page"]}))
+                conn.commit()
+                sql = r"INSERT INTO answer(pid, answers) VALUES(:pid, :answers)"
+                cur.execute(sql, ({"pid": self.j["pid"],
+                                   "answers": self.j["answers"]}))
+                conn.commit()
+
         else:
             self.write("in preparation")
+
+    def delete(self, p_id=None):
+        pass
+
+
+class RenderHTMLModuleHandler(tornado.web.RequestHandler):
+    def prepare(self):
+        self.action = self.get_query_argument("action", None)
+        if self.request.headers.get("Content-Type", None) == "application/json":
+            self.j = json.loads(self.request.body)
+
+    def post(self):
+        if self.action == "addMD":
+            self.write({"html": self._gen_node_string(node="Explain")})
+        elif self.action == "addCode":
+            self.write({"html": self._gen_node_string(node="Code")})
+        elif self.action == "addQ":
+            self.write({"html": self._gen_node_string(node="Question")})
+        else:
+            self.write_error()
 
     def _gen_node_string(self, node:str="Explain", has_nc:bool=True):
         _nc = ""
         if node == "Explain":
-            _html = uimodules.strfmodule(uimodules.Explain(self),
-                                         editor=True, allow_del=True, inQ=self.j.get("inQ", False))
+            _html = strfmodule(Explain(self), editor=True, allow_del=True, inQ=self.j.get("inQ", False))
         elif node == "Code":
-            _html = uimodules.strfmodule(uimodules.Code(self),
-                                         allow_del=True, user=self.j.get("user", 0))
+            _html = strfmodule(Code(self), allow_del=True, user=self.j.get("user", 0))
         elif node == "Question":
-            _html = uimodules.strfmodule(uimodules.Question(self),
-                                         qid=uuid.uuid4(),
-                                         user=1, editable=True, ptype=self.j.get("ptype", 0))
+            _html = strfmodule(Question(self),qid=uuid.uuid4(), user=1, editable=True, 
+                               ptype=self.j.get("ptype", 0))
         else:
             raise KeyError
         if has_nc:
-            _nc = uimodules.strfmodule(uimodules.NodeControl(self),
-                                       question= not self.j.get("inQ", False))
+            _nc = strfmodule(NodeControl(self), question= not self.j.get("inQ", False))
             
         return _html + "\n" + _nc 
 
@@ -313,7 +338,8 @@ def make_app():
         (r"/kernel/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/?", KernelHandler),
         (r"/create/?", ProblemCreateHandler),
-        (r"/create/(?P<p_id>[\w-]+)/?", ProblemCreateHandler)
+        (r"/create/(?P<p_id>[\w-]+)/?", ProblemCreateHandler),
+        (r"/api/render/?", RenderHTMLModuleHandler)
     ],
     template_path=os.path.join(os.getcwd(), "templates"),
     static_path=os.path.join(os.getcwd(), "static"),
