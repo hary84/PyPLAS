@@ -24,7 +24,7 @@ class MainHandler(tornado.web.RequestHandler):
         with closing(sqlite3.connect("pyplas.db")) as conn:
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
-            sql = "SELECT id, title, status FROM pages"
+            sql = "SELECT p_id, title, status FROM pages"
             cur.execute(sql)
             res = cur.fetchall()
 
@@ -279,16 +279,21 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
         """
         if p_id is None:
             with closing(sqlite3.connect("pyplas.db")) as conn:
-                cur = conn.cursor()
-                sql = r"INSERT INTO pages(pid, title, page) VALUES(:pid, :title, :page)"
-                cur.execute(sql, ({"pid": self.j["pid"],
-                                   "title": self.j["title"],
-                                   "page": self.j["page"]}))
-                conn.commit()
-                sql = r"INSERT INTO answer(pid, answers) VALUES(:pid, :answers)"
-                cur.execute(sql, ({"pid": self.j["pid"],
-                                   "answers": self.j["answers"]}))
-                conn.commit()
+                try:
+                    cur = conn.cursor()
+                    sql = r"INSERT INTO pages(p_id, title, page) VALUES(:p_id, :title, :page)"
+                    cur.execute(sql, ({"p_id": self.j["p_id"],
+                                    "title": self.j["title"],
+                                    "page": json.dumps(self.j["page"])}))
+                    sql = r"INSERT INTO answers(p_id, answers) VALUES(:p_id, :answers)"
+                    cur.execute(sql, ({"p_id": self.j["p_id"],
+                                    "answers": json.dumps(self.j["answers"])}))
+                except:
+                    self.write({"status": 0})
+                    conn.rollback()
+                finally:
+                    self.write({"status": 1})
+                    conn.commit()
 
         else:
             self.write("in preparation")

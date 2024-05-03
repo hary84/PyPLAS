@@ -27,30 +27,31 @@
                 display: none;
             }
         }
-        .btn-preview.active {
-            .bi-eye {
-                display: none;
-            }
-            .bi-eye-slash {
-                display: block;
-            }
-        }
     }
     .node-mde {
         border: solid 0.6px rgb(168, 168, 168);
         border-radius: 5px;
         display: block;
     }
-
-    .node-mde:has(+ .for-preview.preview-active) {
-        display: none;
-    }
-
     .for-preview {
         display: none;
         padding: 1rem;
     }
-    .for-preview.preview-active {
+}
+
+.mde.preview-active {
+    .toolbar .btn-preview {
+        .bi-eye {
+            display: none;
+        }
+        .bi-eye-slash {
+            display: block;
+        }
+    }
+    .node-mde {
+        display: none;
+    }
+    .for-preview {
         display: block;
         border: solid 0.6px rgb(168, 168, 168);
         border-radius: 5px;

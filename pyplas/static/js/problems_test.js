@@ -1,5 +1,7 @@
 
 $(function() {
+    document.querySelectorAll(".node-mde").forEach(registerAceMDE(elem))
+    document.querySelectorAll(".node-code").forEach(registerAceEditor(elem))
 
     kh = new KernelHandler()
 
@@ -13,6 +15,20 @@ $(function() {
 
     $(".btn-interrupt").on("click", function() {
         kh.kernelInterrupt()
+    })
+
+    var sourcecode = document.querySelector("#sourceCode")
+    sourcecode.addEventListener("click", function(e) {
+        var target = e.target
+
+        if (target.classList.contains("code")) {
+            $current_node = $(this)
+        } else if (target.classList.contains("btn-exec")) {
+            $current_node = $(this).parents(".code")
+            kh.execute($current_node)
+        } else if (target.classList.contains("executing")) {
+            kh.kernelInterrupt()
+        }
     })
 
     $(".btn-testing").on("click", function() {
@@ -45,9 +61,9 @@ $(function() {
         kh.kernelInterrupt(kh.test_kernel_id)
     })
 
-    $(".code").on("click", function() {
-        $current_node = $(this)
-    })
+    // $(".code").on("click", function() {
+    //     $current_node = $(this)
+    // })
 
     $(window).on("keydown", function(e) {
         if (e.ctrlKey) {
@@ -56,14 +72,15 @@ $(function() {
             } 
         }
     })
-    $(".btn-exec").on("click", function() {
-        $current_node = $(this).parents(".code")
-        kh.execute($current_node)
-    })
 
-    $(".executing").on("click", function() {
-        kh.kernelInterrupt()
-    })
+    // $(".btn-exec").on("click", function() {
+    //     $current_node = $(this).parents(".code")
+    //     kh.execute($current_node)
+    // })
+
+    // $(".executing").on("click", function() {
+    //     kh.kernelInterrupt()
+    // })
 
     watchValue(kh, "running", setExecuteAnimation)
     watchValue(kh, "msg", renderMessage)

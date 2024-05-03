@@ -1,24 +1,24 @@
 <div class="mde">
     <div class="toolbar d-flex ps-2">
         <div class="btn-group">
-            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedBold($(this))"><i class="bi bi-type-bold"></i></button>
-            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedItalic($(this))"><i class="bi bi-type-italic"></i></button>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedBold(this)"><i class="bi bi-type-bold"></i></button>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedItalic(this)"><i class="bi bi-type-italic"></i></button>
             <div class="vr mx-2 my-1"></div>
-            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedLink($(this))"><i class="bi bi-link-45deg"></i></button>
-            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedImg($(this))"><i class="bi bi-card-image"></i></button>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedLink(this)"><i class="bi bi-link-45deg"></i></button>
+            <button type="button" class="btn btn-outline-dark btn-sm" onclick="embedImg(this)"><i class="bi bi-card-image"></i></button>
             <div class="vr mx-2 my-1"></div>
             {% if problem_builder == 1 %}
-                <button type="button" class="btn btn-outline-dark btn-sm" onclick="addFillInBlankProblem($(this))"><i class="bi bi-input-cursor"></i></button>
-                <button type="button" class="btn btn-outline-dark btn-sm" onclick="addSelectionProblem($(this))"><i class="bi bi-list-check"></i></button>
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="addFillInBlankProblem(this)"><i class="bi bi-input-cursor"></i></button>
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="addSelectionProblem(this)"><i class="bi bi-list-check"></i></button>
                 <div class="vr mx-2 my-1"></div>
             {% end %}
-            <button type="button" class="btn btn-outline-dark btn-sm btn-preview" onclick="togglePreview($(this))" data-bs-toggle="button">
+            <button type="button" class="btn btn-outline-dark btn-sm btn-preview" onclick="togglePreview(this)" data-bs-toggle="button">
                 <i class="bi bi-eye"></i>
                 <i class="bi bi-eye-slash"></i>
             </button>
             {% if has_del %}
                 <div class="vr mx-2 my-1"></div>
-                <button type="button" class="btn btn-outline-dark btn-sm" onclick="delme($(this))"><i class="bi bi-trash text-danger"></i></button>
+                <button type="button" class="btn btn-outline-dark btn-sm" onclick="delme(this)"><i class="bi bi-trash text-danger"></i></button>
             {% end %}               
         </div>
     </div>

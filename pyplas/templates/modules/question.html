@@ -16,7 +16,7 @@
 			{% end %}
 			{% if user==1 %}
 			<div class="vr mx-2 my-1"></div>
-			<button type="button" class="btn btn-danger" onclick="delme($(this))"><i class="bi bi-trash"></i></button>
+			<button type="button" class="btn btn-danger" onclick="delme(this)"><i class="bi bi-trash"></i></button>
 			{% end %}
 		</div>
 	</div>
@@ -34,7 +34,7 @@
 				{% module Explain(editor=user, content=question, allow_del=False, inQ=True) %}
 			</div>
 
-			<div class="q-content">
+			<div class="q-content ms-4">
 				{% if (user) or (editable) %}
 					{% module NodeControl(question=False) %}
 					{% for d in conponent %}

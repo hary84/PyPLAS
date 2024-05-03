@@ -1,12 +1,8 @@
 
-$(function() {
-    document.querySelectorAll(".node-mde").forEach(function(elem) {
-        registerAceMDE(elem)
-    })
-
-
-})
-
+/**
+ * ページをパースしてサーバーに投げる
+ * @returns {none}
+ */
 function problemSave() {
     var title = document.querySelector("#titleForm").value
 
@@ -53,7 +49,6 @@ function problemSave() {
                 var html_str = marked.parse(editor.getValue())
 
                 var html_dom = parser.parseFromString(html_str, "text/html").querySelector("body")
-                console.log(html_dom)
                 html_dom.querySelectorAll(".q-text > *[ans]").forEach(function(elem) {
                     answers[qid].push(elem.getAttribute("ans"))
                     elem.removeAttribute("ans")
@@ -95,66 +90,25 @@ function problemSave() {
         "body": body
     }
 
-    // await fetch()
-    return title, page, answers, p_id
-}
+    var send_msg = {
+        "p_id": crypto.randomUUID(),
+        "title": title,
+        "page": page,
+        "answers": answers
+    }
 
-function addMD($append_tail) {
-    $.ajax({
-        url: `${window.location.origin}/create?action=addMD`,
-        type: "POST",
-        contentType: "application/json",
-        dataType: "json",
-        data: JSON.stringify({"inQ": $append_tail.parents(".question").length > 0}),
-    }).done((data) => {
-        $elem = $(data.html)
-        $append_tail.after($elem)
-        registerAceMDE($elem.find(".node-mde")[0])
-    })
-}
-
-function addCode($append_tail) {
-    $.ajax({
-        url: `${window.location.origin}/create?action=addCode`,
-        type: "POST",
-        contentType: "application/json",
-        dataType: "json",
-        data: JSON.stringify({
-            "inQ": $append_tail.parents(".question").length > 0,
-            "user": window.location.pathname.split("/")[1] == "create" ? 1 : 0 }),
-    }).done((data) => {
-        $elem = $(data.html)
-        $append_tail.after($elem)
-        registerAceEditor($elem.find(".node-code")[0])
-    })
-}
-
-function addQ($append_tail, ptype) {
-    $.ajax({
-        url: `${window.location.origin}/create?action=addQ`,
-        type: "POST",
-        contentType: "application/json",
-        dataType: "json",
-        data: JSON.stringify({"ptype": ptype}),
-    }).done((data) => {
-        $elem = $(data.html)
-        $append_tail.after($elem)
-        if (ptype == 1) {
-            registerAceEditor($elem.find(".node-code")[0])
-            registerAceMDE($elem.find(".node-mde")[0])
-        } else if (ptype == 0) {
-            registerAceMDE($elem.find('.node-mde')[0])
+    fetch(`${window.location.origin}/create`,{
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(send_msg)
+    }).then(response => response.json()).then(data => {
+        if (data.status == 0) {
+            alert("SAVE FAILURE")
+        } else if (data.status == 1) {
+            alert("SAVED")
         }
     })
 }
 
-function delU($btn) {
-    $btn.parents(".node-control").prev().remove()
-    $btn.parent().remove()
-}
-
-function delme($btn) {
-    $node = $btn.closest(".node")
-    $node.next(".node-control").remove()
-    $node.remove()
-}
