@@ -3,6 +3,10 @@
   --text-success: #198754;
 }
 
+.only-inq {
+  display: none;
+}
+
 /* when offcanvas show (larger than lg) */
 @media (min-width: 993px) { 
   .sidebar {
@@ -138,6 +142,16 @@
       }
       i:before {
         display: block;
+      }
+    }
+  }
+
+  .card-body {
+    .mde {
+      .toolbar {
+        .only-inq {
+          display: block;
+        }
       }
     }
   }

@@ -1,10 +1,10 @@
-<div class="node question card my-2 ms-3 me-2 position-relative" q-id="{{ qid }}" ptype="{{ ptype }}">
+<div class="node question card my-2 ms-3 me-2 position-relative" q-id="{{ q_id }}" ptype="{{ ptype }}">
 	<div class="for-toast"></div>
 	<div class="card-header bg-success-subtle d-flex">
 		Question
 		{% if ptype == 0 %}
 			<span class="ms-2 fw-bold text-secondary">HTML</span>
-		{% else %}
+		{% elif ptype == 1 %}
 			<span class="ms-2 fw-bold text-secondary">Code Test</span>
 		{% end %}
 		<div class="ms-auto d-flex">
@@ -24,20 +24,20 @@
 
 		<!-- HTML Problem -->
 		{% if ptype == 0 %}
-			{% module Explain(editor=user, content=question, allow_del=False, inQ=True) %}
+			{% module Explain(editor=user, content=question, allow_del=False) %}
 		{% end %}
 
 		<!-- Code Writing Problem -->
 		{% if ptype == 1 %}
 			<div class="q-text mb-2">
 				<p class="mb-0"><span class="badge bg-success">Question</span></p>
-				{% module Explain(editor=user, content=question, allow_del=False, inQ=True) %}
+				{% module Explain(editor=user, content=question, allow_del=False) %}
 			</div>
 
 			<div class="q-content ms-4">
 				{% if (user) or (editable) %}
 					{% module NodeControl(question=False) %}
-					{% for d in conponent %}
+					<!-- {% for d in conponent %}
 						{% if d["type"] == "explain" %}
 							{% module Explain(**d, editor=True, allow_del=True, inQ=True) %}
 							{% module NodeControl(question=False) %}
@@ -45,16 +45,16 @@
 							{% module Node(**d, user=user, allow_del=True) %}
 							{% module NodeControl(question=False) %}
 						{% end %}
-					{% end %}
+					{% end %} -->
 
 				{% else %}
-					{% for d in conponent %}
+					<!-- {% for d in conponent %}
 						{% if d["type"] == "explain" %}
 							{% module Explain(**d) %}
 						{% elif d["type"] == "code" %}
 							{% module Code(**d) %}
 						{% end %}
-					{% end %}
+					{% end %} -->
 				{% end %}
 			</div>
 

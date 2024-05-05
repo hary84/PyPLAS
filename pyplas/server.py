@@ -19,18 +19,32 @@ mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
 
 class MainHandler(tornado.web.RequestHandler):
+    
+    def prepare(self):
+        self.cat = self.get_query_argument("category", None)
 
     def get(self):
-        with closing(sqlite3.connect("pyplas.db")) as conn:
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
-            sql = "SELECT p_id, title, status FROM pages"
-            cur.execute(sql)
-            res = cur.fetchall()
+        if self.cat is None:
+            with closing(sqlite3.connect("pyplas.db")) as conn:
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                sql = r"""SELECT cat_name FROM categories"""
+                cur.execute(sql)
+                res = cur.fetchall()
+            cat = [r["cat_name"] for r in res] if res is not None else []
+            self.render("index.html", categories=cat, problem_list=[])
+        else:
+            with closing(sqlite3.connect("pyplas.db")) as conn:
+                conn.row_factory = sqlite3.Row 
+                cur = conn.cursor()
+                sql = r"""SELECT p_id, title, progress FROM pages
+                INNER JOIN categories ON pages.category = categories.cat_id
+                WHERE cat_name = :cat_name AND status = 1"""
+                cur.execute(sql, ({"cat_name": self.cat})) 
+                res = cur.fetchall()
+            problem_list = [dict(r) for r in res]
+            self.render("index.html", categories=[], problem_list=problem_list)
 
-        p_list = [dict(r) for r in res]
-        self.render("index.html", problem_list=p_list)
-    
 
 class ProblemHandler(tornado.web.RequestHandler):
 
@@ -262,41 +276,91 @@ class KernelHandler(tornado.web.RequestHandler):
 class ProblemCreateHandler(tornado.web.RequestHandler):
 
     def prepare(self):
+        self.action = self.get_query_argument("action", None)
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.j = json.loads(self.request.body)
 
     def get(self, p_id=None):
         if p_id is None:
-            self.write("in preparation")
+            if self.action == "new":
+                self.render("create.html", conponent={}, answers={}, is_new=True)
+            elif self.action is None:
+                with closing(sqlite3.connect("pyplas.db")) as conn:
+                    conn.row_factory = sqlite3.Row 
+                    cur = conn.cursor()
+                    sql = r"""SELECT p_id, title, category, status FROM pages"""
+                    cur.execute(sql)
+                    res = cur.fetchall()
+                    sql = r"""SELECT * FROM categories"""
+                    cur.execute(sql)
+                    cates = cur.fetchall()
+                res = [dict(r) for r in res] if res is not None else []
+                cates = [dict(r) for r in cates]
+                self.render("create_index.html", problem_list=res, categories=cates)
         else:
-            self.render("create.html", conponent={}, answers={}, is_new=True)
+            with closing(sqlite3.connect("pyplas.db")) as conn:
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                sql = r"SELECT title, page FROM pages where p_id = :p_id"
+                cur.execute(sql, ({"p_id": p_id}))
+                res = cur.fetchone()
+                if res is None:
+                    self.redirect("/create?action=new")
+                sql = r"SELECT answers FROM answers WHERE p_id = :p_id"
+                cur.execute(sql, ({"p_id": p_id}))
+                ans = cur.fetchone()
+                ans = json.loads(ans["answers"]) if ans is not None else {}
+
+            res = {"title": res["title"],
+                   "page": json.loads(res["page"])}
+            self.render("create.html", conponent=res, answers=ans, is_new=False)
 
     def post(self, p_id=None):
         """
         p_id
-            p_idがない時、作成した問題は下書き保存(公開されない)される。
-            p_idがある時、下書き保存された問題は正式な問題として登録される。
+            p_idがない時、新規作成。
+            p_idがある時、編集。
         """
         if p_id is None:
             with closing(sqlite3.connect("pyplas.db")) as conn:
                 try:
+                    p_id = str(uuid.uuid4())
                     cur = conn.cursor()
-                    sql = r"INSERT INTO pages(p_id, title, page) VALUES(:p_id, :title, :page)"
-                    cur.execute(sql, ({"p_id": self.j["p_id"],
-                                    "title": self.j["title"],
-                                    "page": json.dumps(self.j["page"])}))
-                    sql = r"INSERT INTO answers(p_id, answers) VALUES(:p_id, :answers)"
-                    cur.execute(sql, ({"p_id": self.j["p_id"],
-                                    "answers": json.dumps(self.j["answers"])}))
-                except:
+                    sql = r"""INSERT INTO pages(p_id, title, page) VALUES(:p_id, :title, :page)"""
+                    cur.execute(sql, ({"p_id": p_id,
+                                       "title": self.j["title"],
+                                       "page": json.dumps(self.j["page"])}))
+                    if len(self.j["answers"]):
+                        sql = r"INSERT INTO answers(p_id, answers) VALUES(:p_id, :answers)"
+                        cur.execute(sql, ({"p_id": p_id,
+                                           "answers": json.dumps(self.j["answers"])}))
+                except Exception as e:
+                    print(e)
                     self.write({"status": 0})
                     conn.rollback()
-                finally:
+                else:
                     self.write({"status": 1})
                     conn.commit()
 
         else:
-            self.write("in preparation")
+            with closing(sqlite3.connect("pyplas.db")) as conn:
+                try:
+                    cur = conn.cursor()
+                    sql = r"""UPDATE pages SET title=:title, page=:page WHERE p_id=:p_id"""
+                    cur.execute(sql, ({"p_id": p_id,
+                                       "title": self.j["title"],
+                                       "page": json.dumps(self.j["page"])}))
+                    if (len(self.j["answers"])):
+                        sql = r"""UPDATE answers SET answers=:answers WHERE p_id=:p_id"""
+                        cur.execute(sql, ({"p_id": p_id,
+                                           "answers": json.dumps(self.j["answers"])}))
+                except Exception as e:
+                    print(e)
+                    self.write({"status": 0})
+                    conn.rollback()
+                else:
+                    self.write({"status": 1})
+                    conn.commit()
 
     def delete(self, p_id=None):
         pass
@@ -325,7 +389,7 @@ class RenderHTMLModuleHandler(tornado.web.RequestHandler):
         elif node == "Code":
             _html = strfmodule(Code(self), allow_del=True, user=self.j.get("user", 0))
         elif node == "Question":
-            _html = strfmodule(Question(self),qid=uuid.uuid4(), user=1, editable=True, 
+            _html = strfmodule(Question(self),q_id=uuid.uuid4(), user=1, editable=True, 
                                ptype=self.j.get("ptype", 0))
         else:
             raise KeyError

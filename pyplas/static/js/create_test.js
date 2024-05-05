@@ -1,16 +1,23 @@
-
+document.querySelectorAll(".node-mde").forEach(elem=>registerAceMDE(elem))
+document.querySelectorAll(".node-code").forEach(elem=>registerAceEditor(elem))
 /**
  * ページをパースしてサーバーに投げる
  * @returns {none}
  */
 function problemSave() {
+
+    var p_id = window.location.pathname.match(/([-a-zA-Z0-9]+)/g)[1]
     var title = document.querySelector("#titleForm").value
+    if (title.length == 0) {
+        alert("input problem title")
+        return 
+    }
 
     var headers = []
 
     document.querySelectorAll("#summary .node-mde").forEach(function(elem) {
         var editor = ace.edit(elem)
-        headers.push(marked.parse(editor.getValue()))
+        headers.push(editor.getValue())
     })
 
     var body = []
@@ -21,7 +28,7 @@ function problemSave() {
     document.querySelectorAll("#sourceCode > .p-content > .node").forEach(function(elem) {
         if (elem.classList.contains("explain")) {
             var editor = ace.edit(elem.querySelector(".node-mde"))
-            var content = marked.parse(editor.getValue())
+            var content = editor.getValue()
             body.push({
                 "type": "explain",
                 "content": content
@@ -39,14 +46,15 @@ function problemSave() {
         }
         else if (elem.classList.contains("question")) {
             var qid = elem.getAttribute("q-id")
-            var ptype = elem.getAttribute("ptype")
+            var ptype = Number(elem.getAttribute("ptype"))
             var question = ""
             var conponent = []
+            var editable = false
             answers[qid] = []
 
             if (ptype == 0) {
                 var editor = ace.edit(elem.querySelector(".node-mde"))
-                var html_str = marked.parse(editor.getValue())
+                var html_str = editor.getValue()
 
                 var html_dom = parser.parseFromString(html_str, "text/html").querySelector("body")
                 html_dom.querySelectorAll(".q-text > *[ans]").forEach(function(elem) {
@@ -56,30 +64,23 @@ function problemSave() {
 
                 question = html_dom.innerHTML
 
-                body.push({
-                    "type": "question",
-                    "qid": qid,
-                    "question": question,
-                    "ptype": ptype
-                })
-
             } else {
                 var editable = elem.querySelector(".editable-flag").checked
                 
-                question = marked.parse(
-                    ace.edit(elem.querySelector(".q-text .node-mde")).getValue())
+                question = ace.edit(elem.querySelector(".q-text .node-mde")).getValue()
 
                 var test_code = ace.edit(elem.querySelector(".test-code .node-code")).getValue()
                 answers[qid].push(test_code)
 
-                body.push({
-                    "type": "question",
-                    "qid": qid,
-                    "question": question,
-                    "ptype": ptype,
-                    "editable": editable,
-                })
             }
+
+            body.push({
+                "type": "question",
+                "q_id": qid,
+                "question": question,
+                "ptype": ptype,
+                "editable": editable,
+            })
         }
     })
 
@@ -91,13 +92,12 @@ function problemSave() {
     }
 
     var send_msg = {
-        "p_id": crypto.randomUUID(),
         "title": title,
         "page": page,
         "answers": answers
     }
 
-    fetch(`${window.location.origin}/create`,{
+    fetch(window.location.href,{
         method: "POST",
         headers: {
             "Content-Type": "application/json"

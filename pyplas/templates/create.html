@@ -16,7 +16,7 @@
 <main class="col-lg-10 col-xl-8 px-3">
     <div class="my-3" id="summary">
         <p class="fs-3 border-bottom border-dark ps-1">
-            <input class="form-control mb-1" id="titleForm" type="text" placeholder="Title" aria-label="problem title input" value="{{conponent['title'] if not is_new else ''}}">
+            <input class="form-control mb-1" id="titleForm" type="text" placeholder="Title" aria-label="problem title input" value="{{conponent.get('title', '')}}">
         </p>
         <div class="ps-3">
             <nav>
@@ -46,11 +46,11 @@
             {% if not is_new %}
                 {% for d in conponent["page"]["body"] %}
                     {% if d["type"] == "explain" %}
-                        {% module Explain(editor=True, content=d["content"], allow_del=True) %}
+                        {% module Explain(**d, editor=True, allow_del=True) %}
                     {% elif d["type"] == "code" %}
-                        {% module Code(content=d["content"], allow_del=True, user=1) %}
+                        {% module Code(**d, user=1, allow_del=True) %}
                     {% elif d["type"] == "question" %}
-                        {% module Question(**d, user=1, answer=answers.get(d["qid"], "")) %}
+                        {% module Question(**d, user=1) %}
                     {% end %}
                 {% end %}
             {% end %}
