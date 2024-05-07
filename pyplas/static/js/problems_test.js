@@ -1,7 +1,7 @@
 
 $(function() {
-    document.querySelectorAll(".node-mde").forEach(registerAceMDE(elem))
-    document.querySelectorAll(".node-code").forEach(registerAceEditor(elem))
+    document.querySelectorAll(".node-mde").forEach(elem => registerAceMDE(elem))
+    document.querySelectorAll(".node-code").forEach(elem => registerAceEditor(elem))
 
     kh = new KernelHandler()
 

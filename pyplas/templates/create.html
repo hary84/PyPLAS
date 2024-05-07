@@ -52,6 +52,7 @@
                     {% elif d["type"] == "question" %}
                         {% module Question(**d, user=1) %}
                     {% end %}
+                    {% module NodeControl() %}
                 {% end %}
             {% end %}
             <i class="bi bi-file-earmark-code"></i>

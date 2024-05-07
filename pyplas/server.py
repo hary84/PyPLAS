@@ -24,6 +24,11 @@ class MainHandler(tornado.web.RequestHandler):
         self.cat = self.get_query_argument("category", None)
 
     def get(self):
+        """
+        問題一覧を表示
+        / -> カテゴリ一覧の表示
+        /?category=<category> -> そのカテゴリのすべての問題を表示
+        """
         if self.cat is None:
             with closing(sqlite3.connect("pyplas.db")) as conn:
                 conn.row_factory = sqlite3.Row
@@ -54,22 +59,25 @@ class ProblemHandler(tornado.web.RequestHandler):
             self.j = json.loads(self.request.body)
 
     def get(self, p_id):
+        """
+        問題回答ページ
+        /problems/<p_id>
+        """
         with closing(sqlite3.connect("pyplas.db")) as conn:
             conn.row_factory = sqlite3.Row 
             cur = conn.cursor()
-            sql = f"SELECT * FROM pages where id = ?"
-            cur.execute(sql, (p_id,))
+            sql = f"SELECT * FROM pages where p_id=:p_id AND status=1"
+            cur.execute(sql, ({"p_id": p_id}))
             page = cur.fetchone()
 
-            sql = f"SELECT id, title, status FROM pages"
-            cur.execute(sql)
-            progress = cur.fetchall()
-
         page = {key: page[key] if key!="page" else json.loads(page[key]) for key in page.keys()}
-        progress = [dict(p) for p in progress]
-        self.render(f"./problem.html", conponent=page, progress=progress)
+        self.render(f"./problem.html", conponent=page, progress=[])
 
     async def post(self, p_id):
+        """
+        解答
+        /problems/<p_id>
+        """
         global  mult_km
         self.p_id = p_id
         try:
@@ -276,52 +284,57 @@ class KernelHandler(tornado.web.RequestHandler):
 class ProblemCreateHandler(tornado.web.RequestHandler):
 
     def prepare(self):
-        self.action = self.get_query_argument("action", None)
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.j = json.loads(self.request.body)
 
     def get(self, p_id=None):
+        """
+        問題編集ページ
+        /create/ -> 問題リスト
+        /create/new -> 新規問題作成ページ
+        /create/<p_id(uuid)> -> 問題編集ページ
+        """
         if p_id is None:
-            if self.action == "new":
-                self.render("create.html", conponent={}, answers={}, is_new=True)
-            elif self.action is None:
-                with closing(sqlite3.connect("pyplas.db")) as conn:
-                    conn.row_factory = sqlite3.Row 
-                    cur = conn.cursor()
-                    sql = r"""SELECT p_id, title, category, status FROM pages"""
-                    cur.execute(sql)
-                    res = cur.fetchall()
-                    sql = r"""SELECT * FROM categories"""
-                    cur.execute(sql)
-                    cates = cur.fetchall()
-                res = [dict(r) for r in res] if res is not None else []
-                cates = [dict(r) for r in cates]
-                self.render("create_index.html", problem_list=res, categories=cates)
-        else:
             with closing(sqlite3.connect("pyplas.db")) as conn:
-                conn.row_factory = sqlite3.Row
+                conn.row_factory = sqlite3.Row 
                 cur = conn.cursor()
-                sql = r"SELECT title, page FROM pages where p_id = :p_id"
-                cur.execute(sql, ({"p_id": p_id}))
-                res = cur.fetchone()
-                if res is None:
-                    self.redirect("/create?action=new")
-                sql = r"SELECT answers FROM answers WHERE p_id = :p_id"
-                cur.execute(sql, ({"p_id": p_id}))
-                ans = cur.fetchone()
-                ans = json.loads(ans["answers"]) if ans is not None else {}
+                sql = r"""SELECT p_id, title, category, status FROM pages"""
+                cur.execute(sql)
+                res = cur.fetchall()
+                sql = r"""SELECT * FROM categories"""
+                cur.execute(sql)
+                cates = cur.fetchall()
+            res = [dict(r) for r in res] if res is not None else []
+            cates = [dict(r) for r in cates]
+            self.render("create_index.html", problem_list=res, categories=cates)
+        else:
+            if p_id == "new":
+                self.render("create.html", conponent={}, answers={}, is_new=True)
+            else:
+                with closing(sqlite3.connect("pyplas.db")) as conn:
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.cursor()
+                    sql = r"SELECT title, page FROM pages where p_id = :p_id"
+                    cur.execute(sql, ({"p_id": p_id}))
+                    res = cur.fetchone()
+                    if res is None:
+                        self.redirect("/create/new")
+                    sql = r"SELECT answers FROM answers WHERE p_id = :p_id"
+                    cur.execute(sql, ({"p_id": p_id}))
+                    ans = cur.fetchone()
+                    ans = json.loads(ans["answers"]) if ans is not None else {}
 
-            res = {"title": res["title"],
-                   "page": json.loads(res["page"])}
-            self.render("create.html", conponent=res, answers=ans, is_new=False)
+                res = {"title": res["title"],
+                    "page": json.loads(res["page"])}
+                self.render("create.html", conponent=res, answers=ans, is_new=False)
 
-    def post(self, p_id=None):
+    def post(self, p_id):
         """
-        p_id
-            p_idがない時、新規作成。
-            p_idがある時、編集。
+        pageの新規作成/更新
+        /create/new/ -> 新規保存
+        /create/<p_id>/ -> 上書き保存
         """
-        if p_id is None:
+        if p_id == "new":
             with closing(sqlite3.connect("pyplas.db")) as conn:
                 try:
                     p_id = str(uuid.uuid4())
@@ -339,8 +352,9 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
                     self.write({"status": 0})
                     conn.rollback()
                 else:
-                    self.write({"status": 1})
+                    # self.write({"status": 1})
                     conn.commit()
+                    self.redirect(f"/create/{p_id}")
 
         else:
             with closing(sqlite3.connect("pyplas.db")) as conn:
@@ -361,6 +375,28 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
                 else:
                     self.write({"status": 1})
                     conn.commit()
+
+    def put(self, p_id=None):
+        """
+        ページの内容以外のパラメータ(title, category, status)の編集  
+        /create/<p_id>/
+        """
+        with closing(sqlite3.connect("pyplas.db")) as conn:
+            try:
+                cur = conn.cursor()
+                sql = r"""UPDATE pages SET title=:title, category=:category, status=:status WHERE p_id=:p_id"""
+                cur.execute(sql, ({"p_id": p_id,
+                                   "title": self.j["title"],
+                                   "category": self.j["category"],
+                                   "status": self.j["status"]
+                                   }))
+            except Exception as e:
+                print(e)
+                self.write({"status": 0})
+                conn.rollback()
+            else:
+                self.write({"status": 1})
+                conn.commit()
 
     def delete(self, p_id=None):
         pass

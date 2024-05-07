@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
 
 {% block head %}
+<link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 {% end %}
 
 {% block head-nav-li %}
@@ -19,33 +21,33 @@
             <tr>
               <th scope="col" style="width: 10%;">#</th>
               <th scope="col" style="width: 30%;">title</th>
-              <th scope="col" style="width: 25%;">group</th>
+              <th scope="col" style="width: 25%;">category</th>
               <th scope="col" style="width: 25%;">status</th>
               <th scope="col" style="width: 10%;">ops</th>
             </tr>
           </thead>
           <tbody>
           {% for i, d in enumerate(problem_list) %}
-            <tr>
+            <tr target="{{ d['p_id'] }}">
               <th scope="row">{{ i }}</th>
-              <td><input type="text" class="form-control form-control-sm" value="{{ d['title'] }}"></td>
+              <td><input type="text" class="title-form form-control form-control-sm" value="{{ d['title'] }}"></td>
               <td>
-                <select class="form-select form-select-sm">
+                <select class="select-category form-select form-select-sm">
                   {% for cat_d in categories %}
-                    <option value="{{ cat_d['cat_id'] }}" {{"cheked" if d['category'] == cat_d['cat_id'] else "" }}>{{ cat_d['cat_name'] }}</option>
+                    <option value="{{ cat_d['cat_id'] }}" {{"selected" if d['category'] == cat_d['cat_id'] else "" }}>{{ cat_d['cat_name'] }}</option>
                   {% end %}
                 </select>
               </td>
               <td>
-                <select class="form-select form-select-sm" aria-label="Default select example">
-                  <option value="0" {{"cheked" if d['status']==0 else "" }}>非公開</option>
-                  <option value="1" {{"cheked "if d['status']==1 else "" }}>公開中</option>
+                <select class="select-status form-select form-select-sm" aria-label="Default select example">
+                  <option value="0" {{"selected" if d['status']==0 else "" }}>非公開</option>
+                  <option value="1" {{"selected" if d['status']==1 else "" }}>公開中</option>
                 </select>
               </td>
               <td class="d-flex mx-auto">
-                <button class="btn btn-sm"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn btn-sm" onclick="editPageParams(this)"><i class="bi bi-arrow-clockwise"></i></button>
                 <div class="vr"></div>
-                <button class="btn btn-sm" onclick="location.href='./create/{{ d['p_id']}}'"><i class="bi bi-pencil-square"></i></button>
+                <button class="btn btn-sm" onclick="location.href='./{{ d['p_id']}}'"><i class="bi bi-pencil-square"></i></button>
               </td>
             </tr>
           {% end %}
@@ -54,5 +56,7 @@
   </div>
 </main>
 <div class="col-xl-2 border-start"></div>
+<script src="{{ static_url('js/create_test.js') }}"></script>
+
 {% end %}
 

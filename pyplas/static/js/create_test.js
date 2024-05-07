@@ -99,15 +99,34 @@ function problemSave() {
 
     fetch(window.location.href,{
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify(send_msg)
     }).then(response => response.json()).then(data => {
         if (data.status == 0) {
             alert("SAVE FAILURE")
+        }
+    })
+}
+/**
+ * pageのstatus, category, titleを変更する
+ * @param {DOM} btn 
+ */
+function editPageParams(btn) {
+    var tr = btn.closest("tr")
+    var p_id = tr.getAttribute("target")
+    var title = tr.querySelector(".title-form").value
+    var category = Number(tr.querySelector(".select-category").value)
+    var status = Number(tr.querySelector(".select-status").value)
+    console.log("edit page params")
+    fetch(`${window.location.origin}/create/${p_id}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({"title": title, "category": category, "status": status})
+    }).then(response => response.json()).then(data => {
+        if (data.status == 0) {
+            alert("SAVE FAILED")
         } else if (data.status == 1) {
-            alert("SAVED")
+            window.location.reload()
         }
     })
 }
