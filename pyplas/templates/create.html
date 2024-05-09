@@ -50,7 +50,7 @@
                     {% elif d["type"] == "code" %}
                         {% module Code(**d, user=1, allow_del=True) %}
                     {% elif d["type"] == "question" %}
-                        {% module Question(**d, user=1) %}
+                        {% module Question(**d, user=1, answers=conponent["answers"]) %}
                     {% end %}
                     {% module NodeControl() %}
                 {% end %}
@@ -80,6 +80,6 @@
     </div>
 </div>
 
-<script src="{{ static_url('js/create_test.js') }}"></script>
 <!-- <script src="{{ static_url('js/problems_test.js') }}"></script> -->
+<script src="{{ static_url('js/create_test.js') }}"></script>
 {% end %}

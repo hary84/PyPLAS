@@ -66,8 +66,6 @@ class Question(UIModule):
         *editable: False: CAN NOT add/remove Markdown, Code
                   True : CAN add/remove Markdown, Code
         """
-        if ptype == 1:
-            answer = answer[0]
         return self.render_string("modules/question.html",
                                   q_id=q_id, ptype=ptype, user=user,
                                   question=question,

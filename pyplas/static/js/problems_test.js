@@ -19,8 +19,8 @@ $(function() {
 
     var sourcecode = document.querySelector("#sourceCode")
     sourcecode.addEventListener("click", function(e) {
-        var target = e.target
-
+        var target = e.target.closest(".code, .btn-exec, .executing, .btn-testing")
+        console.log(target)
         if (target.classList.contains("code")) {
             $current_node = $(this)
         } else if (target.classList.contains("btn-exec")) {
@@ -28,42 +28,15 @@ $(function() {
             kh.execute($current_node)
         } else if (target.classList.contains("executing")) {
             kh.kernelInterrupt()
+        } else if (target.classList.contains("btn-testing")) {
+            scoring(target.closest(".node.question"))
         }
-    })
-
-    $(".btn-testing").on("click", function() {
-        kh.kernelInterrupt()
-        var code = []
-        var $question = $(this).parents(".question")
-        $question.find(".node-code").each(function() {
-            code.push(ace.edit($(this)[0]).getValue())
-        })
-        $(".btn-testing").addClass("disabled")
-        $.ajax({
-            url: window.location.href,
-            type: "POST",
-            contentType: "application/json",
-            dataType: "json",
-            data: JSON.stringify({"qid": $question.attr("q-id"), 
-                                  "code": code,
-                                  "kernel_id": kh.test_kernel_id}),
-            success: (data) => {
-                $toast = $question.find(".for-toast")
-                $toast.empty()
-                $toast.append(data.html.replace(/\x1B[[;\d]+m/g, ""))
-                $toast.find(".toast").toast("show")
-                $(".btn-testing").removeClass("disabled")
-            }
-        })
     })
 
     $(".btn-cancel").on("click", function() {
         kh.kernelInterrupt(kh.test_kernel_id)
     })
 
-    // $(".code").on("click", function() {
-    //     $current_node = $(this)
-    // })
 
     $(window).on("keydown", function(e) {
         if (e.ctrlKey) {
@@ -72,15 +45,6 @@ $(function() {
             } 
         }
     })
-
-    // $(".btn-exec").on("click", function() {
-    //     $current_node = $(this).parents(".code")
-    //     kh.execute($current_node)
-    // })
-
-    // $(".executing").on("click", function() {
-    //     kh.kernelInterrupt()
-    // })
 
     watchValue(kh, "running", setExecuteAnimation)
     watchValue(kh, "msg", renderMessage)

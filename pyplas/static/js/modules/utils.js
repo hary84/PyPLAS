@@ -6,7 +6,7 @@
 function registerAceEditor(elem) {
 
     var id = crypto.randomUUID()
-    elem.setAttribute("node-id", id)
+    elem.closest(".node").setAttribute("node-id", id)
 
     const lh = 1.3
     var editor = ace.edit(elem, {
@@ -63,7 +63,6 @@ function registerAceMDE(elem) {
         }
     })
 }
-
 /**
  * 選択された要素を**で囲む
  * @param {DOM} btn 
@@ -213,10 +212,51 @@ async function addQ(append_tail, ptype) {
 }
 /**
  * DEL Node 
- * @param {DOM} btn
+ * @param {DOM} btn 
  */
 function delme(btn) {
     var node = btn.closest(".node")
     node.nextElementSibling.remove()
     node.remove()
+}
+/**
+ * auto scoring
+ * @param {DOM} question_node 
+ */
+function scoring(question_node) {
+    var ptype = Number(question_node.getAttribute("ptype"))
+    var q_id = question_node.getAttribute("q-id")
+    var answers = []
+
+    // html problem
+    if (ptype == 0) {
+        question_node.querySelectorAll(".card-body > .explain > .q-text").forEach(elem => {
+            answers.push(elem.querySelector("select, input").value)
+        })
+    }
+    // code writing problem
+    else if (ptype == 1) {
+        question_node.querySelectorAll(".node-code").forEach(elem => {
+            answers.push(ace.edit(elem).getValue())
+        })
+    }
+    var sbm_btn = question_node.querySelector(".btn-testing")
+    sbm_btn.classList.add("disabled")
+
+    // POST /problems/<p_id>
+    fetch(window.location.href, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "ptype": ptype,
+            "q_id": q_id,
+            "answers": answers,
+            "kernel_id": sessionStorage["kernel_id"] 
+        })
+    }).then(response => response.json()).then(data => {
+        var toast = question_node.querySelector(".for-toast")
+        toast.innerHTML = data.html.replace(/\x1B[[;\d]+m/g, "")
+        toast.querySelector(".toast").toast("show")
+        sbm_btn.classList.remove("disabled")
+    })
 }

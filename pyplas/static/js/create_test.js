@@ -103,7 +103,10 @@ function problemSave() {
         body: JSON.stringify(send_msg)
     }).then(response => response.json()).then(data => {
         if (data.status == 0) {
-            alert("SAVE FAILURE")
+            alert("SAVE FAILURE\n" + data.error)
+        }
+        else if (data.status == 1) {
+            window.location.href = `/create/${data.p_id}`
         }
     })
 }
