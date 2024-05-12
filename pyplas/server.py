@@ -1,9 +1,9 @@
 import asyncio
-from contextlib import closing
 from datetime import date, datetime
 import signal
-import sqlite3
+from util import InvalidJSONException, ApplicationHandler
 import uuid
+from typing import Union, Tuple
 import tornado 
 import tornado.websocket 
 import tornado.ioloop as ioloop
@@ -18,7 +18,7 @@ from uimodules import *
 mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
 
-class MainHandler(tornado.web.RequestHandler):
+class MainHandler(ApplicationHandler):
     
     def prepare(self):
         self.cat = self.get_query_argument("category", None)
@@ -26,64 +26,56 @@ class MainHandler(tornado.web.RequestHandler):
     def get(self):
         """
         問題一覧を表示
-        / -> カテゴリ一覧の表示
-        /?category=<category> -> そのカテゴリのすべての問題を表示
+        (PATH)
+            / -> カテゴリ一覧の表示
+            /?category=<category> -> そのカテゴリのすべての問題を表示
         """
         if self.cat is None:
-            with closing(sqlite3.connect("pyplas.db")) as conn:
-                conn.row_factory = sqlite3.Row
-                cur = conn.cursor()
-                sql = r"""SELECT cat_name FROM categories"""
-                cur.execute(sql)
-                res = cur.fetchall()
-            cat = [r["cat_name"] for r in res] if res is not None else []
+            sql = r"""SELECT cat_name FROM categories"""
+            cat = self.get_from_db(sql)
+            cat = [r["cat_name"] for r in cat]
             self.render("index.html", categories=cat, problem_list=[])
         else:
-            with closing(sqlite3.connect("pyplas.db")) as conn:
-                conn.row_factory = sqlite3.Row 
-                cur = conn.cursor()
-                sql = r"""SELECT pages.p_id, pages.title, progress.status FROM pages
-                INNER JOIN categories ON pages.category = categories.cat_id
-                INNER JOIN progress ON pages.p_id = progress.p_id
-                WHERE categories.cat_name = :cat_name AND pages.status = 1"""
-                cur.execute(sql, ({"cat_name": self.cat})) 
-                res = cur.fetchall()
-            problem_list = [dict(r) for r in res]
-            self.render("index.html", categories=[], problem_list=problem_list)
+            sql = r"""SELECT pages.p_id, pages.title, progress.status FROM pages
+            INNER JOIN categories ON pages.category = categories.cat_id
+            LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
+            WHERE categories.cat_name = :cat_name AND pages.status = 1"""
+            p_list = self.get_from_db(sql, cat_name=self.cat)
+            p_list = [r for r in p_list]
+            self.render("index.html", categories=[], problem_list=p_list)
 
-class ProblemHandler(tornado.web.RequestHandler):
+class ProblemHandler(ApplicationHandler):
     """
     問題ページの表示/解答の採点を行う
     """
-
     def prepare(self):
         """
-        POSTされたJSONのロード
+        JSONのロード
+        [POST]
             ptype:        問題のタイプ (0-> html, 1-> coding)
-            q_id:         問題id(uuid)
+            q_id:         問題id
             answers:      解答のリスト
             kernel_id:    コードを実行するカーネルのid
         """ 
-        if self.request.headers.get("Content-Type", None) == "application/json":
-            self.j = json.loads(self.request.body)
+        keys = ["ptype", "q_id", "answers", "kernel_id"]
+        self.is_valid_json = self.load_json(validate=True, keys=keys)
 
     def get(self, p_id):
         """
         問題回答ページ
-        /problems/<p_id>
+        (PATH)
+            /problems/<p_id>
         """
-        with closing(sqlite3.connect("pyplas.db")) as conn:
-            conn.row_factory = sqlite3.Row 
-            cur = conn.cursor()
-            sql = r"SELECT title, page FROM pages where p_id=:p_id AND status=1"
-            cur.execute(sql, ({"p_id": p_id}))
-            page = cur.fetchone()
+        sql = r"SELECT title, page FROM pages where p_id=:p_id AND status=1"
+        page = self.get_from_db(sql, p_id=p_id)
 
         try:
-            assert page is not None
+            assert len(page) != 0
+            page = page[0]
         except AssertionError as e:
             print(f"[ERROR] {e}")
             self.redirect("/")
+            return
         else:
             page = {"title": page["title"],
                     "page": json.loads(page["page"])}
@@ -92,86 +84,111 @@ class ProblemHandler(tornado.web.RequestHandler):
     async def post(self, p_id):
         """
         解答
-        /problems/<p_id>
+        (PATH)
+            /problems/<p_id>
         """
-        global  mult_km
         self.p_id = p_id
-        try:
-            if self.j["ptype"] == 0:
+        
+        if self.is_valid_json:
+            sql = r"""SELECT answers FROM pages WHERE p_id=:p_id"""
+            answers = self.get_from_db(sql, p_id=self.p_id)
+            try:
+                assert len(answers) != 0
+                self.answers = answers[0][self.json["answers"]]
+            except AssertionError as e:
                 pass
-            elif self.j["ptype"] == 1:
-                pass
+            if self.json["ptype"] == 0: # html problem
+                result, content = self.html_scoring()
+            elif self.json["ptype"] == 1: # coding problem
+                result, content = self.code_scoring()
             else:
                 raise KeyError
-            self.kernel_id = await mult_km.start_kernel(kernel_id=self.j["kernel_id"])
-            self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
-        except (DuplicateKernelError, KeyError) as e:
-            self._return_error_msg(e)
-            return 
-        self.kc: AsyncKernelClient = self.km.client()
-        if (not self.kc.channels_running):
-            self.kc.start_channels()
-        await self.scoring()
-        
-    def _return_error_msg(self, e):
-        prop = {"result_status": "status-error",
-                "result_content": str(e)}
-        html = tornado.escape.to_unicode(
-            self.render_string("./modules/toast.html", **prop))
-        self.write({"html": html})
+            is_perfect = False not in result 
+            sql = r"""INSERT INTO logs(p_id, q_id, content, result) 
+            VALUES(:p_id, :q_id, :content, :result)"""
+            self.write_to_db(sql, p_id=self.p_id,
+                             q_id=self.json["q_id"],
+                             content=json.dumps(self.json["answers"]),
+                             result=int(is_perfect))
 
-    async def html_scoring(self):
-        pass
+        self.write({"html": self._render_toast(content, is_perfect)})
 
-    async def code_scoring(self):
-        code = ""
-        for value in self.j["code"]:
-            code = code + "\n" + value
-        
-        with closing(sqlite3.connect("pyplas.db")) as conn:
-            cur = conn.cursor()
-
-            sql = "SELECT answers FROM answer WHERE pid=?"
-            cur.execute(sql, (self.p_id,))
-            answers = json.loads(cur.fetchone()[0])
-            test_code = answers[self.j["qid"]].get("code", None)
-            code = code + "\n" + test_code
-            self.kc.execute(code)
-
-            status = 1
-            while 1:
-                try:
-                    output = await self.kc.get_iopub_msg()
-                except:
-                    break
-                print(f"[LOG] scoring output msg_type: {output['msg_type']}")
-                if output["msg_type"] == "error":
-                    error = "\n".join(output["content"]["traceback"])
-                    status = 0
-                if output["msg_type"] == "status" and output["content"]["execution_state"] == "idle":
-                    break
-
-            sql = "INSERT INTO log(pid, qid, content, status) SELECT :pid, :qid, :content, :status " +\
-                  "WHERE NOT EXISTS(SELECT * FROM log WHERE qid=:qid AND status=1)"
-            cur.execute(sql, ({"pid": self.p_id,
-                               "qid": self.j["qid"],
-                               "content": str(self.j["code"]),
-                               "status": status}))
-            conn.commit()
-
-        print(f"[LOG] POST RESULT SEND")
-
-        prop = {"result_status": "status-success" if status else "status-error",
-                "result_content": "Complete" if status else error}
-        
-        html = tornado.escape.to_unicode(
-            self.render_string("./modules/toast.html", **prop)
+    def _render_toast(self,  content, stat):
+        if stat == 0:
+            stat = "status-error"
+        elif stat == 1:
+            stat = "status-success"
+        return tornado.escape.to_unicode(
+            self.render_string("./modules/toast.html",
+                               {"result_status": stat,
+                                "result_content": content})
         )
-        self.write({"html": html})
+    
+    def html_scoring(self) -> Tuple[list, str]:
+        """
+        html problemの自動採点
+
+        Returns
+        -------
+        result: list
+            各質問の採点結果をTrue/Falseで表したlist
+        content: str
+            toastに表示される文字列
+        """
+        result = []
+        try:
+            content = ''
+            assert len(self.j["answers"]) == len(self.answers), "Does not match the number of questions in DB"
+            for i, ans in self.answers:
+                result.append(ans == self.j["answers"][i])
+                content += "[o] " if result[i] else "[x] " + ans + "\n"
+        except (KeyError, AssertionError) as e:
+            content = str(e)
+
+        return (result, content)
         
+    async def code_scoring(self) -> Tuple[list, str]:
+        """
+        coding problem 自動採点
+        
+        Returns
+        -------
+        result: list
+            各質問の採点結果をTrue/Falseで表したlist
+        content: str
+            toastに表示される文字列
+        """
+        global mult_km 
+        try:
+            code = self.json["code"] + self.answers
+            code = "\n".join(code)
+            self.kernel_id = await mult_km.start_kernel(kernel_id=self.json["kernel_id"])
+            self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
+            self.kc: AsyncKernelClient = self.km.client()
+            if (not self.kc.channels_running):
+                self.kc.start_channels()
+        except (KeyError, DuplicateKernelError) as e:
+            pass
+            
+        self.kc.execute(code)
+        result = [True]
+        while 1:
+            try:
+                output = await self.kc.get_iopub_msg()
+            except: 
+                break 
+            if output["msg_type"] == "error":
+                content = "\n".join(output["content"]["traceback"])
+                result[0] = False
+            if output["msg_type"] == "status" and output["content"]["execution_state"] == "idle":
+                break
+
+        if result[0] == True:
+            content = "Complete"
+
         self.kc.stop_channels()
         await mult_km.shutdown_kernel(self.kernel_id)
-        
+        return result, content
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
 
@@ -206,9 +223,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             try:
                 output = await self.kc.get_iopub_msg()
             except:
-                # ioloop.IOLoop.current().spawn_callback(self.messaging2)
                 break
-
             print("get msg = " , output["msg_type"])
             if output["msg_type"] == "error":
                 self.has_error = True
@@ -236,7 +251,7 @@ class KernelHandler(tornado.web.RequestHandler):
 
     def get(self, k_id=None):
         """
-        MultiKernelManagerの管理しているすべてのidを知らせる.
+        MultiKernelManagerの管理しているカーネルのidを知らせる.
         kernel_id が存在する場合, そのカーネルが動いているかを知らせる.
         """
         if k_id:
@@ -306,7 +321,7 @@ class KernelHandler(tornado.web.RequestHandler):
     def on_finish(self):
         mult_km.updated.set()
 
-class ProblemCreateHandler(tornado.web.RequestHandler):
+class ProblemCreateHandler(ApplicationHandler):
     """
     問題作成モード
     """
@@ -322,124 +337,84 @@ class ProblemCreateHandler(tornado.web.RequestHandler):
             category:  問題カテゴリ
             status:    公開/非公開を決めるパラメータ
         """
-        if self.request.headers.get("Content-Type", None) == "application/json":
-            self.j = json.loads(self.request.body)
-
+        if self.request.method == "POST":
+            keys = ["title", "page", "answers"]
+            self.is_valid_json = self.load_json(validate=True, keys=keys)
+        elif self.request.method == "PUT":
+            keys = ["title", "category", "status"]
+            self.is_valid_json = self.load_json(validate=True, keys=keys)
+            
     def get(self, p_id=None):
         """
         問題編集ページ
-        /create/ -> 問題リスト
-        /create/new -> 新規問題作成ページ
-        /create/<p_id(uuid)> -> 問題編集ページ
+        (PATH)
+            /create/ -> 問題リスト
+            /create/new -> 新規問題作成ページ
+            /create/<p_id(uuid)> -> 問題編集ページ
         """
-        if p_id is None: # 問題リスト
-            with closing(sqlite3.connect("pyplas.db")) as conn:
-                conn.row_factory = sqlite3.Row 
-                cur = conn.cursor()
-                sql = r"""SELECT p_id, title, category, status FROM pages"""
-                cur.execute(sql)
-                res = cur.fetchall()
-                sql = r"""SELECT * FROM categories"""
-                cur.execute(sql)
-                cates = cur.fetchall()
-            try:
-                res = [dict(r) for r in res] if res is not None else []
-                cates = [dict(r) for r in cates] if cates is not None else []
-            except Exception as e:
-                print(f"[ERROR] {e}")
-                self.redirect("/")
-            else:
-                self.render("create_index.html", problem_list=res, categories=cates)
+        if p_id is None: # 問題index
+            sql = r"""SELECT p_id, title, category, status FROM pages"""
+            problems = self.get_from_db(sql)
+            sql = r"""SELECT * FROM categories"""
+            cates = self.get_from_db(sql)
+            problems = [r for r in problems] 
+            cates = [r for r in cates]
+            self.render("create_index.html", problem_list=problems, categories=cates)
+
         else: # 編集ページ
-            if p_id == "new":
+            if p_id == "new": # 新規作成
                 self.render("create.html", conponent={}, answers={}, is_new=True)
-            else:
-                with closing(sqlite3.connect("pyplas.db")) as conn:
-                    conn.row_factory = sqlite3.Row
-                    cur = conn.cursor()
-                    sql = r"SELECT title, page, answers FROM pages where p_id = :p_id"
-                    cur.execute(sql, ({"p_id": p_id}))
-                    res = cur.fetchone()
-                try:
-                    res = {"title": res["title"],
-                           "page": json.loads(res["page"]),
-                           "answers": json.loads(res["answers"])}
-                except Exception as e:
-                    print(f"[ERROR] {e}")
-                    self.redirect("/create/new")
-                else:
-                    self.render("create.html", conponent=res, is_new=False)
+            else: # 編集
+                sql = r"SELECT title, page, answers FROM pages where p_id = :p_id"
+                page = self.get_from_db(sql, p_id=p_id)
+                assert len(page) != 0
+                page = page[0]
+                page = {"title": page["title"],
+                        "page": json.loads(page["page"]),
+                        "answers": json.loads(page["answers"])}
+                self.render("create.html", conponent=page, is_new=False)
 
     def post(self, p_id):
         """
         pageの新規作成/更新
-        /create/new/ -> 新規保存
-        /create/<p_id>/ -> 上書き保存
+        (PATH)
+            /create/new/ -> 新規保存
+            /create/<p_id>/ -> 上書き保存
         """
         if p_id == "new": # 新規作成
-            with closing(sqlite3.connect("pyplas.db")) as conn:
-                try:
-                    p_id = str(uuid.uuid4())
-                    cur = conn.cursor()
-                    sql = r"""INSERT INTO pages(p_id, title, page, answers) 
-                    VALUES(:p_id, :title, :page, :answers)"""
-                    cur.execute(sql, ({"p_id": p_id,
-                                       "title": self.j["title"],
-                                       "page": json.dumps(self.j["page"]),
-                                       "answers": json.dumps(self.j.get("answers", {}))
-                                       }))
-                except Exception as e:
-                    print(f"[ERROR] {e}")
-                    self.write({"error": str(e)})
-                    conn.rollback()
-                else:
-                    conn.commit()
-                    self.write({"status": 1,
-                                "p_id": p_id})
+            sql = r"""INSERT INTO pages(p_id, title, page, answers) 
+            VALUES(:p_id, :title, :page, :answers)"""
+            self.write_to_db(sql, p_id=p_id, title=self.json["title"], 
+                             page=json.dumps(self.json["page"]),
+                             answers=json.dumps(self.json["answers"]))
+
+            self.write({"status": 1, "p_id": p_id})
 
         else: # 上書き保存
-            with closing(sqlite3.connect("pyplas.db")) as conn:
-                try:
-                    cur = conn.cursor()
-                    sql = r"""UPDATE pages SET title=:title, page=:page, answers WHERE p_id=:p_id"""
-                    cur.execute(sql, ({"p_id": p_id,
-                                       "title": self.j["title"],
-                                       "page": json.dumps(self.j["page"]),
-                                       "answers": json.dumps(self.j.get("answers", {}))
-                                       }))
-                except Exception as e:
-                    print(f"[ERROR] {e}")
-                    self.write({
-                        "status": 0,
-                        "error": str(e)})
-                    conn.rollback()
-                else:
-                    self.write({"status": 1})
-                    conn.commit()
+            sql = r"""UPDATE pages SET title=:title, page=:page, answers WHERE p_id=:p_id"""
+            self.write_to_db(sql, p_id=p_id, title=self.json["title"],
+                             page=json.dumps(self.json["page"]),
+                             answers=json.dumps(self.json["answers"]))
+            self.write({"status": 1})
 
-    def put(self, p_id=None):
+    def put(self, p_id):
         """
         ページの内容以外のパラメータ(title, category, status)の編集  
-        /create/<p_id>/
+        (PATH)
+            /create/<p_id>/
         """
-        with closing(sqlite3.connect("pyplas.db")) as conn:
-            try:
-                cur = conn.cursor()
-                sql = r"""UPDATE pages SET title=:title, category=:category, status=:status WHERE p_id=:p_id"""
-                cur.execute(sql, ({"p_id": p_id,
-                                   "title": self.j["title"],
-                                   "category": self.j["category"],
-                                   "status": self.j["status"]
-                                   }))
-            except Exception as e:
-                print(e)
-                self.write({"status": 0})
-                conn.rollback()
-            else:
-                self.write({"status": 1})
-                conn.commit()
+        sql = r"""UPDATE pages SET title=:title, category=:category, status=:status WHERE p_id=:p_id"""
+        self.write_to_db(sql, p_id=p_id, title=self.json["title"],
+                         category=self.json["category"],
+                         status=self.json["status"])
+        self.write({"status": 1})
 
-    def delete(self, p_id=None):
+    def delete(self, p_id):
+        """
+        問題ページの削除
+        (PATH)
+            /create/<p_id>/
+        """
         pass
 
 
@@ -489,6 +464,7 @@ def make_app():
     ],
     template_path=os.path.join(os.getcwd(), "templates"),
     static_path=os.path.join(os.getcwd(), "static"),
+    db_path=os.path.join(os.getcwd(), "pyplas.db"),
     debug=True,
     ui_modules=uimodules
     )

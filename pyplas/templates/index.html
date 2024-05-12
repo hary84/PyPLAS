@@ -48,7 +48,7 @@
                                 <th>{{ i }}</th>
                                 <td scope="row">{{ d['title'] }}</td>
                                 <td>
-                                    {% if d['status'] == 0 %}
+                                    {% if d['status'] is None %}
                                         <i class="bi bi-door-closed text-danger"></i>
                                         未学習
                                     {% elif d['status'] == 1 %}
