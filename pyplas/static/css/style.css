@@ -7,6 +7,10 @@
   display: none;
 }
 
+.blocked-bi:before {
+  display: block;
+}
+
 /* when offcanvas show (larger than lg) */
 @media (min-width: 993px) { 
   .sidebar {
@@ -32,16 +36,38 @@
 .code {
   display: flex;
   .node-side {
-      padding: 0rem 0.3rem;
-      text-align: right;
-      position: relative;
-      font-size: 0.7rem;
-      .node-number::before {
-          content: "[";
+      padding-top: 0.15rem;
+      .btn {
+        padding: 0rem;
+        border: none;
+        i {
+          font-size: 1.1rem;
+        }
+        i:before {
+          padding: 0.1rem;
+        }
+        .spinner-border {
+          width: 0.9rem;
+          height: 0.9rem;
+        }
       }
-      .node-number::after {
-          content: "]";
+      .btn:hover{
+        i:before {
+          color: white;
+        }
       }
+      .executing {
+        display: none;
+        padding: 0rem 0.2rem;
+      }
+  }
+  .node-side.running {
+    .btn-exec {
+      display: none;
+    }
+    .executing {
+      display: block;
+    }
   }
   .node-prime {
       width: 100%;
@@ -59,9 +85,6 @@
           margin: 0.1rem;
           i {
             font-size: 0.9rem;
-          }
-          i:before {
-            display: block;
           }
         }
       }

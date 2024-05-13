@@ -191,6 +191,7 @@ class ProblemHandler(ApplicationHandler):
         return result, content
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
+    """コード実行管理"""
 
     async def open(self, id: str):
         global mult_km
@@ -206,34 +207,46 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         print(f"[LOG] WS is connecting with {self.kernel_id}")
 
     async def on_message(self, received_msg: dict):
+        """メッセージ受信時の処理
+
+        received_msg: dict
+            code: str
+            node_id: str
+        """
         received_msg = json.loads(received_msg)
-        print(f"[LOG] WS received : {received_msg}")
+        print(f"[LOG] WebSocket receive {received_msg}")
         await self.exec.wait()
         _code = received_msg.get("code", None)
-        self.msg_meta = {"qid": received_msg.get("qid"), # identify question node
-                         "id": received_msg.get("id")} # id to identify node 
+        self.node_id = received_msg.get("node_id", None)
         self.has_error = False
         self.kc.execute(_code)
         self.exec.clear()
         ioloop.IOLoop.current().spawn_callback(self.messaging)
 
     async def messaging(self):
-        print("=====spawn callback=====")
+        """
+        コード実行にまつわるipykernelからの一連のメッセージを受信
+        """
+        print("===== spawn callback =====")
         while 1:
             try:
                 output = await self.kc.get_iopub_msg()
-            except:
+                print(f"received {output['msg_type']}")
+                if output["msg_type"] == "error":
+                    self.has_error = True
+                if output["msg_type"] == "status" and output["content"]['execution_state'] == "idle":
+                    self.write_message(json.dumps({"msg_type": "exec-end-sig", 
+                                                    "has_error": self.has_error,
+                                                    "node_id": self.node_id}
+                                                    ))
+                    self.exec.set()
+                    break
+                else:
+                    output.update({"node_id": self.node_id})
+                    self.write_message(json.dumps(output, default=self._datetime_encoda))
+            except Exception as e:
+                print(e)
                 break
-            print("get msg = " , output["msg_type"])
-            if output["msg_type"] == "error":
-                self.has_error = True
-            if output["msg_type"] == "status" and output["content"]['execution_state'] == "idle":
-                self.write_message(json.dumps({"msg_type": "exec-end-sig", 
-                                                "has_error": self.has_error} 
-                                                | self.msg_meta))
-                self.exec.set()
-                break
-            self.write_message(json.dumps(output | self.msg_meta , default=self._datetime_encoda))
 
     def _datetime_encoda(self, obj):
         if isinstance(obj, (datetime, date)):
@@ -241,82 +254,93 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
     
     def on_close(self):
         print("[LOG] websocket is closing")
+        
 
 class KernelHandler(tornado.web.RequestHandler):
+    """カーネル管理用 REST API"""
 
     def prepare(self):
         global mult_km
         mult_km.updated.clear()
+        self.action = self.get_query_argument("action", default=None)
 
 
-    def get(self, k_id=None):
+    async def get(self, k_id=None):
         """
-        MultiKernelManagerの管理しているカーネルのidを知らせる.
-        kernel_id が存在する場合, そのカーネルが動いているかを知らせる.
+        管理しているカーネルのidを知らせる
+        (PATH)
+            /kernel/          -> 管理しているすべてのカーネルを出力
+            /kernel/<k_id>/   -> k_idをもつカーネルが管理下にあるか
         """
         if k_id:
-            is_alive = mult_km.is_alive(k_id)
+            is_alive = await mult_km.is_alive(k_id)
             print(f"[KernelHandler-get] Check kernel({k_id})")
             self.write({"status": "success",
                         "is_alive": is_alive})
         else:
             print(f"[KernelHandler-get] Check all kernel")
-            kernel_ids = mult_km.list_kernel_ids()
+            kernel_ids = await mult_km.list_kernel_ids()
             self.write({"status": "success",
                         "is_alive": kernel_ids})
 
     async def post(self, k_id=None):
         """
-        カーネルを起動する.
-        k_idが存在する場合, 
-        [query]None: 指定されたk_idでカーネルの起動
-        [query]action==restart: カーネルの再起動
-        [query]action==interrupt: カーネルの中断
+        カーネルの起動/再起動/中断
+        (PATH)
+            /kernel/                          -> ランダムなidでカーネルを起動
+            /kernel/<k_id>                    -> idを指定してカーネルを起動
+            /kernel/<k_id>/?action=restart    -> カーネルの再起動
+            /kernel/<k_id>/?action=interrupt  -> カーネルの中断
         """
-        if k_id is not None:
-            self.kernel_id = k_id
-            action = self.get_query_argument(name="action", default=None)
-            if action == "interrupt":
-                print(f"[KernelHandler-post] Interrupt kernel")
-                km = mult_km.get_kernel(self.kernel_id)
-                await km.interrupt_kernel()
-                self.write({"status": "success"})
+        try:    
+            if k_id is not None:
+                self.kernel_id = k_id
+                if self.action == "interrupt":
+                    km = mult_km.get_kernel(self.kernel_id)
+                    await km.interrupt_kernel()
+                    self.DESCR = "Kernel successfully interrupted"
 
-            elif action == "restart":
-                print(f"[KernelHandler-post] Restart kernel")
-                await mult_km.shutdown_kernel(kernel_id=self.kernel_id)
-                await mult_km.start_kernel(kernel_id=self.kernel_id)
-                self.write({"status": "success"})
-
-            elif action is None:
-                print(f"[KernelHandler-post] Start kernel with {self.kernel_id}")
-                try:
+                elif self.action == "restart":
+                    await mult_km.shutdown_kernel(kernel_id=self.kernel_id)
                     await mult_km.start_kernel(kernel_id=self.kernel_id)
-                except DuplicateKernelError as e:
-                    print(e)
-                    self.write({"status": "error",
-                                "DESCR": f"{self.kernel_id} is already exist"})
+                    self.DESCR = "Kernel successfully restarted"
+
+                elif self.action is None:
+                    await mult_km.start_kernel(kernel_id=self.kernel_id)
+                    self.DESCR = "Kernel successfully booted"
                 else:
-                    self.write({"status": "success",
-                                "kernel_id": self.kernel_id})
+                    raise ValueError
+            else:
+                self.kernel_id = await mult_km.start_kernel()
+                self.DESCR = "kernel successfully booted"
+        except Exception as e:
+            self.status = "error"
+            self.DESCR = str(e)
         else:
-            self.kernel_id = await mult_km.start_kernel()
-            print(f"[KernelHandler-post] Create new kernel({self.kernel_id})")
-            self.write({"status": "success",
-                        "kernel_id": self.kernel_id})
-     
+            self.status = "success"
+
+        self.write({"status": self.status,
+                    "DESCR": self.DESCR,
+                    "kernel_id": self.kernel_id})
+        
     async def delete(self, k_id=None):
         """
-        すべてのカーネルを停止する.
-        k_idが存在する場合, そのカーネルのみを停止する.
+        カーネルを停止する.
+        (PATH)
+            /kernel/          -> すべてのカーネルを停止する
+            /kernel/<k_id>/   -> k_idのkernel_idをもつカーネルを停止する
         """
-        if k_id:
-            print(f"[KernelHandler-delete] Stop kernel({k_id})")
-            await mult_km.shutdown_kernel(k_id, now=True)
-            self.write({"status": "success"})
+        try:
+            if k_id is not None:
+                await mult_km.shutdown_kernel(k_id, now=True)
+            else:
+                await mult_km.shutdown_all(now=True) 
+        except Exception as e:
+            self.status = "error"
         else:
-            await mult_km.shutdown_all(now=True)
-            self.write({"status": "success"})   
+            self.status = "success"
+
+        self.write({"status": self.status})
             
     def on_finish(self):
         mult_km.updated.set()
