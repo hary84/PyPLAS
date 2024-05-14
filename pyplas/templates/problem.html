@@ -127,4 +127,9 @@
 </div>
 
 <script src="{{ static_url('js/problems_test.js') }}"></script>
+<script>
+    document.querySelectorAll(".question .q-text > *[ans]").forEach(elem => {
+        elem.removeAttribute("ans")
+    })
+</script>
 {% end %}

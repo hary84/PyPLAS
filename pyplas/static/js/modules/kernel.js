@@ -35,7 +35,8 @@ class KernelHandler {
     registerKernelId = (kernel_id) => {
         this.kernel_id = kernel_id
         this.test_kernel_id = "test_" + kernel_id
-        sessionStorage["kernel_id"] = kernel_id
+        sessionStorage["kernel_id"] = this.kernel_id
+        sessionStorage["test_kernel_id"] = this.test_kernel_id
     }
     /**
      * カーネルidが有効かを調べる
@@ -67,6 +68,9 @@ class KernelHandler {
         if (json.status == "success") {
             console.log(json["DESCR"])
             this.registerKernelId(json.kernel_id)
+        } else if (json.status == "error") {
+            console.log(json["DESCR"])
+            this.kernelRestart()
         }
     }
     /**
@@ -79,6 +83,8 @@ class KernelHandler {
         if (json.status == "success") {
             console.log(json["DESCR"])
             this.registerKernelId(json.kernel_id)
+        } else if(json.status == "error") {
+            console.log(json["DESCR"])
         }
     }
     /**

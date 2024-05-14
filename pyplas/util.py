@@ -40,7 +40,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
         if isinstance(keys, list):
             try:
                 for key in keys:
-                    assert self.json[key]
+                    self.json[key]
             except:
                 return False
         elif isinstance(keys, dict):
@@ -101,7 +101,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
         try:
             conn = sqlite3.connect(self.db_path)
             cur = conn.cursor()
-            cur.execute(sql, (kwargs, ))
+            cur.execute(sql, (kwargs))
         except sqlite3.Error as e:
             print(e)
             conn.rollback()

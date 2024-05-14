@@ -13,19 +13,20 @@ function problemSave() {
         return 
     }
 
+    // 概要欄のSummary, Data Source, Environmentを取得
     var headers = []
-
     document.querySelectorAll("#summary .node-mde").forEach(function(elem) {
         var editor = ace.edit(elem)
         headers.push(editor.getValue())
     })
 
+    // The Source CodeからNodeを取得
     var body = []
     var answers = {}
-
     const parser = new DOMParser()
-
+    var q_no = 1
     document.querySelectorAll("#sourceCode > .p-content > .node").forEach(function(elem) {
+        // Explain Node
         if (elem.classList.contains("explain")) {
             var editor = ace.edit(elem.querySelector(".node-mde"))
             var content = editor.getValue()
@@ -34,6 +35,7 @@ function problemSave() {
                 "content": content
             })
         }
+        // Code Node
         else if (elem.classList.contains("code")) {
             var editor = ace.edit(elem.querySelector(".node-code"))
             var content = editor.getValue()
@@ -44,34 +46,34 @@ function problemSave() {
                 "readonly": readonly
             })
         }
+        // Question Node
         else if (elem.classList.contains("question")) {
-            var qid = elem.getAttribute("q-id")
+            var qid = q_no
+            q_no += 1
             var ptype = Number(elem.getAttribute("ptype"))
             var question = ""
             var conponent = []
             var editable = false
             answers[qid] = []
 
-            if (ptype == 0) {
+            if (ptype == 0) { // HTML Problem
                 var editor = ace.edit(elem.querySelector(".node-mde"))
                 var html_str = editor.getValue()
 
+                // 答えの抽出
                 var html_dom = parser.parseFromString(html_str, "text/html").querySelector("body")
                 html_dom.querySelectorAll(".q-text > *[ans]").forEach(function(elem) {
                     answers[qid].push(elem.getAttribute("ans"))
-                    elem.removeAttribute("ans")
+                    // elem.removeAttribute("ans")
                 })
 
                 question = html_dom.innerHTML
 
-            } else {
+            } else { // Code Test Problem
                 var editable = elem.querySelector(".editable-flag").checked
-                
                 question = ace.edit(elem.querySelector(".q-text .node-mde")).getValue()
-
                 var test_code = ace.edit(elem.querySelector(".test-code .node-code")).getValue()
                 answers[qid].push(test_code)
-
             }
 
             body.push({

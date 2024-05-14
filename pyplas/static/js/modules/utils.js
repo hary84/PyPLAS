@@ -251,12 +251,12 @@ function scoring(question_node) {
             "ptype": ptype,
             "q_id": q_id,
             "answers": answers,
-            "kernel_id": sessionStorage["kernel_id"] 
+            "kernel_id": sessionStorage["test_kernel_id"] 
         })
     }).then(response => response.json()).then(data => {
         var toast = question_node.querySelector(".for-toast")
-        toast.innerHTML = data.html.replace(/\x1B[[;\d]+m/g, "")
-        toast.querySelector(".toast").toast("show")
+        toast.innerHTML = data.html
+        toast.querySelector(".toast").classList.add("show")
         sbm_btn.classList.remove("disabled")
     })
 }

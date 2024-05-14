@@ -112,7 +112,6 @@
 }
 
 .question {
-
   /* toast */
   .toast {
     z-index: 10;
@@ -164,6 +163,9 @@
         display: block;
       }
     }
+    span.badge {
+      display: none;
+    }
   }
 
   .card-body {
@@ -174,5 +176,21 @@
         }
       }
     }
+  }
+}
+
+.question[progress="0"] {
+  .card-header > .progress-0 {
+    display: block;
+  }
+}
+.question[progress="1"] {
+  .card-header > .progress-1 {
+    display: block;
+  }
+}
+.question[progress="2"] {
+  .card-header > .progress-2 {
+    display: block;
   }
 }

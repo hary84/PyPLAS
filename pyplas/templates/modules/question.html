@@ -1,4 +1,4 @@
-<div class="node question card my-2 ms-3 me-2 position-relative" q-id="{{ q_id }}" ptype="{{ ptype }}">
+<div class="node question card my-2 ms-3 me-2 position-relative" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
 	<div class="for-toast"></div>
 	<div class="card-header bg-success-subtle d-flex">
 		Question
@@ -7,18 +7,23 @@
 		{% elif ptype == 1 %}
 			<span class="ms-2 fw-bold text-secondary">Code Test</span>
 		{% end %}
-		<div class="ms-auto d-flex">
-			{% if (user==1) and (ptype==1) %}
-				<div class="form-check form-switch">
-					<input class="form-check-input editable-flag" type="checkbox" role="switch">
-					<label class="form-check-label" >Editable</label>
-				</div>
-			{% end %}
-			{% if user==1 %}
-			<div class="vr mx-2 my-1"></div>
-			<button type="button" class="btn btn-danger" onclick="delme(this)"><i class="bi bi-trash"></i></button>
-			{% end %}
-		</div>
+		{% if user == 1 %}
+			<div class="ms-auto d-flex">
+				{% if ptype == 1 %}
+					<div class="form-check form-switch">
+						<input class="form-check-input editable-flag" type="checkbox" role="switch" {{'checked' if editable else "" }}>
+						<label class="form-check-label" >Editable</label>
+					</div>
+				{% end %}
+				<div class="vr mx-2 my-1"></div>
+				<button type="button" class="btn btn-danger" onclick="delme(this)"><i class="bi bi-trash"></i></button>
+			</div>
+		{% end %}
+		{% if user == 0 %}
+				<span class="badge rounded-pill text-bg-light ms-auto progress-0">Untried</span>
+				<span class="badge rounded-pill text-bg-warning ms-auto progress-1">Tried</span>
+				<span class="badge rounded-pill text-bg-success ms-auto progress-2">Complete</span>
+		{% end %}
 	</div>
 	<div class="card-body py-2">
 

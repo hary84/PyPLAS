@@ -53,7 +53,7 @@ class Explain(UIModule):
 
 class Question(UIModule):
     def render(self, q_id:str, ptype:int=0, user:int=0, conponent:list=[], question:str="",
-               answer:list=[], editable:bool=False, **kwargs) -> str:
+               answer:list=[], editable:bool=False, progress:int=0, **kwargs) -> str:
         """
         *q_id: question id (unique)
         *ptype: 0: HTML Problem
@@ -65,13 +65,17 @@ class Question(UIModule):
         *answers: answer list
         *editable: False: CAN NOT add/remove Markdown, Code
                   True : CAN add/remove Markdown, Code
+        progress: 0: untried
+                   1: tried
+                   2: complete
         """
         return self.render_string("modules/question.html",
                                   q_id=q_id, ptype=ptype, user=user,
                                   question=question,
                                   answer=answer,
                                   conponent=conponent,
-                                  editable=editable)
+                                  editable=editable,
+                                  progress=progress)
     
 class NodeControl(UIModule):
     def render(self, code:bool=True, explain:bool=True, question:bool=True):

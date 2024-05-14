@@ -1,5 +1,6 @@
 import asyncio
 from datetime import date, datetime
+import re
 import signal
 from util import InvalidJSONException, ApplicationHandler
 import uuid
@@ -66,7 +67,7 @@ class ProblemHandler(ApplicationHandler):
         (PATH)
             /problems/<p_id>
         """
-        sql = r"SELECT title, page FROM pages where p_id=:p_id AND status=1"
+        sql = r"""SELECT title, page FROM pages WHERE p_id=:p_id AND status=1"""
         page = self.get_from_db(sql, p_id=p_id)
 
         try:
@@ -90,19 +91,24 @@ class ProblemHandler(ApplicationHandler):
         self.p_id = p_id
         
         if self.is_valid_json:
+            self.kernel_id = self.json["kernel_id"]
             sql = r"""SELECT answers FROM pages WHERE p_id=:p_id"""
             answers = self.get_from_db(sql, p_id=self.p_id)
             try:
                 assert len(answers) != 0
-                self.answers = answers[0][self.json["answers"]]
-            except AssertionError as e:
-                pass
-            if self.json["ptype"] == 0: # html problem
-                result, content = self.html_scoring()
-            elif self.json["ptype"] == 1: # coding problem
-                result, content = self.code_scoring()
-            else:
-                raise KeyError
+                answers = json.loads(answers[0]["answers"])
+                self.answers: list = answers[self.json["q_id"]]
+                # html problem
+                if self.json["ptype"] == 0: 
+                    print(f"[LOG] HTML Scoring")
+                    result, content = self.html_scoring()
+                # coding problem    
+                elif self.json["ptype"] == 1: 
+                    print(f"[LOG] CODE Testing Scoring")
+                    result, content = await self.code_scoring()
+            except (AssertionError) as e:
+                content = f"{str(type(e))}: {e}"
+                result = [False]
             is_perfect = False not in result 
             sql = r"""INSERT INTO logs(p_id, q_id, content, result) 
             VALUES(:p_id, :q_id, :content, :result)"""
@@ -111,7 +117,7 @@ class ProblemHandler(ApplicationHandler):
                              content=json.dumps(self.json["answers"]),
                              result=int(is_perfect))
 
-        self.write({"html": self._render_toast(content, is_perfect)})
+            self.write({"html": self._render_toast(content, is_perfect)})
 
     def _render_toast(self,  content, stat):
         if stat == 0:
@@ -120,7 +126,7 @@ class ProblemHandler(ApplicationHandler):
             stat = "status-success"
         return tornado.escape.to_unicode(
             self.render_string("./modules/toast.html",
-                               {"result_status": stat,
+                               **{"result_status": stat,
                                 "result_content": content})
         )
     
@@ -138,12 +144,13 @@ class ProblemHandler(ApplicationHandler):
         result = []
         try:
             content = ''
-            assert len(self.j["answers"]) == len(self.answers), "Does not match the number of questions in DB"
-            for i, ans in self.answers:
-                result.append(ans == self.j["answers"][i])
-                content += "[o] " if result[i] else "[x] " + ans + "\n"
-        except (KeyError, AssertionError) as e:
-            content = str(e)
+            assert len(self.json["answers"]) == len(self.answers), "Does not match the number of questions in DB"
+            for i, ans in enumerate(self.answers):
+                result.append(ans == self.json["answers"][i])
+                content += "<p class='mb-0'>[{flag}] {ans}</p>".format(flag="o" if result[i] else "x",
+                                                          ans=ans)
+        except (KeyError, AssertionError, DuplicateKernelError) as e:
+            raise
 
         return (result, content)
         
@@ -160,28 +167,36 @@ class ProblemHandler(ApplicationHandler):
         """
         global mult_km 
         try:
-            code = self.json["code"] + self.answers
+            code = self.json["answers"] + self.answers
             code = "\n".join(code)
-            self.kernel_id = await mult_km.start_kernel(kernel_id=self.json["kernel_id"])
-            self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
-            self.kc: AsyncKernelClient = self.km.client()
-            if (not self.kc.channels_running):
-                self.kc.start_channels()
-        except (KeyError, DuplicateKernelError) as e:
-            pass
-            
+            await mult_km.start_kernel(kernel_id=self.kernel_id)
+        except DuplicateKernelError as e:
+            await mult_km.restart_kernel(kernel_id=self.kernel_id)
+        except (KeyError) as e:
+            print(e)
+            raise
+        self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
+        self.kc: AsyncKernelClient = self.km.client()
+        if (not self.kc.channels_running):
+            self.kc.start_channels()
         self.kc.execute(code)
+
         result = [True]
+        content = ""
         while 1:
             try:
                 output = await self.kc.get_iopub_msg()
-            except: 
-                break 
-            if output["msg_type"] == "error":
-                content = "\n".join(output["content"]["traceback"])
-                result[0] = False
-            if output["msg_type"] == "status" and output["content"]["execution_state"] == "idle":
+                print(f"received {output['msg_type']}")
+            except Exception as e: 
+                print(e)
                 break
+            else:
+                if output["msg_type"] == "error":
+                    content = [f"<p class='mb-0'>{row}</p>" for row in output["content"]["traceback"]]
+                    content = re.sub(r"(\x1B[[;\d]+m)", "", "".join(content))
+                    result[0] = False
+                if output["msg_type"] == "status" and output["content"]["execution_state"] == "idle":
+                    break
 
         if result[0] == True:
             content = "Complete"
@@ -415,11 +430,11 @@ class ProblemCreateHandler(ApplicationHandler):
             self.write({"status": 1, "p_id": p_id})
 
         else: # 上書き保存
-            sql = r"""UPDATE pages SET title=:title, page=:page, answers WHERE p_id=:p_id"""
+            sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers WHERE p_id=:p_id"""
             self.write_to_db(sql, p_id=p_id, title=self.json["title"],
                              page=json.dumps(self.json["page"]),
                              answers=json.dumps(self.json["answers"]))
-            self.write({"status": 1})
+            self.write({"status": 1, "p_id": p_id})
 
     def put(self, p_id):
         """

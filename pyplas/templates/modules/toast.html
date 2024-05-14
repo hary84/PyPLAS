@@ -1,7 +1,7 @@
 <!-- 
 @params
     result_status:   "status-success" or "status-error"
-    result_content:  content to be displayed 
+    result_content:  content to be displayed
 -->
 <div class="toast position-absolute {{ result_status }}" data-bs-autohide="false" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="toast-header">
@@ -11,6 +11,6 @@
         <button type="button" class="btn-close ms-auto" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
     <div class="toast-body">
-        {{ result_content }}
+        {% raw result_content %}
     </div>
 </div>
