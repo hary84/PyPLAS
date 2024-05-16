@@ -100,7 +100,7 @@
                 {% elif d["type"] == "explain" %}
                     {% module Explain(**d) %}
                 {% elif d["type"] == "question" %}
-                    {% module Question(**d) %}
+                    {% module Question(**d, progress=conponent['q_status'].get(str(d['q_id']), 0)) %}
                 {% end %}
             {% end %}
     </div>

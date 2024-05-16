@@ -48,13 +48,13 @@
                                 <th>{{ i }}</th>
                                 <td scope="row">{{ d['title'] }}</td>
                                 <td>
-                                    {% if d['status'] is None %}
+                                    {% if d['p_status'] == 0 %}
                                         <i class="bi bi-door-closed text-danger"></i>
                                         未学習
-                                    {% elif d['status'] == 1 %}
+                                    {% elif d['p_status'] == 1 %}
                                         <i class="bi bi-slash-circle text-warning"></i>
                                         学習中
-                                    {% elif d['status'] == 2 %}
+                                    {% elif d['p_status'] == 2 %}
                                         <i class="bi bi-check-circle text-success"></i>
                                         完了
                                     {% end %}

@@ -70,9 +70,9 @@ function problemSave() {
                 question = html_dom.innerHTML
 
             } else { // Code Test Problem
-                var editable = elem.querySelector(".editable-flag").checked
-                question = ace.edit(elem.querySelector(".q-text .node-mde")).getValue()
-                var test_code = ace.edit(elem.querySelector(".test-code .node-code")).getValue()
+                var editable = elem.querySelector(".editable-flag").checked  // editable
+                question = ace.edit(elem.querySelector(".q-text .node-mde")).getValue() // question
+                var test_code = ace.edit(elem.querySelector(".test-code .node-code")).getValue() // answer
                 answers[qid].push(test_code)
             }
 

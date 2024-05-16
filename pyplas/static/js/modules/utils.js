@@ -258,5 +258,6 @@ function scoring(question_node) {
         toast.innerHTML = data.html
         toast.querySelector(".toast").classList.add("show")
         sbm_btn.classList.remove("disabled")
+        question_node.setAttribute("progress", data.progress)
     })
 }

@@ -1,5 +1,3 @@
-
-from contextlib import closing
 import json
 import sqlite3
 from typing import Union
@@ -76,6 +74,8 @@ class ApplicationHandler(tornado.web.RequestHandler):
         
         Parameters
         ----------
+        sql: str
+            sql文
         kwargs: 
             sqlのパラメータを指定する
         """
@@ -84,24 +84,26 @@ class ApplicationHandler(tornado.web.RequestHandler):
             conn.row_factory = _dict_factory
             cur = conn.execute(sql, (kwargs))
             return cur.fetchall()
-        except sqlite3.Error as e:
-            print("[ERROR] " + str(e))
+        except sqlite3.Error:
             raise
     
 
-    def write_to_db(self, sql:str, **kwargs) -> None:
+    def write_to_db(self, sql:Union[str, tuple, list], **kwargs) -> None:
         """
         DBにデータを書き込む
         
         Parameters
         ----------
+        sql: str, tuple, list
+            sql文. tuple, listの場合は各sql文を実行する
         kwargs:
             sqlのパラメータを指定する
         """
         try:
             conn = sqlite3.connect(self.db_path)
-            cur = conn.cursor()
-            cur.execute(sql, (kwargs))
+            sqls = [sql] if isinstance(sql, str) else sql
+            for q in sqls:
+                conn.execute(q, (kwargs))
         except sqlite3.Error as e:
             print(e)
             conn.rollback()
@@ -109,6 +111,35 @@ class ApplicationHandler(tornado.web.RequestHandler):
         else:
             conn.commit()
 
+    def parse_json(self, jsonstr: Union[str, dict]) -> dict:
+        """
+        JSONをdictに変換する
+        """
+
+
 def _dict_factory(cursor, row):
+    """
+    DBから取得したデータをdictに変換する
+    """
     fields = [column[0] for column in cursor.description]
     return {key: value for key, value in zip(fields, row)}
+
+
+class DBCache:
+    """
+    データベースキャッシュ
+    """
+    def __init__(self):
+        self.cache = {}
+
+    def set(self, p_id, value):
+        pass
+
+    def get(self, key):
+        pass        
+
+    def clear(self, key):
+        pass
+        
+    def has(self, key):
+        pass

@@ -1,7 +1,12 @@
 import asyncio
+from audioop import mul
 from datetime import date, datetime
 import re
 import signal
+import sqlite3
+import time
+
+from cycler import K
 from util import InvalidJSONException, ApplicationHandler
 import uuid
 from typing import Union, Tuple
@@ -31,19 +36,21 @@ class MainHandler(ApplicationHandler):
             / -> カテゴリ一覧の表示
             /?category=<category> -> そのカテゴリのすべての問題を表示
         """
-        if self.cat is None:
+        if self.cat is None: # render categories index page
             sql = r"""SELECT cat_name FROM categories"""
             cat = self.get_from_db(sql)
             cat = [r["cat_name"] for r in cat]
-            self.render("index.html", categories=cat, problem_list=[])
-        else:
-            sql = r"""SELECT pages.p_id, pages.title, progress.status FROM pages
-            INNER JOIN categories ON pages.category = categories.cat_id
+            p_list = []
+        else: # render problem list page with specific category
+            sql = r"""SELECT pages.p_id, pages.title, COALESCE(progress.p_status, 0) AS p_status 
+            FROM pages INNER JOIN categories ON pages.category = categories.cat_id
             LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
             WHERE categories.cat_name = :cat_name AND pages.status = 1"""
             p_list = self.get_from_db(sql, cat_name=self.cat)
             p_list = [r for r in p_list]
-            self.render("index.html", categories=[], problem_list=p_list)
+            cat = []
+
+        self.render("index.html", categories=cat, problem_list=p_list)
 
 class ProblemHandler(ApplicationHandler):
     """
@@ -67,19 +74,27 @@ class ProblemHandler(ApplicationHandler):
         (PATH)
             /problems/<p_id>
         """
-        sql = r"""SELECT title, page FROM pages WHERE p_id=:p_id AND status=1"""
-        page = self.get_from_db(sql, p_id=p_id)
+        sql = r"""SELECT pages.title, pages.page, 
+            COALESCE(JSON_EXTRACT(progress.q_status, '$'), '{}') AS q_status, 
+            COALESCE(JSON_EXTRACT(progress.q_content, '$'), '{}') AS q_content
+            FROM pages 
+            LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
+            WHERE pages.p_id=:p_id AND status=1"""
 
         try:
+            page = self.get_from_db(sql, p_id=p_id)
             assert len(page) != 0
-            page = page[0]
-        except AssertionError as e:
-            print(f"[ERROR] {e}")
+            page:dict = page[0]
+        except (AssertionError, sqlite3.Error) as e:
+            print(f"[ERROR] {e.__class__.__name__}: {e}")
             self.redirect("/")
             return
         else:
             page = {"title": page["title"],
-                    "page": json.loads(page["page"])}
+                    "page": json.loads(page["page"]),
+                    "q_status": json.loads(page["q_status"]),
+                    "q_content": json.loads(page["q_content"])
+                    }
             self.render(f"./problem.html", conponent=page, progress=[])
 
     async def post(self, p_id):
@@ -90,39 +105,74 @@ class ProblemHandler(ApplicationHandler):
         """
         self.p_id = p_id
         
-        if self.is_valid_json:
-            self.kernel_id = self.json["kernel_id"]
+        if self.is_valid_json: # when msg from POST is valid 
             sql = r"""SELECT answers FROM pages WHERE p_id=:p_id"""
-            answers = self.get_from_db(sql, p_id=self.p_id)
+            c_answers = self.get_from_db(sql, p_id=self.p_id)
             try:
-                assert len(answers) != 0
-                answers = json.loads(answers[0]["answers"])
-                self.answers: list = answers[self.json["q_id"]]
-                # html problem
-                if self.json["ptype"] == 0: 
+                assert len(c_answers) != 0
+                c_answers: dict = json.loads(c_answers[0]["answers"])
+                self.keys: list = c_answers.keys() # q_id list 
+                self.c_answers:list = c_answers[self.json["q_id"]] # correct answer list 
+
+                if self.json["ptype"] == 0: # html problem
                     print(f"[LOG] HTML Scoring")
                     result, content = self.html_scoring()
-                # coding problem    
-                elif self.json["ptype"] == 1: 
+                
+                elif self.json["ptype"] == 1: # coding problem    
                     print(f"[LOG] CODE Testing Scoring")
                     result, content = await self.code_scoring()
-            except (AssertionError) as e:
-                content = f"{str(type(e))}: {e}"
+
+            except (AssertionError, KeyError) as e:
+                content = f"{e.__class__.__name__}: {e}"
                 result = [False]
-            is_perfect = False not in result 
+
+            q_status = 2 if False not in result else 1
             sql = r"""INSERT INTO logs(p_id, q_id, content, result) 
             VALUES(:p_id, :q_id, :content, :result)"""
             self.write_to_db(sql, p_id=self.p_id,
                              q_id=self.json["q_id"],
                              content=json.dumps(self.json["answers"]),
-                             result=int(is_perfect))
+                             result=q_status)
+            self._insert_and_update_progress(q_status=q_status)
 
-            self.write({"html": self._render_toast(content, is_perfect)})
+            self.write({"html": self._render_toast(content, q_status),
+                        "progress": q_status})
 
-    def _render_toast(self,  content, stat):
-        if stat == 0:
+
+    def _insert_and_update_progress(self, q_status: int):
+        """
+        progressテーブルに採点結果を記録する
+        """
+        write_state = r"""INSERT INTO progress(p_id, q_status, q_content)
+            VALUES (
+            :p_id,
+            JSON_OBJECT(JSON_QUOTE(:q_id), :status),
+            JSON_OBJECT(JSON_QUOTE(:q_id), :content) ) 
+            ON CONFLICT(p_id) DO UPDATE SET
+            q_status=JSON_SET(q_status, '$.' || :q_id, :status),
+            q_content=JSON_SET(q_content, '$.' || :q_id, :content)
+            """
+        update_state = r"""UPDATE progress 
+            SET p_status= 
+            CASE
+                WHEN {condition} AND SUM(stat.value != 2) = 0 THEN 2 
+                ELSE 1
+            END
+            FROM JSON_EACH(q_status) AS stat
+            WHERE p_id = :p_id
+            """.format(condition=r" AND ".join(
+                [r"JSON_TYPE(q_status, '$.{key}') IS NOT NULL".format(key=key) 
+                 for key in self.keys]
+            ))
+        self.write_to_db((write_state, update_state), 
+                         p_id=self.p_id, q_id=int(self.json["q_id"]),
+                         status=q_status,
+                         content=json.dumps(self.json["answers"]))
+
+    def _render_toast(self, content: str, stat: int):
+        if stat == 1:
             stat = "status-error"
-        elif stat == 1:
+        elif stat == 2:
             stat = "status-success"
         return tornado.escape.to_unicode(
             self.render_string("./modules/toast.html",
@@ -142,14 +192,15 @@ class ProblemHandler(ApplicationHandler):
             toastに表示される文字列
         """
         result = []
+
+        # string match
         try:
             content = ''
-            assert len(self.json["answers"]) == len(self.answers), "Does not match the number of questions in DB"
-            for i, ans in enumerate(self.answers):
-                result.append(ans == self.json["answers"][i])
-                content += "<p class='mb-0'>[{flag}] {ans}</p>".format(flag="o" if result[i] else "x",
-                                                          ans=ans)
-        except (KeyError, AssertionError, DuplicateKernelError) as e:
+            assert len(self.json["answers"]) == len(self.c_answers), "Does not match the number of questions in DB"
+            for i, ans in enumerate(self.json["answers"]):
+                result.append(ans == self.c_answers[i])
+                content += f"<p class='mb-0'>[{'o' if result[i] else 'x'}] {ans}</p>"
+        except (KeyError, AssertionError):
             raise
 
         return (result, content)
@@ -165,45 +216,39 @@ class ProblemHandler(ApplicationHandler):
         content: str
             toastに表示される文字列
         """
-        global mult_km 
+        # set up test kernel
+        self.kernel_id = self.json["kernel_id"]
+        code = "\n".join(self.json["answers"] + self.c_answers)
         try:
-            code = self.json["answers"] + self.answers
-            code = "\n".join(code)
             await mult_km.start_kernel(kernel_id=self.kernel_id)
-        except DuplicateKernelError as e:
-            await mult_km.restart_kernel(kernel_id=self.kernel_id)
-        except (KeyError) as e:
-            print(e)
-            raise
-        self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
-        self.kc: AsyncKernelClient = self.km.client()
-        if (not self.kc.channels_running):
-            self.kc.start_channels()
-        self.kc.execute(code)
+        except DuplicateKernelError:
+            pass
+        km = mult_km.get_kernel(self.kernel_id)
+        kc = km.client()
+        if not kc.channels_running:
+            kc.start_channels()
+        kc.execute(code)
 
-        result = [True]
+        # execute code 
+        result = [True] 
         content = ""
         while 1:
             try:
-                output = await self.kc.get_iopub_msg()
+                output = await kc.get_iopub_msg()
                 print(f"received {output['msg_type']}")
-            except Exception as e: 
-                print(e)
-                break
-            else:
                 if output["msg_type"] == "error":
+                    # traceback formatting (remove ansi code tag)
                     content = [f"<p class='mb-0'>{row}</p>" for row in output["content"]["traceback"]]
                     content = re.sub(r"(\x1B[[;\d]+m)", "", "".join(content))
                     result[0] = False
-                if output["msg_type"] == "status" and output["content"]["execution_state"] == "idle":
+                if output["content"].get("execution_state", None) == "idle":
                     break
-
+            except Exception as e: 
+                raise
         if result[0] == True:
             content = "Complete"
 
-        self.kc.stop_channels()
-        await mult_km.shutdown_kernel(self.kernel_id)
-        return result, content
+        return (result, content)
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
     """コード実行管理"""
@@ -289,11 +334,11 @@ class KernelHandler(tornado.web.RequestHandler):
         """
         if k_id:
             is_alive = await mult_km.is_alive(k_id)
-            print(f"[KernelHandler-get] Check kernel({k_id})")
+            print(f"[KernelHandler GET] Check kernel({k_id})")
             self.write({"status": "success",
                         "is_alive": is_alive})
         else:
-            print(f"[KernelHandler-get] Check all kernel")
+            print(f"[KernelHandler GET] Check all kernel")
             kernel_ids = await mult_km.list_kernel_ids()
             self.write({"status": "success",
                         "is_alive": kernel_ids})
@@ -310,27 +355,31 @@ class KernelHandler(tornado.web.RequestHandler):
         try:    
             if k_id is not None:
                 self.kernel_id = k_id
-                if self.action == "interrupt":
+                if self.action == "interrupt": # interrupt
+                    print(f"[KernelHandler POST] kernel interrupt")
                     km = mult_km.get_kernel(self.kernel_id)
                     await km.interrupt_kernel()
                     self.DESCR = "Kernel successfully interrupted"
 
-                elif self.action == "restart":
+                elif self.action == "restart": # restart
+                    print(f"[KernelHandler POST] kernel restart")
                     await mult_km.shutdown_kernel(kernel_id=self.kernel_id)
                     await mult_km.start_kernel(kernel_id=self.kernel_id)
                     self.DESCR = "Kernel successfully restarted"
 
-                elif self.action is None:
+                elif self.action is None: # start with specific kernel_id
+                    print(f"[KernelHandler POST] kernel start")
                     await mult_km.start_kernel(kernel_id=self.kernel_id)
                     self.DESCR = "Kernel successfully booted"
                 else:
                     raise ValueError
-            else:
+            else: # start with random kernel_id
+                print(f"[KernelHandler POST] kernel start")
                 self.kernel_id = await mult_km.start_kernel()
                 self.DESCR = "kernel successfully booted"
         except Exception as e:
             self.status = "error"
-            self.DESCR = str(e)
+            self.DESCR = f"{e.__class__.__name__}: {e}"
         else:
             self.status = "success"
 
@@ -346,9 +395,9 @@ class KernelHandler(tornado.web.RequestHandler):
             /kernel/<k_id>/   -> k_idのkernel_idをもつカーネルを停止する
         """
         try:
-            if k_id is not None:
+            if k_id is not None: # shutdown specific kernel_id
                 await mult_km.shutdown_kernel(k_id, now=True)
-            else:
+            else: # shutdown all kernel
                 await mult_km.shutdown_all(now=True) 
         except Exception as e:
             self.status = "error"

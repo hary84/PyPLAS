@@ -42,24 +42,23 @@
 			<div class="q-content ms-4">
 				{% if (user) or (editable) %}
 					{% module NodeControl(question=False) %}
-					<!-- {% for d in conponent %}
+					{% for d in conponent %}
 						{% if d["type"] == "explain" %}
-							{% module Explain(**d, editor=True, allow_del=True, inQ=True) %}
-							{% module NodeControl(question=False) %}
+							{% module Explain(**d, editor=True, allow_del=True) %}
 						{% elif d["type"] == "code" %}
 							{% module Node(**d, user=user, allow_del=True) %}
-							{% module NodeControl(question=False) %}
 						{% end %}
-					{% end %} -->
+						{% module NodeControl(question=False) %}
+					{% end %}
 
 				{% else %}
-					<!-- {% for d in conponent %}
+					{% for d in conponent %}
 						{% if d["type"] == "explain" %}
 							{% module Explain(**d) %}
 						{% elif d["type"] == "code" %}
 							{% module Code(**d) %}
 						{% end %}
-					{% end %} -->
+					{% end %}
 				{% end %}
 			</div>
 
