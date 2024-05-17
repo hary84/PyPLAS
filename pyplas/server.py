@@ -1,5 +1,6 @@
 import asyncio
-from concurrent.futures import CancelledError, ThreadPoolExecutor
+from concurrent.futures import CancelledError, ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from datetime import date, datetime
 from functools import partial
 import re
@@ -220,13 +221,19 @@ class ProblemHandler(ApplicationHandler):
         # set up test kernel
         self.kernel_id = self.json["kernel_id"]
         code = "\n".join(self.json["answers"] + self.c_answers)
-        future = ioloop.IOLoop.current().run_in_executor(ThreadPoolExecutor(), exec, code, {}, {})
-        ProblemHandler.execute_pool[self.kernel_id] = future
+        executor = ProcessPoolExecutor(max_workers=1)
+        future = ioloop.IOLoop.current().run_in_executor(executor, exec, code, {}, {})
+        ProblemHandler.execute_pool[self.kernel_id] = [executor, future]
         try:
             await future
-        except Exception as e:
+        except BrokenProcessPool as e:
             result = [False]
-            content = f"<{e.__class__.__name__}>: {e}"
+            content = f"[Cancel Error]: The code execution process has been destroyed."
+            print(content)
+        except Exception as e:
+            print(type(e))
+            result = [False]
+            content = f"{type(e)}: {e}"
         else:
             ProblemHandler.execute_pool.pop(self.kernel_id, None)
             result = [True]
@@ -236,9 +243,10 @@ class ProblemHandler(ApplicationHandler):
 
     def put(self, p_id):
         print("[ProblemHandler PUT] cancel exec")
-        future = ProblemHandler.execute_pool.pop(self.json["kernel_id"], None)
-        if future is not None:
-            future.cancel()
+        executor, future = ProblemHandler.execute_pool.pop(self.json["kernel_id"], [None, None])
+        if executor is not None:
+            for e in executor._processes.values():
+                e.kill()
 
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):

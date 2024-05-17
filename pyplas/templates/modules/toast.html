@@ -11,6 +11,6 @@
         <button type="button" class="btn-close ms-auto" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
     <div class="toast-body">
-        {% raw result_content %}
+        {% raw escape(result_content) %}
     </div>
 </div>
