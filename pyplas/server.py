@@ -1,12 +1,12 @@
 import asyncio
-from audioop import mul
+from concurrent.futures import CancelledError, ThreadPoolExecutor
 from datetime import date, datetime
+from functools import partial
 import re
 import signal
 import sqlite3
 import time
-
-from cycler import K
+import traceback
 from util import InvalidJSONException, ApplicationHandler
 import uuid
 from typing import Union, Tuple
@@ -56,6 +56,7 @@ class ProblemHandler(ApplicationHandler):
     """
     問題ページの表示/解答の採点を行う
     """
+    execute_pool = {}
     def prepare(self):
         """
         JSONのロード
@@ -219,36 +220,26 @@ class ProblemHandler(ApplicationHandler):
         # set up test kernel
         self.kernel_id = self.json["kernel_id"]
         code = "\n".join(self.json["answers"] + self.c_answers)
+        future = ioloop.IOLoop.current().run_in_executor(ThreadPoolExecutor(), exec, code, {}, {})
+        ProblemHandler.execute_pool[self.kernel_id] = future
         try:
-            await mult_km.start_kernel(kernel_id=self.kernel_id)
-        except DuplicateKernelError:
-            pass
-        km = mult_km.get_kernel(self.kernel_id)
-        kc = km.client()
-        if not kc.channels_running:
-            kc.start_channels()
-        kc.execute(code)
-
-        # execute code 
-        result = [True] 
-        content = ""
-        while 1:
-            try:
-                output = await kc.get_iopub_msg()
-                print(f"received {output['msg_type']}")
-                if output["msg_type"] == "error":
-                    # traceback formatting (remove ansi code tag)
-                    content = [f"<p class='mb-0'>{row}</p>" for row in output["content"]["traceback"]]
-                    content = re.sub(r"(\x1B[[;\d]+m)", "", "".join(content))
-                    result[0] = False
-                if output["content"].get("execution_state", None) == "idle":
-                    break
-            except Exception as e: 
-                raise
-        if result[0] == True:
+            await future
+        except Exception as e:
+            result = [False]
+            content = f"<{e.__class__.__name__}>: {e}"
+        else:
+            ProblemHandler.execute_pool.pop(self.kernel_id, None)
+            result = [True]
             content = "Complete"
 
         return (result, content)
+
+    def put(self, p_id):
+        print("[ProblemHandler PUT] cancel exec")
+        future = ProblemHandler.execute_pool.pop(self.json["kernel_id"], None)
+        if future is not None:
+            future.cancel()
+
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
     """コード実行管理"""

@@ -261,3 +261,13 @@ function scoring(question_node) {
         question_node.setAttribute("progress", data.progress)
     })
 }
+
+function cancelScoring() {
+    fetch(window.location.href, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "kernel_id": sessionStorage["test_kernel_id"]
+        })
+    })
+}

@@ -66,6 +66,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
             if validate:
                 return self.validate_JSON(keys)
         else:
+            self.json = {}
             return None
             
     def get_from_db(self, sql:str, **kwargs) -> list :

@@ -44,25 +44,6 @@
             </div>
         </div>
     </div>
-    <div class="accordion-item">
-        <h2 class="accordion-header">
-            <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseKernel" aria-expanded="false" aria-controls="collapseKernel">
-            Running Kernel
-            </button>
-        </h2>
-        <div id="collapseKernel" class="accordion-collapse collapse">
-            <div class="accordion-body px-1">
-                <div class="list-group list-group-flush">
-                    {% for d in progress %}
-                        <a class="list-group-item pe-0 ps-1 py-1 rounded" href="/problems/{{ d['id'] }}">
-                            <i class="bi bi-circle-fill text-success" status="{{ d['status'] }}"></i>
-                            {{ d['title'] }}
-                        </a>
-                    {% end %}
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 {% end %}
 
@@ -79,14 +60,16 @@
                 </div>
             </nav>
             <div class="tab-content border bg-light" id="nav-tabContent">
+                {% import markdown %}
+                {% set md = markdown.Markdown() %}
                 <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
-                    {% raw conponent["page"]["header"]["summary"] %}
+                    {% raw md.convert(conponent["page"]["header"]["summary"]) %}
                 </div>
                 <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
-                    {% raw conponent["page"]["header"]["source"] %}
+                    {% raw md.convert(conponent["page"]["header"]["source"]) %}
                 </div>
                 <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-                    {% raw conponent["page"]["header"]["env"] %}
+                    {% raw md.convert(conponent["page"]["header"]["env"]) %}
                 </div>
             </div>
         </div>
