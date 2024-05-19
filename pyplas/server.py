@@ -6,8 +6,6 @@ from functools import partial
 import re
 import signal
 import sqlite3
-import time
-import traceback
 from util import InvalidJSONException, ApplicationHandler
 import uuid
 from typing import Union, Tuple
@@ -206,6 +204,7 @@ class ProblemHandler(ApplicationHandler):
             raise
 
         return (result, content)
+    
         
     async def code_scoring(self) -> Tuple[list, str]:
         """
@@ -222,24 +221,25 @@ class ProblemHandler(ApplicationHandler):
         self.kernel_id = self.json["kernel_id"]
         code = "\n".join(self.json["answers"] + self.c_answers)
         executor = ProcessPoolExecutor(max_workers=1)
-        future = ioloop.IOLoop.current().run_in_executor(executor, exec, code, {}, {})
+        future = ioloop.IOLoop.current().run_in_executor(executor, _exec, code)
         ProblemHandler.execute_pool[self.kernel_id] = [executor, future]
         try:
             await future
         except BrokenProcessPool as e:
             result = [False]
             content = f"[Cancel Error]: The code execution process has been destroyed."
-            print(content)
         except Exception as e:
-            print(type(e))
             result = [False]
             content = f"{type(e)}: {e}"
         else:
-            ProblemHandler.execute_pool.pop(self.kernel_id, None)
             result = [True]
             content = "Complete"
+        finally:
+            ProblemHandler.execute_pool.pop(self.kernel_id, None)
 
         return (result, content)
+    
+
 
     def put(self, p_id):
         print("[ProblemHandler PUT] cancel exec")
@@ -248,6 +248,16 @@ class ProblemHandler(ApplicationHandler):
             for e in executor._processes.values():
                 e.kill()
 
+def _exec(code):
+    import asyncio
+    ls = {}
+    exec(
+        "async def __ex(): " +
+        "".join(f"\n    {row}" for row in code.split('\n')),
+        {},
+        ls
+    )
+    asyncio.run(ls["__ex"]())
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
     """コード実行管理"""
@@ -564,9 +574,13 @@ async def main():
     shutdown_event = asyncio.Event()
 
     def shutdown_server(signum, frame):
+        for ex, f in ProblemHandler.execute_pool.values():
+            for e in ex._processes.values():
+                print(f"[LOG] Process: {e} is killed")
+                e.kill()
         run_sync(mult_km._async_shutdown_all)()
-        shutdown_event.set()
         print("[LOG] Server has been safely shut down.")
+        shutdown_event.set()
 
     signal.signal(signal.SIGTERM, shutdown_server)
     signal.signal(signal.SIGINT, shutdown_server)
