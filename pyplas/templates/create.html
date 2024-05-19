@@ -50,7 +50,8 @@
                     {% elif d["type"] == "code" %}
                         {% module Code(**d, user=1, allow_del=True) %}
                     {% elif d["type"] == "question" %}
-                        {% module Question(**d, user=1, answers=conponent["answers"]) %}
+                        {% module Question(**d, user=1, 
+                            answers=conponent["answers"].get(str(d['q_id']), [])) %}
                     {% end %}
                     {% module NodeControl() %}
                 {% end %}

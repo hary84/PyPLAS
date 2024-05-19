@@ -1,12 +1,10 @@
 import asyncio
-from concurrent.futures import CancelledError, ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import CancelledError, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from datetime import date, datetime
-from functools import partial
-import re
 import signal
 import sqlite3
-from util import InvalidJSONException, ApplicationHandler
+from util import ApplicationHandler
 import uuid
 from typing import Union, Tuple
 import tornado 
@@ -15,7 +13,6 @@ import tornado.ioloop as ioloop
 import os  
 import json
 from jupyter_client import AsyncMultiKernelManager, AsyncKernelManager, AsyncKernelClient
-from jupyter_client.multikernelmanager import DuplicateKernelError
 from jupyter_client.utils import run_sync
 import uimodules
 from uimodules import *
@@ -93,8 +90,10 @@ class ProblemHandler(ApplicationHandler):
             page = {"title": page["title"],
                     "page": json.loads(page["page"]),
                     "q_status": json.loads(page["q_status"]),
-                    "q_content": json.loads(page["q_content"])
+                    "q_content": {key: json.loads(value) 
+                                  for key, value in json.loads(page["q_content"]).items()}
                     }
+            print(page["q_content"])
             self.render(f"./problem.html", conponent=page, progress=[])
 
     async def post(self, p_id):
@@ -519,22 +518,24 @@ class RenderHTMLModuleHandler(tornado.web.RequestHandler):
     def prepare(self):
         self.action = self.get_query_argument("action", None)
         if self.request.headers.get("Content-Type", None) == "application/json":
-            self.j = json.loads(self.request.body)
+            self.j: dict = json.loads(self.request.body)
 
     def post(self):
         if self.action == "addMD":
             self.write({"html": self._gen_node_string(node="Explain")})
         elif self.action == "addCode":
-            self.write({"html": self._gen_node_string(node="Code")})
+            self.write({"html": self._gen_node_string(node="Code", 
+                                                      explain=bool(self.j.get("user", 0)),
+                                                      question=not(self.j.get("inQ", True)))
+                        })
         elif self.action == "addQ":
             self.write({"html": self._gen_node_string(node="Question")})
         else:
             self.write_error()
 
-    def _gen_node_string(self, node:str="Explain", has_nc:bool=True):
-        _nc = ""
+    def _gen_node_string(self, node:str="Explain", **kwargs):
         if node == "Explain":
-            _html = strfmodule(Explain(self), editor=True, allow_del=True, inQ=self.j.get("inQ", False))
+            _html = strfmodule(Explain(self), editor=True, allow_del=True)
         elif node == "Code":
             _html = strfmodule(Code(self), allow_del=True, user=self.j.get("user", 0))
         elif node == "Question":
@@ -542,8 +543,7 @@ class RenderHTMLModuleHandler(tornado.web.RequestHandler):
                                ptype=self.j.get("ptype", 0))
         else:
             raise KeyError
-        if has_nc:
-            _nc = strfmodule(NodeControl(self), question= not self.j.get("inQ", False))
+        _nc = strfmodule(NodeControl(self), **kwargs)
             
         return _html + "\n" + _nc 
 

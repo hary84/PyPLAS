@@ -6,7 +6,7 @@ document.querySelectorAll(".node-code").forEach(elem=>registerAceEditor(elem))
  */
 function problemSave() {
 
-    var p_id = window.location.pathname.match(/([-a-zA-Z0-9]+)/g)[1]
+    // var p_id = window.location.pathname.match(/([-a-zA-Z0-9]+)/g)[1]
     var title = document.querySelector("#titleForm").value
     if (title.length == 0) {
         alert("input problem title")
@@ -69,18 +69,36 @@ function problemSave() {
 
                 question = html_dom.innerHTML
 
-            } else { // Code Test Problem
+            } 
+            else if (ptype == 1) { // Code Test Problem
                 var editable = elem.querySelector(".editable-flag").checked  // editable
                 question = ace.edit(elem.querySelector(".q-text .node-mde")).getValue() // question
                 var test_code = ace.edit(elem.querySelector(".test-code .node-code")).getValue() // answer
                 answers[qid].push(test_code)
+                // conponent
+                if (!editable) {
+                    elem.querySelectorAll(".q-content > .node").forEach(elem => {
+                        if (elem.classList.contains("explain")) {
+                            var type = "explain"
+                            var content = ace.edit(elem.querySelector(".node-mde")).getValue()
+                        } else if (elem.classList.contains("code")) {
+                            var type = "code"
+                            var content = ace.edit(elem.querySelector(".node-code")).getValue()
+                        }
+                        conponent.push({
+                            "type": type,
+                            "content": content
+                        })
+                    }) 
+                }
             }
 
             body.push({
                 "type": "question",
                 "q_id": qid,
-                "question": question,
                 "ptype": ptype,
+                "conponent": conponent,
+                "question": question,
                 "editable": editable,
             })
         }

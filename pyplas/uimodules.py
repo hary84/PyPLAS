@@ -6,16 +6,18 @@ class Code(UIModule):
     def render(self, content:str="", readonly:bool=False, user:int=0, 
                allow_del:bool=False, **kwargs) -> bytes:
         """
-        *content: code content
-        *readonly
+        Parameters
+        ----------
+        *content: str or list
+            code content
+        *readonly: bool
             False: CAN edit code
             True : CAN NOT edit code 
-        user
+        user: int
             0: learner
             1: problem creator (add readonly checkbox)
-        allow_del
-            False: CAN NOT add/remove node 
-            True : CAN add/remove node (add trash btn)
+        allow_del: bool
+            if True, can remove node
         """
         if type(content) == list:
             content = "\n".join(content)
@@ -32,10 +34,15 @@ class Explain(UIModule):
     def render(self, editor:bool=False, content:str="", 
                allow_del:bool=False, **kwargs) -> str:
         """
-        *content: markdown content 
-        editor:    False: is PLAIN text
-                   True : is EDITOR 
-        allow_del: if True, add del-btn
+        Parameters (* params is saved in DB -> pages)
+        ----------
+        *content: str or list
+            markdown content 
+        editor: bool
+            False: is PLAIN text
+            True : is EDITOR 
+        allow_del: bool
+            if True, add del-btn
         """
         if type(content) == list:
             content = "\n".join(content)
@@ -53,26 +60,44 @@ class Explain(UIModule):
 
 class Question(UIModule):
     def render(self, q_id:str, ptype:int=0, user:int=0, conponent:list=[], question:str="",
-               answer:list=[], editable:bool=False, progress:int=0, **kwargs) -> str:
+               answers:list=[], saved_answers:list=[], 
+               editable:bool=False, progress:int=0, **kwargs) -> str:
         """
-        *q_id: question id (unique)
-        *ptype: 0: HTML Problem
-               1: Code Writing Problem
-        user:  0: learner
-               1: problem creator 
-        conponent: contents (only if ptype == 1)
-        *question: question text
-        *answers: answer list
-        *editable: False: CAN NOT add/remove Markdown, Code
-                  True : CAN add/remove Markdown, Code
-        progress: 0: untried
-                   1: tried
-                   2: complete
+        Parameters (* params is saved in DB -> pages)
+        ----------
+        *q_id: str
+            question id (unique)
+        *ptype: int
+            0: HTML Problem
+            1: Code Writing Problem
+        user: int
+            0: learner
+            1: problem creator 
+        *conponent: list
+            contents 
+            Only used in ptype=1 and editable=False
+            e.g. [Node, Node, ...]
+        *question: str
+            question text
+        answers: list
+            correct answer list
+            e.g. [{<q_id>: [answer, answer...], ...}]
+        saved_answers: list
+            answers saved in DB -> progress
+            e.g. [answer, answer, ...]
+        *editable: bool
+            False: CAN NOT add/remove Markdown, Code
+            True : CAN add/remove Markdown, Code
+        progress: int
+            0: untried
+            1: tried
+            2: complete
         """
         return self.render_string("modules/question.html",
                                   q_id=q_id, ptype=ptype, user=user,
                                   question=question,
-                                  answer=answer,
+                                  answers=answers,
+                                  saved_answers=saved_answers,
                                   conponent=conponent,
                                   editable=editable,
                                   progress=progress)

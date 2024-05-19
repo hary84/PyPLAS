@@ -83,7 +83,8 @@
                 {% elif d["type"] == "explain" %}
                     {% module Explain(**d) %}
                 {% elif d["type"] == "question" %}
-                    {% module Question(**d, progress=conponent['q_status'].get(str(d['q_id']), 0)) %}
+                    {% module Question(**d, progress=conponent['q_status'].get(str(d['q_id']), 0),
+                                        saved_answers=conponent['q_content'].get(str(d['q_id']), [])) %}
                 {% end %}
             {% end %}
     </div>

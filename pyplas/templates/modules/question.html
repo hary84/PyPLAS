@@ -7,7 +7,12 @@
 		{% elif ptype == 1 %}
 			<span class="ms-2 fw-bold text-secondary">Code Test</span>
 		{% end %}
-		{% if user == 1 %}
+
+		{% if user == 0 %}
+			<span class="badge rounded-pill text-bg-light ms-auto progress-0">Untried</span>
+			<span class="badge rounded-pill text-bg-warning ms-auto progress-1">Tried</span>
+			<span class="badge rounded-pill text-bg-success ms-auto progress-2">Complete</span>
+		{% elif user == 1 %}
 			<div class="ms-auto d-flex">
 				{% if ptype == 1 %}
 					<div class="form-check form-switch">
@@ -18,11 +23,6 @@
 				<div class="vr mx-2 my-1"></div>
 				<button type="button" class="btn btn-danger" onclick="delme(this)"><i class="bi bi-trash"></i></button>
 			</div>
-		{% end %}
-		{% if user == 0 %}
-				<span class="badge rounded-pill text-bg-light ms-auto progress-0">Untried</span>
-				<span class="badge rounded-pill text-bg-warning ms-auto progress-1">Tried</span>
-				<span class="badge rounded-pill text-bg-success ms-auto progress-2">Complete</span>
 		{% end %}
 	</div>
 	<div class="card-body py-2">
@@ -40,23 +40,37 @@
 			</div>
 
 			<div class="q-content ms-4">
-				{% if (user) or (editable) %}
+				{% if user == 1 %}
 					{% module NodeControl(question=False) %}
 					{% for d in conponent %}
 						{% if d["type"] == "explain" %}
 							{% module Explain(**d, editor=True, allow_del=True) %}
 						{% elif d["type"] == "code" %}
-							{% module Node(**d, user=user, allow_del=True) %}
+							{% module Code(**d, user=user, allow_del=True) %}
 						{% end %}
 						{% module NodeControl(question=False) %}
 					{% end %}
 
-				{% else %}
+				{% elif (user == 0) and (editable) %}
+					{% module NodeControl(question=False, explain=False) %}
+					{% for ans in saved_answers %}
+						{% module Code(content=ans, allow_del=True) %}
+						{% module NodeControl(question=False, explain=False) %}
+					{% end %}
+
+				{% elif (user == 0) and (not editable) %}
+					{% set i = 0 %}
 					{% for d in conponent %}
 						{% if d["type"] == "explain" %}
 							{% module Explain(**d) %}
 						{% elif d["type"] == "code" %}
-							{% module Code(**d) %}
+							{% if len(saved_answers) > i %}
+								{% module Code(content=saved_answers[i], ) %}
+								{% set i = i + 1%}
+							{% else %}
+								{% module Code(**d) %}
+							{% end %}
+
 						{% end %}
 					{% end %}
 				{% end %}
@@ -65,7 +79,7 @@
 			{% if user == 1 %}
 				<div class="test-code mt-2">
 					<p class="mb-0"><span class="badge bg-danger">Test Code</span></p>
-					{% module Code(content=answer, allow_del=False, user=0) %}
+					{% module Code(content=answers, allow_del=False, user=0) %}
 				</div>
 			{% end %}
 		{% end %}
