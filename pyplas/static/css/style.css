@@ -203,7 +203,7 @@
     }
   }
   .card-body {
-    .mde > .toolbar > .only-inq { display: block; } 
+    .mde  .toolbar  .only-inq { display: block; } 
   }
 }
 

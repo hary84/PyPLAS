@@ -478,13 +478,14 @@ class ProblemCreateHandler(ApplicationHandler):
             /create/<p_id>/ -> 上書き保存
         """
         if p_id == "new": # 新規作成
+            self.p_id = str(uuid.uuid4())
             sql = r"""INSERT INTO pages(p_id, title, page, answers) 
             VALUES(:p_id, :title, :page, :answers)"""
-            self.write_to_db(sql, p_id=p_id, title=self.json["title"], 
+            self.write_to_db(sql, p_id=self.p_id, title=self.json["title"], 
                              page=json.dumps(self.json["page"]),
                              answers=json.dumps(self.json["answers"]))
 
-            self.write({"status": 1, "p_id": p_id})
+            self.write({"status": 1, "p_id": self.p_id})
 
         else: # 上書き保存
             sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers WHERE p_id=:p_id"""

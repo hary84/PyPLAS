@@ -89,7 +89,7 @@
             {% end %}
     </div>
 </main>
-<div class="col-xxl-2 bg-white border-start">
+<div class="col-xxl-2 d-none d-xxl-block bg-white border-start">
     <div class="mt-5 position-sticky" style="top: 3rem;">
         <nav id="question-nav" class="h-100 flex-column align-items-stretch pe-4">
             <nav class="nav nav-pills flex-column">
@@ -99,9 +99,4 @@
 </div>
 
 <script src="{{ static_url('js/problems_test.js') }}"></script>
-<script>
-    document.querySelectorAll(".question .q-text > *[ans]").forEach(elem => {
-        elem.removeAttribute("ans")
-    })
-</script>
 {% end %}

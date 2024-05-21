@@ -50,7 +50,7 @@ function registerAceMDE(elem) {
     editor.setOptions({
         showGutter: false,
         fontSize: `${lh}rem`,
-        highlightActiveLine: false
+        highlightActiveLine: false,
     })
     editor.container.style.height = lh * defaultLineNumbers + "rem"
 

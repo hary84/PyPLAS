@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 import markdown
 from tornado.web import UIModule 
 from tornado.escape import to_unicode
@@ -93,6 +94,13 @@ class Question(UIModule):
             1: tried
             2: complete
         """
+        if ptype == 0 and user == 0:
+            soup = BeautifulSoup(question, "html.parser")
+            elems = soup.find_all(attrs={"ans", True})
+            for e in elems:
+                if "ans" in e.attrs:
+                    del e.attrs["ans"]
+            question = soup.prettify()
         return self.render_string("modules/question.html",
                                   q_id=q_id, ptype=ptype, user=user,
                                   question=question,

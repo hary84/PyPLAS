@@ -1,7 +1,17 @@
 document.querySelectorAll(".node-mde").forEach(elem=>registerAceMDE(elem))
 document.querySelectorAll(".node-code").forEach(elem=>registerAceEditor(elem))
+
 /**
  * ページをパースしてサーバーに投げる
+ * POST /create/<p_id>
+ *  (send)
+ *      title: str
+ *      page: dict
+ *          headersとbodyのdict
+ *      answers: dict
+ *          {<q_id>: [ans, ans, ...] }
+ *  (receive)
+ *      status: int
  * @returns {none}
  */
 function problemSave() {
@@ -132,6 +142,13 @@ function problemSave() {
 }
 /**
  * pageのstatus, category, titleを変更する
+ * PUT /create/<p_id>
+ *  (send)
+ *      title: str
+ *      category: int
+ *      status: int 
+ *  (receive)
+ *      status: int
  * @param {DOM} btn 
  */
 function editPageParams(btn) {
