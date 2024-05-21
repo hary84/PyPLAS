@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% end %}
+
+{% block head-nav-li %}
+{% end %}
+
+{% block side-content %}
+{% module Template("./modules/side_kernel_ops.html") %}
+{% end %}
+
+{% block main %}
+<main class="col-lg-10 col-xl-8 px-3">
+    <div class="my-3" id="summary">
+        <p class="fs-3 border-bottom border-dark ps-1">
+            <input class="form-control mb-1" id="titleForm" type="text" placeholder="Title" aria-label="problem title input" value="{{conponent.get('title', '')}}">
+        </p>
+        <div class="ps-3">
+            <nav>
+                <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                  <button class="nav-link active" id="nav-summary-tab" data-bs-toggle="tab" data-bs-target="#navSummary" type="button" role="tab" aria-controls="navSummary" aria-selected="true">Summary</button>
+                  <button class="nav-link" id="nav-data-tab" data-bs-toggle="tab" data-bs-target="#navData" type="button" role="tab" aria-controls="navData" aria-selected="false">Data Source</button>
+                  <button class="nav-link" id="nav-env-tab" data-bs-toggle="tab" data-bs-target="#navEnv" type="button" role="tab" aria-controls="navEnv" aria-selected="false">Environment</button>
+                </div>
+            </nav>
+            <div class="tab-content border bg-light" id="nav-tabContent">
+                <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
+                    {% module Template("modules/MDE.html", content=conponent.get("page", {}).get("header", {}).get("summary", ""), has_del=False, problem_builder=False) %}
+                </div>
+                <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
+                    {% module Template("modules/MDE.html", content=conponent.get("page", {}).get("header", {}).get("source", ""), has_del=False, problem_builder=False) %}
+                </div>
+                <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
+                    {% module Template("modules/MDE.html", content=conponent.get("page", {}).get("header", {}).get("env", ""), has_del=False, problem_builder=False) %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="sourceCode">
+        <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
+        <div class="p-content position-relative ms-3">
+            {% module NodeControl() %}
+            {% if not is_new %}
+                {% for d in conponent["page"]["body"] %}
+                    {% if d["type"] == "explain" %}
+                        {% module Explain(**d, editor=True, allow_del=True) %}
+                    {% elif d["type"] == "code" %}
+                        {% module Code(**d, user=1, allow_del=True) %}
+                    {% elif d["type"] == "question" %}
+                        {% module Question(**d, user=1, 
+                            answers=conponent["answers"].get(str(d['q_id']), [])) %}
+                    {% end %}
+                    {% module NodeControl() %}
+                {% end %}
+            {% end %}
+            <i class="bi bi-file-earmark-code"></i>
+        </div>
+    </div>
+</main>
+<div class="col-xl-2 bg-white border-start">
+    <div class="sticky-top d-none d-xxl-block" id="sideItem">
+        <p class="fw-bold border-bottom mb-1 mt-3">Items</p>
+        <nav id="navbar-example3" class="flex-column align-items-stretch pe-4">
+            <nav class="nav nav-pills flex-column">
+                <a class="nav-link" href="#item-1">Item 1</a>
+                <nav class="nav nav-pills flex-column">
+                    <a class="nav-link ms-3 my-1" href="#item-1-1">Item 1-1</a>
+                    <a class="nav-link ms-3 my-1" href="#item-1-2">Item 1-2</a>
+                </nav>
+                <a class="nav-link" href="#item-2">Item 2</a>
+                <a class="nav-link" href="#item-3">Item 3</a>
+                <nav class="nav nav-pills flex-column">
+                    <a class="nav-link ms-3 my-1" href="#item-3-1">Item 3-1</a>
+                    <a class="nav-link ms-3 my-1" href="#item-3-2">Item 3-2</a>
+                </nav>
+            </nav>
+        </nav>
+    </div>
+</div>
+
+<!-- <script src="{{ static_url('js/problems_test.js') }}"></script> -->
+<script src="{{ static_url('js/create_test.js') }}"></script>
+{% end %}

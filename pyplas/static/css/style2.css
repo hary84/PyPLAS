@@ -1,0 +1,61 @@
+.row {
+    height: 100vh;
+}
+
+.mde {
+    border: solid 0.6px rgb(168, 168, 168);
+    border-radius: 5px;
+    .toolbar {
+        height: 1.5rem;
+        background-color: #ececed;
+        .btn {
+            padding: 0.2rem 0.5rem;
+            border: none;
+            border-radius: 0;
+            i {
+                font-size: 1rem;
+            }
+            i:before {
+                display: block;
+            }
+        }
+        .btn-preview {
+            .bi-eye {
+                display: block;
+            }
+            .bi-eye-slash {
+                display: none;
+            }
+        }
+    }
+    .node-mde {
+        border: solid 0.6px rgb(168, 168, 168);
+        border-radius: 5px;
+        display: block;
+    }
+    .for-preview {
+        display: none;
+        padding: 1rem;
+    }
+}
+
+.mde.preview-active {
+    .toolbar .btn-preview {
+        .bi-eye {
+            display: none;
+        }
+        .bi-eye-slash {
+            display: block;
+        }
+    }
+    .node-mde {
+        display: none;
+    }
+    .for-preview {
+        display: block;
+        border: solid 0.6px rgb(168, 168, 168);
+        border-radius: 5px;
+    }
+}
+
+

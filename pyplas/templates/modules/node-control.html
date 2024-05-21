@@ -1,0 +1,21 @@
+<div class="node-control text-center">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Button group with nested dropdown">
+        {% if explain %}
+            <button type="button" class="btn btn-secondary btn-addMD" onclick="addMD(this.closest('.node-control'))">+  <i class="bi bi-filetype-md"></i></button>
+        {% end %}
+        {% if code %}
+            <button type="button" class="btn btn-primary btn-addCode" onclick="addCode(this.closest('.node-control'))">+  <i class="bi bi-code-slash"></i></button>
+        {% end %}
+        {% if question %}
+            <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    +  <i class="bi bi-question-octagon"></i>
+                </button>
+                <ul class="dropdown-menu">
+                <li><a class="dropdown-item" onclick="addQ(this.closest('.node-control'), ptype=0)">HTML Problem</a></li>
+                <li><a class="dropdown-item" onclick="addQ(this.closest('.node-control'), ptype=1)">Code Problem</a></li>
+                </ul>
+            </div>
+        {% end %}
+    </div>
+</div>

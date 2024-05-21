@@ -1,4 +1,17 @@
-/* when offcanvas show */
+:root {
+  --text-danger: #dc3545;
+  --text-success: #198754;
+}
+
+.only-inq {
+  display: none;
+}
+
+.blocked-bi:before {
+  display: block;
+}
+
+/* when offcanvas show (larger than lg) */
 @media (min-width: 993px) { 
   .sidebar {
     position: sticky;
@@ -8,7 +21,7 @@
   }
 }
 
-/* accordion status controll */
+/* accordion status control */
 .accordion-button:focus {
   box-shadow: none;
   border-color: rgba(0,0,0,.125);
@@ -17,4 +30,217 @@
 .accordion-button:not(.collapsed) {
   opacity: 100%;
   background-color: white;
+}
+
+
+:is(.p-content, .q-content) {
+  border: dotted;
+  background-color: rgb(242 243 247);
+  padding: 1rem 0rem;
+  .node-control {
+      margin-left: 1rem;
+  }
+
+}
+:is(.p-content, .q-content):has(:is(.explain, .code, .question)) {
+  .node-control:hover {
+      .btn-group {
+          .btn {
+              display: inline;
+              padding: 0.2rem 0.5rem;
+              line-height: 1rem;
+              border: none;
+              border-radius: 0;
+          }
+      }
+  }
+  .node-control .btn-group .btn {
+      display: none;
+  }
+  .bi-file-earmark-code {
+      display: none;
+  }
+}
+.p-content:not(:has(:is(.explain, .code, .question))) {
+  text-align: center;
+  height: 350px;
+  .bi-file-earmark-code {
+      display: block;
+      font-size: 200px;
+      margin-top: auto;
+      opacity: 0.6;
+  }
+}
+.q-content:not(:has(:is(.explain, .code, .question))) {
+  .node-control .btn-group .btn {
+      display: inline;
+      padding: 0.2rem 0.5rem;
+      line-height: 1rem;
+      border: none;
+      border-radius: 0;
+  }
+}
+
+
+/* code node */
+.code {
+  display: flex;
+  .node-side {
+      padding-top: 0.15rem;
+      .btn {
+        padding: 0rem;
+        border: none;
+        i {
+          font-size: 1.1rem;
+        }
+        i:before {
+          padding: 0.1rem;
+        }
+        .spinner-border {
+          width: 0.9rem;
+          height: 0.9rem;
+        }
+      }
+      .btn:hover{
+        i:before {
+          color: white;
+        }
+      }
+      .executing {
+        display: none;
+        padding: 0rem 0.2rem;
+      }
+  }
+  .node-side.running {
+    .btn-exec {
+      display: none;
+    }
+    .executing {
+      display: block;
+    }
+  }
+  .node-prime {
+      width: 100%;
+      .code-config {
+        height: 1.7rem;
+        border-radius: 5px;
+        z-index: 1;
+        display: flex;
+        position: absolute;
+        right: 0;
+        top: 0;
+        .btn {
+          height: 1.5rem;
+          padding: 0.2rem 0.3rem;
+          margin: 0.1rem;
+          i {
+            font-size: 0.9rem;
+          }
+        }
+      }
+      .node-code {
+          width: 100%;
+      }
+      .return-box {
+          position: relative;
+          padding: 0.1rem 0 1rem 0;
+          .node-sidebutton {
+            position: absolute;
+            transform: translate(-100%, -100%);
+            top: 0;
+            left: 0;
+          }
+          p {
+              padding: 0 1rem;
+              margin-bottom: 0rem;
+              white-space: pre-wrap;
+              font-size: 0.7rem;
+          }
+
+      }
+  }
+}
+
+.question {
+  /* toast */
+  .toast {
+    z-index: 10;
+    right: 1%;
+    .toast-body {
+      overflow-y: auto;
+      max-height: 10rem;
+    }
+  }
+  .toast.status-success {
+    border: solid var(--text-success);
+    background-color: rgb(182 216 182);
+    .toast-header {
+      i {
+        color: var(--text-success);
+      }
+      span::before {
+        content: "SUCCESS";
+        color: var(--text-success);
+      }
+    }
+  }
+  .toast.status-error {
+    border: solid var(--text-danger); 
+    background-color: #ffdddd;
+    .toast-header {
+      i {
+        color: var(--text-danger);
+      }
+      span::before {
+        content: "ERROR";
+        color: var(--text-danger);
+      }
+    }
+    .toast-body {
+      white-space: pre-wrap;
+      font-size: 0.6rem;
+    }
+  }
+
+  .card-header {
+    .btn {
+      height: 1.5rem;
+      padding: 0.2rem;
+      i {
+        font-size: 0.9rem;
+      }
+      i:before {
+        display: block;
+      }
+    }
+    span.badge {
+      display: none;
+    }
+  }
+
+  .card-body {
+    .mde {
+      .toolbar {
+        .only-inq {
+          display: block;
+        }
+      }
+    }
+  }
+}
+
+.question[progress="0"] {
+  .card-header > .progress-0 {
+    display: block;
+  }
+}
+.question[progress="1"] {
+  .card-header > .progress-1 {
+    display: block;
+  }
+}
+.question[progress="2"] {
+  .card-header > .progress-2 {
+    display: block;
+  }
 }

@@ -1,5 +1,7 @@
 
 $(function() {
+    document.querySelectorAll(".node-mde").forEach(elem => registerAceMDE(elem))
+    document.querySelectorAll(".node-code").forEach(elem => registerAceEditor(elem))
 
     kh = new KernelHandler()
 
@@ -15,16 +17,27 @@ $(function() {
         kh.kernelInterrupt()
     })
 
-    $(".btn-testing").on("click", function() {
-        kh.kernelInterrupt()
-        $(this).parents(".question").find(".node-code").each(function() {
-            kh.execute_task_q.push($(this).parents(".node"))
-        })
-        kh.executeCode()
-    })
+    var sourcecode = document.querySelector("#sourceCode")
+    sourcecode.addEventListener("click", function(e) {
+        var code = e.target.closest(".code")
+        if (code) {
+            $current_node = code
+        }
+        var target = e.target.closest(".btn-exec, .btn-interrupt, .btn-testing, .btn-cancel")
+        console.log(target)
 
-    $(".node").on("click", function() {
-        $current_node = $(this)
+        if (target) {
+            if (target.classList.contains("btn-exec")) {
+                $current_node = target.closest(".code")
+                kh.execute($current_node)
+            } else if (target.classList.contains("btn-interrupt")) {
+                kh.kernelInterrupt()
+            } else if (target.classList.contains("btn-testing")) {
+                scoring(target.closest(".node.question"))
+            } else if (target.classList.contains("btn-cancel")) {
+                kh.kernelInterrupt(kh.test_kernel_id)
+            }
+        }
     })
 
     $(window).on("keydown", function(e) {
@@ -34,36 +47,33 @@ $(function() {
             } 
         }
     })
-    $(".btn-exec").on("click", function() {
-        $current_node = $(this).parents(".node")
-        kh.execute($current_node)
-    })
-
-    $(".executing").on("click", function() {
-        kh.kernelInterrupt()
-    })
 
     watchValue(kh, "running", setExecuteAnimation)
     watchValue(kh, "msg", renderMessage)
 })
 
+/**
+ * KernelHandler classのrunningパラメータが変化した際に起動する関数
+ * @param {KernelHandler} kh 
+ * @param {bool} newValue 
+ */
 function setExecuteAnimation(kh, newValue) {
+    // コード実行中(kh.running == true)の時
     if (newValue) {
-        $side = kh.execute_task_q[0].find(".node-sidebutton")
-        $side.children(".btn-exec").addClass("d-none")
-        $side.children(".executing").removeClass("d-none")
+        var side = kh.execute_task_q[0].querySelector(".node-side")
+        side.classList.add("running")
+    // 非コード実行中(kh.running == false)の時
     } else {
-        $side = $(".node").find(".node-sidebutton")
-        $side.children(".btn-exec").removeClass("d-none")
-        $side.children(".executing").addClass("d-none")
+        document.querySelectorAll(".node-side").forEach(elem => {
+            elem.classList.remove("running")
+        })
     }
 }
 
 function renderMessage(kh, newValue) {
     if (newValue) {
         var content = newValue.content
-        var $return_form = $(`#${newValue.id}`).parent().find(".return-box")
-
+        var $return_form = $(`div[node-id='${newValue.node_id}']`).find(".return-box")
         switch (newValue.msg_type) {
             case "execute_result":
                 _renderResult(content["data"]["text/plain"], $return_form)
@@ -78,33 +88,13 @@ function renderMessage(kh, newValue) {
             case "error":
                 var error_msg = content["traceback"].join("\n")
                 _renderResult(error_msg, $return_form, "error")
-                kh.running = false
-                kh.execute_task_q = []
+                kh.execute_task_q = [kh.execute_task_q[0]]
                 break;
             case "exec-end-sig":
                 kh.running = false
                 kh.execute_task_q.shift()
                 if (kh.execute_task_q[0]) {
                     kh.executeCode()
-                }
-                if($(`#${newValue.id}`).hasClass("is_testcode")) {
-                    var content = {}
-                    $(`div[q-id=${newValue.qid}]`).find(".node-code").each(function() {
-                        var editor_id = $(this).attr("id")
-                        content[editor_id] = ace.edit(editor_id).getValue()
-                    })
-                    $.ajax({
-                        url: window.location.href,
-                        type: "POST",
-                        contentType: "application/json",
-                        dataType: "json",
-                        data: JSON.stringify({"qid": newValue.qid, 
-                                              "content": content, 
-                                              "status": !newValue.has_error}),
-                        success: (data) => {
-                            console.log("SEND YOUR ANSWER")
-                        }
-                    })
                 }
                 break;
         }

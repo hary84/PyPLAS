@@ -1,5 +1,8 @@
 {% extends "layout.html" %}
 
+{% block head %}
+{% end %}
+
 {% block head-nav-li %}
 {% end %}
 
@@ -12,58 +15,58 @@
     <li class="list-group-item">A third item</li>
     <li class="list-group-item">A fourth item</li>
     <li class="list-group-item">And a fifth one</li>
-  </ul>
+</ul>
 {% end %}
 
 {% block main %}
 <main class="col px-3 vh-100 mt-3">
-  <div class="" id="progress">
-      <p class="fs-3 border-bottom border-dark">Problems</p>
-      <table class="table table-hover ms-3">
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Problem Name</th>
-              <th scope="col">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for d in problem_list %}
-            <tr onclick="location.href='problems/{{ d["id"] }}'">
-              <th scope="row">{{ d['id'] }}</th>
-              <td>{{ d['title'] }}</td>
-              <td>
-                {% if d["status"] == 0 %}
-                    <i class="bi bi-circle text-dark"></i>
-                    Untried
-                {% elif d["status"] == 1 %} 
-                    <i class="bi bi-triangle text-warning"></i>
-                    Tried
-                {% elif d["status"] == 2 %}
-                    <i class="bi bi-check2-circle text-success"></i>
-                    Completed
+    <div class="" id="progress">
+         {% if len(categories) != 0 %}
+            <p class="fs-3 border-bottom border-dark">Categories</p>
+            <ul class="list-group">
+                {% for cat in categories %}
+                    <li class="list-group-item">
+                        <a onclick="location.href='?category={{ cat }}'">{{ cat }}</a>
+                    </li>
                 {% end %}
-            </tr>
-          {% end %}
-          </tbody>
-        </table>
+            </ul>
+         {% elif len(problem_list) != 0 %}
+            <p class="fs-3 border-bottom border-dark">Problems</p>
+            <ul class="list-group">
+            {% for p in problem_list %}
+                <table class="table table-hover ms-3">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">title</th>
+                            <th scope="col">progress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i, d in enumerate(problem_list) %}
+                            <tr onclick="location.href='./problems/{{ d['p_id']}}'">
+                                <th>{{ i }}</th>
+                                <td scope="row">{{ d['title'] }}</td>
+                                <td>
+                                    {% if d['p_status'] == 0 %}
+                                        <i class="bi bi-door-closed text-danger"></i>
+                                        未学習
+                                    {% elif d['p_status'] == 1 %}
+                                        <i class="bi bi-slash-circle text-warning"></i>
+                                        学習中
+                                    {% elif d['p_status'] == 2 %}
+                                        <i class="bi bi-check-circle text-success"></i>
+                                        完了
+                                    {% end %}
+                                </td>
+                            </tr>
+                        {% end %}
+                    </tbody>
+                </table>        
+      {% end %}
+    {% end %}
   </div>
 
-  <div id="submitForm">
-      <p class="fs-3 border-bottom border-dark">Submit Form</p>
-      <form class="ms-3">
-          <div class="mb-3">
-            <label for="studentId" class="form-label">Student ID</label>
-            <input type="text" class="form-control" id="exampleInputID" aria-describedby="idHelp">
-            <div id="idHelp" class="form-text">Your Student Id <i>095xxxxx</i></div>
-          </div>
-          <div class="mb-3 form-check">
-            <input type="checkbox" class="form-check-input" id="exampleCheck1">
-            <label class="form-check-label" for="exampleCheck1">Check me out</label>
-          </div>
-          <button type="submit" class="btn btn-primary">Submit</button>
-        </form>
-  </div>
 </main>
 <div class="col-xl-2 border-start"></div>
 {% end %}

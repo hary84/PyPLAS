@@ -1,0 +1,34 @@
+<!-- 
+@params
+    content: str 
+    readonly: bool
+    user: int (0 or 1)
+    allow_del: bool 
+-->
+<div class="code node px-2 my-2">
+    <div class="node-side">
+        <button class="btn-exec btn btn-sm btn-outline-dark">
+            <i class="bi bi-caret-right-fill blocked-bi text-dark"></i>
+        </button>
+        <button class="btn-interrupt btn btn-sm btn-outline-dark executing">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="visually-hidden">Loading...</span>
+        </button>
+    </div>
+    <div class="node-prime position-relative">
+        <div class="code-config bg-secondary-subtle m-1">
+            <!-- creator mode -->
+            {% if user == 1 %}
+                <input class="form-check-input readonly-flag my-auto mx-1" type="checkbox" {{ 'checked' if readonly else "" }}>
+                <label class="form-check-label my-auto" for="readonly-flag">readonly</label>
+            {% end %}
+            <!-- normal & creator mode -->
+            {% if allow_del %}
+                <div class="vr m-1"></div>
+                <button class="btn btn-danger" onclick="delme(this)"><i class="bi bi-trash blocked-bi"></i></button>
+            {% end %}
+        </div>
+        <div class="node-code border rounded {{ 'readonly' if readonly else None }}">{{ content }}</div>
+        <div class="return-box border rounded"></div>            
+    </div>
+</div>

@@ -1,5 +1,8 @@
 {% extends "layout.html" %}
 
+{% block head %}
+{% end %}
+
 {% block head-nav-li %}
 <li class="nav-item px-4">
     <a href="/" class="nav-link text-light">Home</a>
@@ -14,22 +17,7 @@
 
 {% block side-content %}
 <p class="fs-5 fw-bold border-bottom px-2">SideMenu</p>
-<div class="mb-3" id="kernel-ops">
-    <div class="list-group list-group-flush">
-        <a class="list-group-item list-group-item-action text-decoration-none text-dark btn-restart">
-            <i class="bi bi-arrow-counterclockwise"></i>
-            Restart
-        </a>
-        <a class="list-group-item list-group-item-action text-decoration-none text-danger btn-interrupt">
-            <i class="bi bi-stop-circle"></i>
-            Interrupt
-        </a>
-        <a class="list-group-item list-group-item-action text-decoration-none text-success" id="btn-save">
-            <i class="bi bi-save"></i>
-            Save
-        </a>
-    </div>
-</div>
+{% module Template("modules/side_kernel_ops.html") %}
 <div class="accordion" id="accordionExample">
     <div class="accordion-item">
         <h2 class="accordion-header">
@@ -56,32 +44,13 @@
             </div>
         </div>
     </div>
-    <div class="accordion-item">
-        <h2 class="accordion-header">
-            <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseKernel" aria-expanded="false" aria-controls="collapseKernel">
-            Running Kernel
-            </button>
-        </h2>
-        <div id="collapseKernel" class="accordion-collapse collapse">
-            <div class="accordion-body px-1">
-                <div class="list-group list-group-flush">
-                    {% for d in progress %}
-                        <a class="list-group-item pe-0 ps-1 py-1 rounded" href="/problems/{{ d['id'] }}">
-                            <i class="bi bi-circle-fill text-success" status="{{ d['status'] }}"></i>
-                            {{ d['title'] }}
-                        </a>
-                    {% end %}
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 {% end %}
 
 {% block main %}
 <main class="col px-3">
     <div class="my-3" id="summary">
-        <p class="fs-3 border-bottom border-dark ps-1">Problem {{ conponent["id"]}}: {{ conponent["title"] }}</p>
+        <p class="fs-3 border-bottom border-dark ps-1">Problem: {{ conponent["title"] }}</p>
         <div class="ps-3">
             <nav>
                 <div class="nav nav-tabs" id="nav-tab" role="tablist">
@@ -91,14 +60,16 @@
                 </div>
             </nav>
             <div class="tab-content border bg-light" id="nav-tabContent">
+                {% import markdown %}
+                {% set md = markdown.Markdown() %}
                 <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
-                    {% raw conponent["page"]["header"]["summary"] %}
+                    {% raw md.convert(conponent["page"]["header"]["summary"]) %}
                 </div>
                 <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
-                    {% raw conponent["page"]["header"]["source"] %}
+                    {% raw md.convert(conponent["page"]["header"]["source"]) %}
                 </div>
                 <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-                    {% raw conponent["page"]["header"]["env"] %}
+                    {% raw md.convert(conponent["page"]["header"]["env"]) %}
                 </div>
             </div>
         </div>
@@ -108,11 +79,12 @@
         <div id="">
             {% for d in conponent["page"]["body"]%}
                 {% if d["type"] == "code" %}
-                    {% module Node(**d) %}
+                    {% module Code(**d) %}
                 {% elif d["type"] == "explain" %}
                     {% module Explain(**d) %}
                 {% elif d["type"] == "question" %}
-                    {% module Question(**d) %}
+                    {% module Question(**d, progress=conponent['q_status'].get(str(d['q_id']), 0),
+                                        saved_answers=conponent['q_content'].get(str(d['q_id']), [])) %}
                 {% end %}
             {% end %}
     </div>
@@ -139,4 +111,9 @@
 </div>
 
 <script src="{{ static_url('js/problems_test.js') }}"></script>
+<script>
+    document.querySelectorAll(".question .q-text > *[ans]").forEach(elem => {
+        elem.removeAttribute("ans")
+    })
+</script>
 {% end %}

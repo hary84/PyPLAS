@@ -1,3 +1,10 @@
-<div class="explain py-2 ps-4" node-id="{{ nodeid }}">
-    {% raw content %}
+<div class="explain node my-2 ps-4 pe-2">
+    {% if editor %}
+        {% module Template("modules/MDE.html",
+                           content=content, 
+                           has_del=allow_del,
+                           ) %}
+    {% else %}
+        {% raw content %}
+    {% end %}
 </div>
