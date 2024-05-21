@@ -1,8 +1,3 @@
-:root {
-  --text-danger: #dc3545;
-  --text-success: #198754;
-}
-
 .only-inq {
   display: none;
 }
@@ -156,49 +151,42 @@
               white-space: pre-wrap;
               font-size: 0.7rem;
           }
-
       }
   }
 }
 
+/* question Node */
 .question {
-  /* toast */
-  .toast {
-    z-index: 10;
-    right: 1%;
-    .toast-body {
-      overflow-y: auto;
-      max-height: 10rem;
-    }
-  }
   .toast.status-success {
-    border: solid var(--text-success);
+    border: solid var(--bs-success);
     background-color: rgb(182 216 182);
     .toast-header {
       i {
-        color: var(--text-success);
+        color: var(--bs-success);
       }
       span::before {
         content: "SUCCESS";
-        color: var(--text-success);
+        color: var(--bs-success);
       }
     }
   }
   .toast.status-error {
-    border: solid var(--text-danger); 
+    border: solid var(--bs-danger); 
     background-color: #ffdddd;
     .toast-header {
       i {
-        color: var(--text-danger);
+        color: var(--bs-danger);
       }
       span::before {
         content: "ERROR";
-        color: var(--text-danger);
+        color: var(--bs-danger);
       }
     }
     .toast-body {
       white-space: pre-wrap;
       font-size: 0.6rem;
+      overflow-y: auto;
+      max-height: 10rem;
     }
   }
 
@@ -208,39 +196,50 @@
       padding: 0.2rem;
       i {
         font-size: 0.9rem;
-      }
-      i:before {
-        display: block;
-      }
-    }
-    span.badge {
-      display: none;
-    }
-  }
-
-  .card-body {
-    .mde {
-      .toolbar {
-        .only-inq {
+        &::before {
           display: block;
         }
       }
     }
   }
+  .card-body {
+    .mde > .toolbar > .only-inq { display: block; } 
+  }
 }
 
-.question[progress="0"] {
-  .card-header > .progress-0 {
-    display: block;
+
+/* 各question Nodeの進捗バッチ */
+*[progress="0"] {
+  .progress-badge {
+    background-color: var(--bs-gray-300);
+    color: var(--bs-dark);
+    &::before {
+      content: "Untried";
+    }
   }
 }
-.question[progress="1"] {
-  .card-header > .progress-1 {
-    display: block;
+*[progress="1"] {
+  .progress-badge {
+    background-color: var(--bs-warning);
+    color: var(--bs-dark);
+    &::before {
+      content: "Tried"
+    }
   }
 }
-.question[progress="2"] {
-  .card-header > .progress-2 {
-    display: block;
+*[progress="2"] {
+  .progress-badge {
+    background-color: var(--bs-success);
+    &::before {
+      content: "Complete"
+    }
+  }
+}
+
+
+#question-nav {
+  .nav-link.active {
+    background-color: var(--bs-success-bg-subtle);
+    color: var(--bs-dark);
   }
 }

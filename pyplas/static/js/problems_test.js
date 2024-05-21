@@ -1,7 +1,14 @@
 
 $(function() {
-    document.querySelectorAll(".node-mde").forEach(elem => registerAceMDE(elem))
-    document.querySelectorAll(".node-code").forEach(elem => registerAceEditor(elem))
+    document.querySelectorAll(".node-mde").forEach(elem => registerAceMDE(elem)) // AceMDEの登録
+    document.querySelectorAll(".node-code").forEach(elem => registerAceEditor(elem)) // AceEditorの登録
+
+    // 右サイドバーにquestion nodeのリンクを配置
+    var question_nav_bar = document.querySelector("#question-nav > .nav")
+    document.querySelectorAll(".question").forEach((elem, i) => {
+        question_nav_bar.insertAdjacentHTML("beforeend",
+        `<a class="nav-link position-relative" href="#${elem.id}" progress=${elem.getAttribute("progress")}>Q. ${i+1}<span class="progress-badge badge position-absolute" style="right: 5%;"> </span></a>`)
+    })
 
     kh = new KernelHandler()
 

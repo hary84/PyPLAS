@@ -76,7 +76,7 @@
     </div>
     <div id="sourceCode">
         <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
-        <div id="">
+        <div class="question-scrollspy" id="" data-bs-spy="scroll" data-bs-target="#question-nav" data-bs-smooth-scroll="true">
             {% for d in conponent["page"]["body"]%}
                 {% if d["type"] == "code" %}
                     {% module Code(**d) %}
@@ -90,21 +90,9 @@
     </div>
 </main>
 <div class="col-xxl-2 bg-white border-start">
-    <div class="sticky-top d-none d-xxl-block" id="sideItem">
-        <p class="fw-bold border-bottom mb-1 mt-3">Items</p>
-        <nav id="navbar-example3" class="flex-column align-items-stretch pe-4">
+    <div class="mt-5 position-sticky" style="top: 3rem;">
+        <nav id="question-nav" class="h-100 flex-column align-items-stretch pe-4">
             <nav class="nav nav-pills flex-column">
-                <a class="nav-link" href="#item-1">Item 1</a>
-                <nav class="nav nav-pills flex-column">
-                    <a class="nav-link ms-3 my-1" href="#item-1-1">Item 1-1</a>
-                    <a class="nav-link ms-3 my-1" href="#item-1-2">Item 1-2</a>
-                </nav>
-                <a class="nav-link" href="#item-2">Item 2</a>
-                <a class="nav-link" href="#item-3">Item 3</a>
-                <nav class="nav nav-pills flex-column">
-                    <a class="nav-link ms-3 my-1" href="#item-3-1">Item 3-1</a>
-                    <a class="nav-link ms-3 my-1" href="#item-3-2">Item 3-2</a>
-                </nav>
             </nav>
         </nav>
     </div>

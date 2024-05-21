@@ -1,4 +1,4 @@
-<div class="node question card my-2 ms-3 me-2 position-relative" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
+<div class="node question card my-2 ms-3 me-2 position-relative" id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
 	<div class="for-toast"></div>
 	<div class="card-header bg-success-subtle d-flex">
 		Question
@@ -9,9 +9,7 @@
 		{% end %}
 
 		{% if user == 0 %}
-			<span class="badge rounded-pill text-bg-light ms-auto progress-0">Untried</span>
-			<span class="badge rounded-pill text-bg-warning ms-auto progress-1">Tried</span>
-			<span class="badge rounded-pill text-bg-success ms-auto progress-2">Complete</span>
+			<span class="progress-badge badge rounded-pill ms-auto"> </span>
 		{% elif user == 1 %}
 			<div class="ms-auto d-flex">
 				{% if ptype == 1 %}
