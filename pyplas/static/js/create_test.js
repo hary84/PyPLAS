@@ -14,7 +14,7 @@ document.querySelectorAll(".node-code").forEach(elem=>registerAceEditor(elem))
  *      status: int
  * @returns {none}
  */
-function problemSave() {
+function registerProblem() {
 
     // var p_id = window.location.pathname.match(/([-a-zA-Z0-9]+)/g)[1]
     var title = document.querySelector("#titleForm").value

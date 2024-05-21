@@ -1,3 +1,4 @@
+// for /create/<p_id> or /problems/<p_id>
 
 $(function() {
     document.querySelectorAll(".node-mde").forEach(elem => registerAceMDE(elem)) // AceMDEの登録
@@ -31,8 +32,6 @@ $(function() {
             $current_node = code
         }
         var target = e.target.closest(".btn-exec, .btn-interrupt, .btn-testing, .btn-cancel")
-        console.log(target)
-
         if (target) {
             if (target.classList.contains("btn-exec")) {
                 $current_node = target.closest(".code")

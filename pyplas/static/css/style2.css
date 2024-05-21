@@ -2,6 +2,10 @@
     height: 100vh;
 }
 
+/* =======
+ MDE Node
+========== */
+/* 共通 */
 .mde {
     border: solid 0.6px rgb(168, 168, 168);
     border-radius: 5px;
@@ -39,7 +43,7 @@
         word-break: break-all;
     }
 }
-
+/* プレビュー状態 */
 .mde.preview-active {
     .toolbar .btn-preview {
         .bi-eye {

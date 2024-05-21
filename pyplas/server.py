@@ -53,16 +53,28 @@ class ProblemHandler(ApplicationHandler):
     問題ページの表示/解答の採点を行う
     """
     execute_pool = {}
-    def prepare(self):
+    def prepare(self, p_id=None):
         """
         JSONのロード
-        [POST]
+        [POST] /problems/<p_id>
             ptype:        問題のタイプ (0-> html, 1-> coding)
             q_id:         問題id
             answers:      解答のリスト
             kernel_id:    コードを実行するカーネルのid
+        [PUT] /problems
+            kernel_id:    コードを実行するカーネルのid
+        [PUT] /problems/<p_id>
+            q_content:    Question Nodeのconponent部分のdict
         """ 
-        keys = ["ptype", "q_id", "answers", "kernel_id"]
+        if self.request.method == "POST":
+            keys = ["ptype", "q_id", "answers", "kernel_id"]
+        elif self.request.method == "PUT":
+            if p_id is None:
+                keys = ["kernel_id"]
+            else:
+                keys = ["q_content"]
+        else:
+            keys = []
         self.is_valid_json = self.load_json(validate=True, keys=keys)
 
     def get(self, p_id):
@@ -93,7 +105,6 @@ class ProblemHandler(ApplicationHandler):
                     "q_content": {key: json.loads(value) 
                                   for key, value in json.loads(page["q_content"]).items()}
                     }
-            print(page["q_content"])
             self.render(f"./problem.html", conponent=page, progress=[])
 
     async def post(self, p_id):
@@ -240,12 +251,38 @@ class ProblemHandler(ApplicationHandler):
     
 
 
-    def put(self, p_id):
-        print("[ProblemHandler PUT] cancel exec")
-        executor, future = ProblemHandler.execute_pool.pop(self.json["kernel_id"], [None, None])
-        if executor is not None:
-            for e in executor._processes.values():
-                e.kill()
+    def put(self, p_id=None):
+        """
+        自動採点のキャンセル. 進捗のセーブ
+        (path) 
+            /problems/          -> code testing のキャンセル
+            /problems/<p_id>    -> 進捗のセーブ
+        """
+        if p_id is None:
+            print("[ProblemHandler PUT] cancel exec")
+            executor, future = ProblemHandler.execute_pool.pop(self.json["kernel_id"], [None, None])
+            if executor is not None:
+                for e in executor._processes.values():
+                    e.kill()
+        else:
+            write_content = r"""INSERT INTO progress(p_id, q_status, q_content)
+                VALUES (
+                :p_id,
+                '{}',
+                :q_content ) 
+                ON CONFLICT(p_id) DO UPDATE SET
+                q_content=:q_content
+                """
+            try:
+                for key, value in self.json["q_content"]:
+                    assert isinstance(key, str)
+                    assert isinstance(value, list)
+            except AssertionError as e:
+                pass
+            else:
+                self.write_to_db(write_content, p_id=p_id, 
+                             q_content=json.dumps(self.json["q_content"]))
+
 
 def _exec(code):
     import asyncio

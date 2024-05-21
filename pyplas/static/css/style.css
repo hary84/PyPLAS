@@ -16,18 +16,23 @@
   }
 }
 
-/* accordion status control */
+/* ========
+  accordion 
+=========== */
 .accordion-button:focus {
   box-shadow: none;
   border-color: rgba(0,0,0,.125);
 }
-
 .accordion-button:not(.collapsed) {
   opacity: 100%;
   background-color: white;
 }
 
 
+/* ===================
+  p-content, q-content
+====================== */
+/* 共通 */
 :is(.p-content, .q-content) {
   border: dotted;
   background-color: rgb(242 243 247);
@@ -35,8 +40,7 @@
   .node-control {
       margin-left: 1rem;
   }
-
-}
+} /* 内部にNodeオブジェクトが存在する場合 */
 :is(.p-content, .q-content):has(:is(.explain, .code, .question)) {
   .node-control:hover {
       .btn-group {
@@ -55,7 +59,7 @@
   .bi-file-earmark-code {
       display: none;
   }
-}
+} /* .p-content内部にNodeオブジェクトが存在しない場合 */
 .p-content:not(:has(:is(.explain, .code, .question))) {
   text-align: center;
   height: 350px;
@@ -65,7 +69,7 @@
       margin-top: auto;
       opacity: 0.6;
   }
-}
+} /* .q-content内部にNodeオブジェクトが存在しない場合 */
 .q-content:not(:has(:is(.explain, .code, .question))) {
   .node-control .btn-group .btn {
       display: inline;
@@ -77,7 +81,19 @@
 }
 
 
-/* code node */
+/* ===========
+  Explain Node
+============== */
+.explain {
+  p {
+    margin-bottom: 0.5rem;
+  }
+}
+
+
+/* ==========
+  Code Node
+============= */
 .code {
   display: flex;
   .node-side {
@@ -133,9 +149,6 @@
           }
         }
       }
-      .node-code {
-          width: 100%;
-      }
       .return-box {
           position: relative;
           padding: 0.1rem 0 1rem 0;
@@ -155,7 +168,9 @@
   }
 }
 
-/* question Node */
+/* ============
+  question Node 
+=============== */
 .question {
   .toast.status-success {
     border: solid var(--bs-success);
@@ -169,7 +184,8 @@
         color: var(--bs-success);
       }
     }
-  }
+  } 
+/* toast */ 
   .toast.status-error {
     border: solid var(--bs-danger); 
     background-color: #ffdddd;
@@ -189,7 +205,7 @@
       max-height: 10rem;
     }
   }
-
+/* card-header */
   .card-header {
     .btn {
       height: 1.5rem;
@@ -202,6 +218,7 @@
       }
     }
   }
+/* card-body */
   .card-body {
     .mde  .toolbar  .only-inq { display: block; } 
   }

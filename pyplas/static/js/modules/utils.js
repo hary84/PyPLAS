@@ -8,7 +8,7 @@ function registerAceEditor(elem) {
     var id = crypto.randomUUID()
     elem.closest(".node").setAttribute("node-id", id)
 
-    const lh = 1.3
+    const lh = 1 // rem
     var editor = ace.edit(elem, {
         mode: "ace/mode/python",
         theme: "ace/theme/twilight"
@@ -18,20 +18,20 @@ function registerAceEditor(elem) {
         editor.setReadOnly(true)
     }
 
-    editor.container.style.lineHeight = `${lh}rem`;
-    editor.container.style.height = lh * 5 + "rem"
-    editor.renderer.updateFontSize()
+    function resizeEditor() {
+        var newHeight = editor.getSession().getScreenLength() * lh
+            + editor.renderer.scrollBar.getWidth() + 1
+        editor.container.style.height = newHeight.toString() + "rem"
+        editor.resize()   
+    }
+
+    resizeEditor()
 
     editor.getSession().on("change", function(delta) {
-        var line = editor.session.getLength()
-        if (line > 4) {
-            editor.container.style.height = lh * (line+1) + "rem"
-        } else {
-            editor.container.style.height = lh * 5 + "rem"
-        }
-        editor.resize()
+        resizeEditor()
     })
 }
+
 
 /**
  * elemをmarkdown ace editorとして登録する 
@@ -49,18 +49,19 @@ function registerAceMDE(elem) {
 
     editor.setOptions({
         showGutter: false,
-        fontSize: `${lh}rem`,
         highlightActiveLine: false,
     })
-    editor.container.style.height = lh * defaultLineNumbers + "rem"
+
+    function resizeEditor() {
+        var newHeight = editor.getSession().getScreenLength() * lh
+            + editor.renderer.scrollBar.getWidth() + 1
+        editor.container.style.height = newHeight.toString() + "rem"
+        editor.resize()   
+    }
+    resizeEditor()
 
     editor.getSession().on("change", function(delta) {
-        var line = editor.session.getLength()
-        if (line >= defaultLineNumbers-2) {
-            editor.container.style.height = lh * (line+2) + "rem"
-        } else {
-            editor.container.style.height = lh * defaultLineNumbers + "rem"
-        }
+        resizeEditor()
     })
 }
 /**
