@@ -1,3 +1,4 @@
+from datetime import datetime, date
 import json
 import sqlite3
 from typing import Union
@@ -118,9 +119,35 @@ class ApplicationHandler(tornado.web.RequestHandler):
         """
 
 
-def _dict_factory(cursor, row):
+def _dict_factory(cursor, row) -> dict:
     """
     DBから取得したデータをdictに変換する
     """
     fields = [column[0] for column in cursor.description]
     return {key: value for key, value in zip(fields, row)}
+
+def custom_exec(code: str) -> None:
+    """
+    exec()関数を使って任意のコードを実行する
+
+    Parameters
+    ----------
+    code: str
+        実行したいコード
+    """
+    import asyncio
+    ls = {}
+    exec(
+        "async def __ex(): " +
+        "".join(f"\n    {row}" for row in code.split('\n')),
+        {},
+        ls
+    )
+    asyncio.run(ls["__ex"]())
+
+def datetime_encoda(obj: object) -> str:
+    """
+    objがdatetimeオブジェクトであれば、isoformatの文字列に変換する
+    """
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
