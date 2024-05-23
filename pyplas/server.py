@@ -1,7 +1,6 @@
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
-from datetime import datetime
 import signal
 import sqlite3
 from util import ApplicationHandler, custom_exec, datetime_encoda
@@ -51,7 +50,7 @@ class MainHandler(ApplicationHandler):
 class ProblemHandler(ApplicationHandler):
 
     execute_pool = {}
-    def prepare(self, p_id=None):
+    def prepare(self):
         """
         JSONのロード
         [POST] /problems/<p_id>
@@ -80,13 +79,13 @@ class ProblemHandler(ApplicationHandler):
         """
         # 問題のタイトル, コンテンツ, 進捗, 過去の回答を取得
         sql = r"""SELECT pages.title, pages.page, 
-            COALESCE(JSON_EXTRACT(progress.q_status, '$'), '{}') AS q_status, 
-            COALESCE(JSON_EXTRACT(progress.q_content, '$'), '{}') AS q_content
+            COALESCE(progress.q_status, '{}') AS q_status, 
+            COALESCE(progress.q_content, '{}') AS q_content
             FROM pages 
             LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
             WHERE pages.p_id=:p_id AND status=1"""
+        page = self.get_from_db(sql, p_id=p_id)
         try:
-            page = self.get_from_db(sql, p_id=p_id)
             assert len(page) != 0
             page:dict = page[0]
         except (AssertionError, sqlite3.Error) as e:
@@ -97,8 +96,7 @@ class ProblemHandler(ApplicationHandler):
             page = {"title": page["title"], # str
                     "page": json.loads(page["page"]), 
                     "q_status": json.loads(page["q_status"]), # dict: {"q_id": [0|1|2], ...}
-                    "q_content": {key: json.loads(value)  # dict: {"q_id": ['content', 'content'...], ...}
-                                  for key, value in json.loads(page["q_content"]).items()}
+                    "q_content": json.loads(page["q_content"])  # dict: {"q_id": ['content', 'content'...], ...}
                     }
             self.render(f"./problem.html", conponent=page, progress=[])
 
@@ -108,47 +106,42 @@ class ProblemHandler(ApplicationHandler):
         (PATH)
             /problems/<p_id>
         """
-        self.p_id = p_id
-        
         if self.is_valid_json: # Request-bodyのJSONが有効な形式の場合
+            print(f"[ProblemHandler POST] Scoring")
             sql = r"""SELECT answers FROM pages WHERE p_id=:p_id"""
-            c_answers = self.get_from_db(sql, p_id=self.p_id)
+            c_answers = self.get_from_db(sql, p_id=p_id)
             try:
-                assert len(c_answers) != 0
-                self.q_id = self.json["q_id"]
+                assert len(c_answers) != 0, f"Problem({p_id}) does not exist."
                 c_answers: dict = json.loads(c_answers[0]["answers"])
-                self.keys: list = c_answers.keys() # 問題(p_id)に存在するq_idのリスト
-                self.c_answers:list = c_answers[self.q_id] # 質問(q_id)の答え
-            except (AssertionError, KeyError) as e:
-                content = f"Question(q-id={self.q_id}) does not exist"
-                result = [False]
-
-            try:
+                self.c_answers:list = c_answers.get(self.json["q_id"], []) # 質問(q_id)の答え
+                assert len(self.c_answers) != 0, f"Question({self.json['q_id']}) does not exist."
+                keys: list = c_answers.keys() # 問題(p_id)に存在するq_idのリスト
+                assert len(keys) != 0, f"Problem({p_id}) has no questions."
+            except AssertionError as e:
+                content = str(e)
+                q_status = 0
+                status  = 500
+            else:
                 if self.json["ptype"] == 0: # html problem
-                    print(f"[LOG] HTML Scoring")
                     result, content = self.html_scoring()
                 elif self.json["ptype"] == 1: # coding problem    
-                    print(f"[LOG] CODE Testing Scoring")
                     result, content = await self.code_scoring()
-            except Exception as e:
-                content = f"[{e.__class__.__name__}] {e}"
-                result = [False]
+                q_status = 2 if False not in result else 1
+                try:
+                    self._insert_and_update_progress(p_id, q_status, keys) # 結果をdbに書き込む
+                except sqlite3.Error as e:
+                    self.print_traceback()
+                    status = 500
+                else:
+                    status = 200
+            
+            self.finish({"html": self._render_toast(content, q_status),
+                         "progress": q_status,
+                         "status": status,
+                         "detail": json.dumps({"p_id": p_id, "q_id": self.json["q_id"], "result": q_status}),
+                        })
 
-            q_status = 2 if False not in result else 1
-            try:
-                # 結果をdbに書き込む
-                self._insert_and_update_progress(q_status=q_status)
-            except sqlite3.Error as e:
-                self.finish({"status": 500})
-            else:
-                self.write({"html": self._render_toast(content, q_status),
-                            "progress": q_status,
-                            "status": 200,
-                            "saved": json.dumps({"p_id": p_id, "q_id": self.q_id, "result": q_status,
-                                                "answer_at": datetime.now().strftime("%Y/%m/%d %H:%M:%S")})
-                            })
-
-    def _insert_and_update_progress(self, q_status: int) -> None:
+    def _insert_and_update_progress(self, p_id: str, q_status: int, keys: list) -> None:
         """
         採点結果logテーブル, progressテーブルに記録する
         """
@@ -158,11 +151,11 @@ class ProblemHandler(ApplicationHandler):
         write_state = r"""INSERT INTO progress(p_id, q_status, q_content)
             VALUES (
             :p_id,
-            JSON_OBJECT(JSON_QUOTE(:q_id), :status),
-            JSON_OBJECT(JSON_QUOTE(:q_id), :content) ) 
+            JSON_OBJECT(:q_id, :status),
+            JSON_OBJECT(:q_id, JSON(:content)) ) 
             ON CONFLICT(p_id) DO UPDATE SET
             q_status=JSON_SET(q_status, '$.' || :q_id, :status),
-            q_content=JSON_SET(q_content, '$.' || :q_id, :content)
+            q_content=JSON_SET(q_content, '$.' || :q_id, JSON(:content))
             """
         update_state = r"""UPDATE progress 
             SET p_status= 
@@ -174,10 +167,10 @@ class ProblemHandler(ApplicationHandler):
             WHERE p_id = :p_id
             """.format(condition=r" AND ".join(
                 [r"JSON_TYPE(q_status, '$.{key}') IS NOT NULL".format(key=key) 
-                 for key in self.keys]
+                 for key in keys]
             ))
         self.write_to_db((write_log, write_state, update_state), 
-                         p_id=self.p_id, q_id=self.q_id,
+                         p_id=p_id, q_id=str(self.json["q_id"]),
                          status=q_status,
                          content=json.dumps(self.json["answers"]))
 
@@ -206,17 +199,18 @@ class ProblemHandler(ApplicationHandler):
         content: str
             toastに表示される文字列
         """
-        result = []
-
         # 文字列マッチング
+        result = []
+        content = ''
         try:
-            content = ''
             assert len(self.json["answers"]) == len(self.c_answers), "Does not match the number of questions in DB"
+        except AssertionError as e:
+            result = [False]
+            content = f"[{e.__class__.__name__}] {e}"
+        else:
             for i, ans in enumerate(self.json["answers"]):
                 result.append(ans == self.c_answers[i])
                 content += f"<p class='mb-0'>[{'o' if result[i] else 'x'}] {ans}</p>"
-        except (KeyError, AssertionError):
-            raise
 
         return (result, content)
     
@@ -233,23 +227,24 @@ class ProblemHandler(ApplicationHandler):
             toastに表示される文字列
         """
         # set up test kernel
-        self.kernel_id = self.json["kernel_id"]
+        kernel_id = self.json["kernel_id"]
         code = "\n".join(self.json["answers"] + self.c_answers)
         executor = ProcessPoolExecutor(max_workers=1)
         future = ioloop.IOLoop.current().run_in_executor(executor, custom_exec, code)
-        ProblemHandler.execute_pool[self.kernel_id] = [executor, future]
+        ProblemHandler.execute_pool[kernel_id] = executor
         try:
             await future
         except BrokenProcessPool as e:
             result = [False]
             content = f"[Cancel]: The code execution process has been destroyed."
         except Exception as e:
-            raise
+            result = [False]
+            content = f"[{e.__class__.__name__}] {e}"
         else:
             result = [True]
             content = "Complete"
         finally:
-            ProblemHandler.execute_pool.pop(self.kernel_id, None)
+            ProblemHandler.execute_pool.pop(kernel_id, None)
 
         return (result, content)
     
@@ -262,35 +257,35 @@ class ProblemHandler(ApplicationHandler):
         """
         if self.is_valid_json:
             write_content = r"""INSERT INTO progress(p_id, q_status, q_content)
-                VALUES (:p_id, '{}', :q_content ) 
+                VALUES (:p_id, '{}', :q_content) 
                 ON CONFLICT(p_id) DO UPDATE SET
                 q_content=:q_content
                 """
             try:
-                for key, value in self.json["q_content"]:
+                for key, value in self.json["q_content"].items():
                     assert isinstance(key, str)
                     assert isinstance(value, list)
                 self.write_to_db(write_content, p_id=p_id, 
                              q_content=json.dumps(self.json["q_content"]))
-            except AssertionError as e:
-                print(f"PUT /problems/{p_id}: {e}")
-                self.finish({"status": 406,
-                             "DESCR": "DATA KEY OR VALUE IS NOT ACCEPTABLE"})
-            except sqlite3.Error as e:
-                print(f"PUT /problems/{p_id}: {e}")
-                self.finish({"status": 500,
-                             "DESCR": "FILURE TO SAVE DATA"})
+            except AssertionError:
+                status = 500
+                descr = "data key or value is not acceptable"
+            except sqlite3.Error:
+                self.print_traceback()
             else:
-                self.finish({"status": 200,
-                             "body": json.dumps(self.json["q_content"]),
-                             "DESCR": "DATA SUCCESSFULLY SAVED"})
+                status = 200
+                descr = "data is successfully saved"
+
+            self.finish({"status": status,
+                         "body": json.dumps(self.json["q_content"]),
+                         "DESCR": descr})
                 
     def delete(self, p_id):
         """
         カーネル<p_id>で実行中のコードテスティングを中断する
         """
         print("[ProblemHandler PUT] cancel exec")
-        executor, future = ProblemHandler.execute_pool.pop(p_id, [None, None])
+        executor = ProblemHandler.execute_pool.pop(p_id, None)
         if executor is not None:
             for e in executor._processes.values():
                 e.kill()
@@ -350,7 +345,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
                     break
                 else:
                     output.update({"node_id": self.node_id})
-                    self.write_message(json.dumps(output, datetime_encoda))
+                    self.write_message(json.dumps(output, default=datetime_encoda))
             except Exception as e:
                 print(e)
                 break
@@ -376,19 +371,22 @@ class KernelHandler(ApplicationHandler):
         if k_id is None:
             print(f"[KernelHandler GET] Check all kernel")
             kernel_ids = await mult_km.list_kernel_ids()
-            self.write({"status": 200,
-                        "kernel_ids": kernel_ids})
+            self.finish({"status": 200,
+                        "kernel_ids": kernel_ids,
+                        "DESCR": "Get a list of kernels managed by the server"})
         else:
             try:
                 print(f"[KernelHandler GET] Check kernel({k_id})")
                 is_alive = await mult_km.is_alive(k_id)
                 self.finish({"status": 200,
                             "kernel_id": k_id,
-                            "is_alive": is_alive})
+                            "is_alive": is_alive,
+                            "DESCR": f"kernel({k_id}) is alive."})
             except KeyError as e:
                 self.finish({"status": 500,
+                             "kernel_id": k_id,
+                             "is_alive": False,
                              "DESCR": str(e)})
-
 
     async def post(self, k_id=None):
         """
@@ -530,9 +528,11 @@ class ProblemCreateHandler(ApplicationHandler):
                                 page=json.dumps(self.json["page"]),
                                 answers=json.dumps(self.json["answers"]))
             except sqlite3.Error:
-                self.finish({"status": 500, "DESCR": "FAILURE TO REGISTER NEW PROBLEM"})
+                self.print_traceback()
+                self.finish({"status": 500, "DESCR": "Failure to register new problem."})
             else:
-                self.finish({"status": 200, "p_id": self.p_id})
+                self.finish({"status": 200, "p_id": self.p_id,
+                             "DESCR": "New Problem is successfully registered."})
 
         else: # 上書き保存
             sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers WHERE p_id=:p_id"""
@@ -540,11 +540,13 @@ class ProblemCreateHandler(ApplicationHandler):
                 self.write_to_db(sql, p_id=p_id, title=self.json["title"],
                                 page=json.dumps(self.json["page"]),
                                 answers=json.dumps(self.json["answers"]))
-            except sqlite3.Error as e:
-                print(f"POST /create/{p_id}: {e}")
-                self.finish({"status": 500, "DESCR": f"FAILURE TO EDIT {p_id}"})
+            except sqlite3.Error:
+                self.print_traceback()
+                self.finish({"status": 500, "p_id": p_id,
+                             "DESCR": f"FAILURE TO EDIT {p_id}"})
             else:
-                self.finish({"status": 200, "p_id": p_id})
+                self.finish({"status": 200, "p_id": p_id,
+                             "DESCR": f"Problem({p_id}) is successfully saved."})
 
     def put(self, p_id):
         """
@@ -557,12 +559,13 @@ class ProblemCreateHandler(ApplicationHandler):
             self.write_to_db(sql, p_id=p_id, title=self.json["title"],
                             category=self.json["category"],
                             status=self.json["status"])
-        except sqlite3.Error as e:
-            print(f"PUT /create/{p_id}: {e}")
+        except sqlite3.Error:
+            self.print_traceback()
             self.finish({"status": 500, "profile": json.dumps(self.json), 
                          "DESCR": f"FAILURE TO UPDATE {p_id}'s PROFILE"})
         else:
-            self.write({"status": 200, "profile": json.dumps(self.json)})
+            self.write({"status": 200, "profile": json.dumps(self.json),
+                        "DESCR": "problem profile is successfully updated."})
 
     def delete(self, p_id):
         """
@@ -632,8 +635,6 @@ def make_app():
     ui_modules=uimodules
     )
 
-    
-
 async def main():
     app = make_app()
     app.listen(8888)
@@ -652,6 +653,5 @@ async def main():
     signal.signal(signal.SIGINT, shutdown_server)
     await shutdown_event.wait()
 
-    
 if __name__ == "__main__":
     asyncio.run(main())

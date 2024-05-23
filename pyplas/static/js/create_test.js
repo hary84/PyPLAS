@@ -1,5 +1,3 @@
-document.querySelectorAll(".node-mde").forEach(elem=>registerAceMDE(elem))
-document.querySelectorAll(".node-code").forEach(elem=>registerAceEditor(elem))
 
 /**
  * ページをパースしてサーバーに投げる
@@ -33,8 +31,7 @@ function registerProblem() {
     // The Source CodeからNodeを取得
     var body = []
     var answers = {}
-    const parser = new DOMParser()
-    var q_no = 1
+    var q_id = 1
     document.querySelectorAll("#sourceCode > .p-content > .node").forEach(function(elem) {
         // Explain Node
         if (elem.classList.contains("explain")) {
@@ -58,69 +55,26 @@ function registerProblem() {
         }
         // Question Node
         else if (elem.classList.contains("question")) {
-            var qid = q_no
-            q_no += 1
-            var ptype = Number(elem.getAttribute("ptype"))
-            var question = ""
-            var conponent = []
-            var editable = false
-            answers[qid] = []
-
-            if (ptype == 0) { // HTML Problem
-                var editor = ace.edit(elem.querySelector(".node-mde"))
-                var html_str = editor.getValue()
-
-                // 答えの抽出
-                var html_dom = parser.parseFromString(html_str, "text/html").querySelector("body")
-                html_dom.querySelectorAll(".q-text > *[ans]").forEach(function(elem) {
-                    answers[qid].push(elem.getAttribute("ans"))
-                    // elem.removeAttribute("ans")
-                })
-
-                question = html_dom.innerHTML
-
-            } 
-            else if (ptype == 1) { // Code Test Problem
-                var editable = elem.querySelector(".editable-flag").checked  // editable
-                question = ace.edit(elem.querySelector(".q-text .node-mde")).getValue() // question
-                var test_code = ace.edit(elem.querySelector(".test-code .node-code")).getValue() // answer
-                answers[qid].push(test_code)
-                // conponent
-                if (!editable) {
-                    elem.querySelectorAll(".q-content > .node").forEach(elem => {
-                        if (elem.classList.contains("explain")) {
-                            var type = "explain"
-                            var content = ace.edit(elem.querySelector(".node-mde")).getValue()
-                        } else if (elem.classList.contains("code")) {
-                            var type = "code"
-                            var content = ace.edit(elem.querySelector(".node-code")).getValue()
-                        }
-                        conponent.push({
-                            "type": type,
-                            "content": content
-                        })
-                    }) 
-                }
-            }
-
+            elem.setAttribute("q-id", q_id)
+            var params = extractQuestionNode(elem, mode=1)
+            answers[`${q_id}`] = params.answers 
             body.push({
                 "type": "question",
-                "q_id": qid,
-                "ptype": ptype,
-                "conponent": conponent,
-                "question": question,
-                "editable": editable,
+                "q_id": params.q_id,
+                "ptype": params.ptype,
+                "conponent": params.conponent,
+                "question": params.question,
+                "editable": params.editable,
             })
+            q_id += 1
         }
     })
-
     var page = {
         "header": {"summary": headers[0],
                    "source": headers[1],
                    "env": headers[2]},
         "body": body
     }
-
     var send_msg = {
         "title": title,
         "page": page,
@@ -139,6 +93,7 @@ function registerProblem() {
             window.location.href = `/create/${data.p_id}`
         }
     })
+    console.log(send_msg)
 }
 /**
  * pageのstatus, category, titleを変更する
@@ -163,11 +118,10 @@ function editPageParams(btn) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({"title": title, "category": category, "status": status})
     }).then(response => response.json()).then(data => {
-        if (data.status == 0) {
-            alert("SAVE FAILED")
-        } else if (data.status == 1) {
+        console.log(`[editProblemparams] ${data.DESCR}`)
+        if (data.status == 200) {
             window.location.reload()
-        }
+        } 
     })
 }
 

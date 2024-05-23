@@ -17,15 +17,14 @@ class KernelHandler {
 
         this.ws = new WebSocket(`ws://${window.location.host}/ws/${this.kernel_id}`)
         this.ws.onopen = () => {
-            console.log("[LOG] ws connecting ...")
+            console.log("[LOG] WS connecting ...")
         }
         this.ws.onmessage = (event) => {
             var data = JSON.parse(event.data)
-            console.log(data)
             this.msg = data
         }
         this.ws.onclose = function() {
-            console.log("[LOG] ws disconnecting ...")
+            console.log("[LOG] WS disconnecting ...")
         }
     }
     /**
@@ -40,13 +39,14 @@ class KernelHandler {
     }
     /**
      * カーネルidが有効かを調べる
-     * @param {String} kernel_id 
+     * @param {string} kernel_id 
      * @returns {bool} 
      */
     isAliveKernel = async (kernel_id) => {
         var id = (kernel_id) ? kernel_id : this.kernel_id
         var res = await fetch(`${window.location.origin}/kernel/${id}`, {method: "GET"})
         var json = await res.json()
+        console.log(`[KernelHandler] ${json.DESCR}`)
         return json.is_alive
     }
     /**
@@ -56,35 +56,39 @@ class KernelHandler {
     getKernelIds = async () => {
         var res = await fetch(`${window.location.origin}/kernel`, {method: "GET"})
         var json = await res.json()
+        console.log(`[KernelHandler] ${json.DESCR}`)
         return json.is_alive
     }
     /**
-     * REST API を用いてカーネルを起動する
+     * カーネルを起動する
+     * カーネルがすでに存在している場合、kernelRestart()でカーネルを再起動する
      */
     kernelStart = async () => {
         var id = (this.kernel_id) ? this.kernel_id : ""
         var res = await fetch(`${window.location.origin}/kernel/${id}`, {method: "POST"})
         var json = await res.json()
-        if (json.status == "success") {
-            console.log(json["DESCR"])
+        if (json.status == 200) {
+            console.log(`[Kernelhandler] ${json.DESCR}`)
             this.registerKernelId(json.kernel_id)
-        } else if (json.status == "error") {
-            console.log(json["DESCR"])
+        } else if (json.status == 500) {
+            console.log(`[KernelHandler] ${json.DESCR}`)
             this.kernelRestart()
         }
     }
     /**
      * REST API を用いてカーネルを再起動する
+     * このメソッドは直接呼び出さず、kernelStart(), setUpKernel()からのみ呼び出す
      */
     kernelRestart = async () => {
         var res = await fetch(`${window.location.origin}/kernel/${this.kernel_id}?action=restart`,
                               {method: "POST"})
         var json = await res.json()
-        if (json.status == "success") {
-            console.log(json["DESCR"])
+        if (json.status == 200) {
+            console.log(`[KernelHandler] ${json.DESCR}`)
             this.registerKernelId(json.kernel_id)
-        } else if(json.status == "error") {
-            console.log(json["DESCR"])
+        } else if(json.status == 500) {
+            console.log(`[KernelHandler] ${json.DESCR}`)
+            throw new Error("Fail to start kernel.")
         }
     }
     /**
@@ -95,15 +99,13 @@ class KernelHandler {
         var res = await fetch(`${window.location.origin}/kernel/${id}?action=interrupt`,
                               {method: "POST"})
         var json = await res.json()
-        if (json.status == "success") {
-            console.log(json["DESCR"])
-        }
+        console.log(`[KernelHandler] ${json.DESCR}`)
     }
     /**
      * websocketを用いてコードの実行命令を出す
+     * この関数は直接呼び出さず、execute()関数から呼び出す
      */
     executeCode = () => {
-        this.running = true
         var node = this.execute_task_q[0]
         var node_id = node.getAttribute("node-id")
         var node_code = node.querySelector(".node-code")
@@ -113,11 +115,12 @@ class KernelHandler {
             "node_id": node_id
         })
         this.ws.send(msg)
+        this.running = true
         this.execute_counter += 1
-        // node.querySelector(".node-number").innerHTML = this.execute_counter
     }
     /**
-     * Nodeを実行タスクキューに格納する
+     * Nodeを実行タスクキュー(execute_task_q)に格納する
+     * execute_task_qが空だった場合、即座に実装指示を出す
      * @param {DOM} node 
      */
     execute = (node) => {
@@ -129,10 +132,11 @@ class KernelHandler {
         // それ以外の場合
         else {
             this.execute_task_q.push(node)
+            // execute_task_qが空だった場合, 実行指示を出す
             if (this.execute_task_q.length == 1) {
+                this.running = false
                 this.executeCode()
             }
         }
     } 
-
 }

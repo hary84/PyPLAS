@@ -1,17 +1,32 @@
 // for /create/<p_id> or /problems/<p_id>
 
 $(function() {
+    var groups = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/).groups
+    var p_id = groups.p_id
+    var parent = groups.parent_path
+    console.log(`problem_id(p_id) is ${p_id}`)
     document.querySelectorAll(".node-mde").forEach(elem => registerAceMDE(elem)) // AceMDEの登録
     document.querySelectorAll(".node-code").forEach(elem => registerAceEditor(elem)) // AceEditorの登録
 
     // 右サイドバーにquestion nodeのリンクを配置
-    var question_nav_bar = document.querySelector("#question-nav > .nav")
-    document.querySelectorAll(".question").forEach((elem, i) => {
-        question_nav_bar.insertAdjacentHTML("beforeend",
-        `<a class="nav-link position-relative" href="#${elem.id}" progress=${elem.getAttribute("progress")}>Q. ${i+1}<span class="progress-badge badge position-absolute" style="right: 5%;"> </span></a>`)
-    })
+    if (parent == "problems") {
+        var question_nav_bar = document.querySelector("#question-nav > .nav")
+        document.querySelectorAll(".question").forEach((elem, i) => {
+            question_nav_bar.insertAdjacentHTML("beforeend",
+            `<a class="nav-link position-relative" href="#${elem.id}" progress=${elem.getAttribute("progress")}>Q. ${i+1}<span class="progress-badge badge position-absolute" style="right: 5%;"> </span></a>`)
+        })
+    }
 
     kh = new KernelHandler()
+
+    document.querySelector(".btn-save").addEventListener("click", function(e) {
+        if (parent == "problems") {
+            saveUserData(p_id)
+        }
+        else if (parent == "create") {
+            registerProblem()
+        }
+    })
 
     $(".btn-restart").on("click", function() {
         kh.ws.close()
@@ -130,16 +145,26 @@ function renderMessage(kh, newValue) {
         return $("<p/>").text(str).html()
     }
 }
+/**
+ * ユーザーの入力を保存する
+ * @param {string} p_id 
+ */
+function saveUserData(p_id) {
+    q_content = {}
+    document.querySelectorAll(".question").forEach(elem => {
+        var params = extractQuestionNode(elem, mode=0)
+        q_content[params.q_id] = params.answers
+    })
 
-function watchValue(obj, propName, func) {
-    let value = obj[propName];
-    Object.defineProperty(obj, propName, {
-        get: () => value,
-        set: newValue => {
-            const oldValue = value;
-            value = newValue;
-            func(obj, newValue);
-        },
-        configurable: true
-    });
+    fetch(`${window.location.origin}/problems/${p_id}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "q_content": q_content
+        })
+    }).then(res => res.json()).then(data => {
+        if (data.status == 200) {
+            console.log(`[SAVE] ${data.DESCR}`)
+        } 
+    })
 }

@@ -1,6 +1,7 @@
 from datetime import datetime, date
 import json
 import sqlite3
+import traceback
 from typing import Union
 import tornado
 from tornado.httputil import HTTPServerRequest
@@ -113,10 +114,15 @@ class ApplicationHandler(tornado.web.RequestHandler):
         else:
             conn.commit()
 
-    def parse_json(self, jsonstr: Union[str, dict]) -> dict:
+    def print_traceback(self):
         """
-        JSONをdictに変換する
+        error時のtracebackをきれいに標準出力にprintする
+        except内でのみ有効
         """
+        err = traceback.format_exc()
+        print("="*40)
+        print(err[:-1])
+        print("="*40)
 
 
 def _dict_factory(cursor, row) -> dict:
