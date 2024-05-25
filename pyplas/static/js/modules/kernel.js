@@ -17,14 +17,14 @@ class KernelHandler {
 
         this.ws = new WebSocket(`ws://${window.location.host}/ws/${this.kernel_id}`)
         this.ws.onopen = () => {
-            console.log("[LOG] WS connecting ...")
+            console.log("[WS] WS connecting ...")
         }
         this.ws.onmessage = (event) => {
             var data = JSON.parse(event.data)
             this.msg = data
         }
         this.ws.onclose = function() {
-            console.log("[LOG] WS disconnecting ...")
+            console.log("[WS] WS disconnecting ...")
         }
     }
     /**
@@ -62,6 +62,7 @@ class KernelHandler {
     /**
      * カーネルを起動する
      * カーネルがすでに存在している場合、kernelRestart()でカーネルを再起動する
+     * このメソッドは直接呼び出さず、setUpKernel()からのみ呼び出す
      */
     kernelStart = async () => {
         var id = (this.kernel_id) ? this.kernel_id : ""
@@ -103,7 +104,7 @@ class KernelHandler {
     }
     /**
      * websocketを用いてコードの実行命令を出す
-     * この関数は直接呼び出さず、execute()関数から呼び出す
+     * このメソッドは直接呼び出さず、execute()から呼び出す
      */
     executeCode = () => {
         var node = this.execute_task_q[0]

@@ -56,7 +56,7 @@ $(function() {
             } else if (target.classList.contains("btn-testing")) {
                 scoring(target.closest(".node.question"))
             } else if (target.classList.contains("btn-cancel")) {
-                kh.kernelInterrupt(kh.test_kernel_id)
+                cancelScoring()
             }
         }
     })

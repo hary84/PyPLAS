@@ -96,11 +96,19 @@ class Question(UIModule):
         """
         if ptype == 0 and user == 0:
             soup = BeautifulSoup(question, "html.parser")
-            elems = soup.find_all(attrs={"ans", True})
-            for e in elems:
-                if "ans" in e.attrs:
-                    del e.attrs["ans"]
+            elems = soup.find_all(["select", "input"], attrs={"ans", True})
+            for i, e in enumerate(elems):
+                del e.attrs["ans"]
+                try:
+                    if e.name == "input":
+                        e["value"] = saved_answers[i]
+                    elif e.name == "select":
+                        e.find("option", {"value": saved_answers[i]})["selected"] = ""
+                except (IndexError, AttributeError, TypeError):
+                    continue
+
             question = soup.prettify()
+
         return self.render_string("modules/question.html",
                                   q_id=q_id, ptype=ptype, user=user,
                                   question=question,

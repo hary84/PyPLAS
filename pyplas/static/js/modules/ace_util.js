@@ -1,11 +1,48 @@
 /**
+ * elemをpython ace editorとして登録する
+ * @param {DOM} elem 
+ * @returns {none}
+ */
+function registerAceEditor(elem) {
+
+    var id = crypto.randomUUID()
+    elem.closest(".node").setAttribute("node-id", id)
+
+    const lh = 1 // rem
+    const defaultLineNumbers = 5
+    var editor = ace.edit(elem, {
+        mode: "ace/mode/python",
+        theme: "ace/theme/twilight"
+    });
+
+    if (elem.classList.contains("readonly")) {
+        editor.setReadOnly(true)
+    }
+
+    function resizeEditor() {
+        var newHeight = editor.getSession().getScreenLength() * lh
+            + editor.renderer.scrollBar.getWidth() 
+        if (newHeight < defaultLineNumbers) {
+            newHeight = defaultLineNumbers
+        } else {
+            newHeight += 1
+        }
+        editor.container.style.height = newHeight.toString() + "rem"
+        editor.resize()   
+    }
+    resizeEditor()
+    editor.getSession().on("change", function(delta) {
+        resizeEditor()
+    })
+}
+/**
  * elemをmarkdown ace editorとして登録する 
  * @param {DOM} elem 
  * @return {none}
  */
 function registerAceMDE(elem) {
-    const lh = 1
-    const defaultLineNumbers = 7
+    const lh = 1 //rem
+    const defaultLineNumbers = 3
 
     var editor = ace.edit(elem, {
         mode: "ace/mode/markdown",
@@ -19,7 +56,12 @@ function registerAceMDE(elem) {
 
     function resizeEditor() {
         var newHeight = editor.getSession().getScreenLength() * lh
-            + editor.renderer.scrollBar.getWidth() + 1
+            + editor.renderer.scrollBar.getWidth() 
+        if (newHeight < defaultLineNumbers) {
+            newHeight = defaultLineNumbers
+        } else {
+            newHeight += 1
+        }
         editor.container.style.height = newHeight.toString() + "rem"
         editor.resize()   
     }
@@ -82,14 +124,15 @@ function addFillInBlankProblem(btn) {
 function addSelectionProblem(btn) {
     var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
     var tag = [
+        '<!--  question  -->',
         '<p class="mb-0 q-text">',
         '   <label class="form-label">?????</label>',
         '   <select class="form-select" ans=?????>',
-        '       <option selected>Open this select menu</option>',
+        '       <option> Open this select menu</option>',
         '       <option value="1">?????</option>',
         '       <option value="2">?????</option>',
         '   </select>',
-        '</p>'
+        '</p>',
     ].join("\n")
     editor.insert(tag)
 }

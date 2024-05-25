@@ -1,35 +1,4 @@
 /**
- * elemをpython ace editorとして登録する
- * @param {DOM} elem 
- * @returns {none}
- */
-function registerAceEditor(elem) {
-
-    var id = crypto.randomUUID()
-    elem.closest(".node").setAttribute("node-id", id)
-
-    const lh = 1 // rem
-    var editor = ace.edit(elem, {
-        mode: "ace/mode/python",
-        theme: "ace/theme/twilight"
-    });
-
-    if (elem.classList.contains("readonly")) {
-        editor.setReadOnly(true)
-    }
-
-    function resizeEditor() {
-        var newHeight = editor.getSession().getScreenLength() * lh
-            + editor.renderer.scrollBar.getWidth() + 1
-        editor.container.style.height = newHeight.toString() + "rem"
-        editor.resize()   
-    }
-    resizeEditor()
-    editor.getSession().on("change", function(delta) {
-        resizeEditor()
-    })
-}
-/**
  * HTML文字列からdom要素に変換する
  * @param {string} str 
  * @returns {[DOM]}
@@ -143,7 +112,7 @@ function scoring(question_node) {
             "ptype": params.ptype,     // int:   0 or 1
             "q_id": params.q_id,       // str:   e.g. "1"
             "answers": params.answers, // list:  ['ans', 'ans', ...]
-            "kernel_id": sessionStorage["test_kernel_id"] 
+            "kernel_id": sessionStorage["kernel_id"] 
         })
     }).then(response => response.json()).then(data => {
         var toast = question_node.querySelector(".for-toast")
@@ -158,16 +127,12 @@ function scoring(question_node) {
  * Code Testingをキャンセルする
  */
 function cancelScoring() {
-    fetch(window.location.href, {
-        method: "PUT",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            "kernel_id": sessionStorage["test_kernel_id"]
-        }).then(res => res.json()).then(data => {
-            if (data.status == 200) {
-                console.log(`[cancelScoring()] ${data.DESCR}`)
-            }
-        })
+    fetch(`${window.location.origin}/problems/${sessionStorage["kernel_id"]}`, {
+        method: "DELETE",
+    }).then(response => response.json()).then(data => {
+        if (data.status == 200) {
+            console.log(`[cancelScoring()] ${data.DESCR}`)
+        }
     })
 }
 /**

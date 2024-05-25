@@ -58,10 +58,8 @@ class ProblemHandler(ApplicationHandler):
             q_id:         問題id
             answers:      解答のリスト
             kernel_id:    コードを実行するカーネルのid
-        [PUT] /problems
-            kernel_id:    コードを実行するカーネルのid
         [PUT] /problems/<p_id>
-            q_content:    Question Nodeのconponent部分のdict
+            q_content:    Question Nodeのconponent部分のdict {<q_id>: ['ans', ...]}
         """ 
         if self.request.method == "POST":
             keys = ["ptype", "q_id", "answers", "kernel_id"]
