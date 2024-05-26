@@ -99,13 +99,13 @@ function delme(btn) {
  * サーバーに採点を要請する
  * @param {DOM} question_node 
  */
-function scoring(question_node) {
+async function scoring(question_node) {
     var params = extractQuestionNode(question_node, mode=0)
     var sbm_btn = question_node.querySelector(".btn-testing")
     sbm_btn.classList.add("disabled")
     console.log(params.answers)
     // POST /problems/<p_id>
-    fetch(window.location.href, {
+    var res = await fetch(window.location.href, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -113,27 +113,26 @@ function scoring(question_node) {
             "q_id": params.q_id,       // str:   e.g. "1"
             "answers": params.answers, // list:  ['ans', 'ans', ...]
             "kernel_id": sessionStorage["kernel_id"] 
-        })
-    }).then(response => response.json()).then(data => {
-        var toast = question_node.querySelector(".for-toast")
-        toast.innerHTML = data.html
-        toast.querySelector(".toast").classList.add("show")
-        sbm_btn.classList.remove("disabled")
-        question_node.setAttribute("progress", data.progress)
-        document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", data.progress)
-    })
+        })})
+    var json = await res.json()
+    var toast = question_node.querySelector(".for-toast")
+    toast.innerHTML = json.html
+    toast.querySelector(".toast").classList.add("show")
+    sbm_btn.classList.remove("disabled")
+    question_node.setAttribute("progress", json.progress)
+    document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
 }
 /**
  * Code Testingをキャンセルする
  */
-function cancelScoring() {
-    fetch(`${window.location.origin}/problems/${sessionStorage["kernel_id"]}`, {
+async function cancelScoring() {
+    var res = await fetch(`${window.location.origin}/problems/${sessionStorage["kernel_id"]}`, {
         method: "DELETE",
-    }).then(response => response.json()).then(data => {
-        if (data.status == 200) {
-            console.log(`[cancelScoring()] ${data.DESCR}`)
-        }
     })
+    var json = await res.json()
+    if (json.status == 200) {
+        console.log(`[cancelScoring()] ${json.DESCR}`)
+    }
 }
 /**
  * Question Nodeから各パラメータを抽出する
@@ -203,6 +202,5 @@ function extractQuestionNode(elem, mode) {
             "editable": editable,   // bool
             "answers": answers      // list
         }
-
     }
 }

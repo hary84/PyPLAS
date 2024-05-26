@@ -3,6 +3,7 @@ from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 import signal
 import sqlite3
+import time
 from util import ApplicationHandler, custom_exec, datetime_encoda
 import uuid
 from typing import Tuple
@@ -313,6 +314,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             code: str
             node_id: str
         """
+        await self.kc.wait_for_ready()
         received_msg = json.loads(received_msg)
         print(f"[LOG] WebSocket receive {received_msg}")
         await self.exec.wait()

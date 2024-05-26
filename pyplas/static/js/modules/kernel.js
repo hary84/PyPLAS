@@ -73,7 +73,7 @@ class KernelHandler {
             this.registerKernelId(json.kernel_id)
         } else if (json.status == 500) {
             console.log(`[KernelHandler] ${json.DESCR}`)
-            this.kernelRestart()
+            await this.kernelRestart()
         }
     }
     /**
@@ -116,6 +116,7 @@ class KernelHandler {
             "node_id": node_id
         })
         this.ws.send(msg)
+        console.log(`[KernelHandler] Executing code (node-id=${node_id})`)
         this.running = true
         this.execute_counter += 1
     }
@@ -124,11 +125,11 @@ class KernelHandler {
      * execute_task_qが空だった場合、即座に実装指示を出す
      * @param {DOM} node 
      */
-    execute = (node) => {
+    execute = async (node) => {
         // 実行中のNodeと実行したいNodeが同じ場合
         if (this.execute_task_q[0] && this.execute_task_q[0].getAttribute("node-id") 
                     == node.getAttribute("node-id")){
-            this.kernelInterrupt()
+            await this.kernelInterrupt()
         } 
         // それ以外の場合
         else {

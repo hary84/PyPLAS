@@ -12,22 +12,19 @@
  *      status: int
  * @returns {none}
  */
-function registerProblem() {
+async function registerProblem() {
 
-    // var p_id = window.location.pathname.match(/([-a-zA-Z0-9]+)/g)[1]
     var title = document.querySelector("#titleForm").value
     if (title.length == 0) {
         alert("input problem title")
         return 
     }
-
     // 概要欄のSummary, Data Source, Environmentを取得
     var headers = []
     document.querySelectorAll("#summary .node-mde").forEach(function(elem) {
         var editor = ace.edit(elem)
         headers.push(editor.getValue())
     })
-
     // The Source CodeからNodeを取得
     var body = []
     var answers = {}
@@ -81,18 +78,18 @@ function registerProblem() {
         "answers": answers
     }
 
-    fetch(window.location.href,{
+    var res = await fetch(window.location.href,{
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(send_msg)
-    }).then(response => response.json()).then(data => {
-        if (data.status == 0) {
-            alert("SAVE FAILURE\n" + data.error)
-        }
-        else if (data.status == 1) {
-            window.location.href = `/create/${data.p_id}`
-        }
     })
+    var json = await res.json()
+    if (json.status == 0) {
+        alert("SAVE FAILURE\n" + json.error)
+    }
+    else if (json.status == 1) {
+        window.location.href = `/create/${json.p_id}`
+    }
     console.log(send_msg)
 }
 /**
@@ -106,22 +103,22 @@ function registerProblem() {
  *      status: int
  * @param {DOM} btn 
  */
-function editPageParams(btn) {
+async function editPageParams(btn) {
     var tr = btn.closest("tr")
     var p_id = tr.getAttribute("target")
     var title = tr.querySelector(".title-form").value
     var category = Number(tr.querySelector(".select-category").value)
     var status = Number(tr.querySelector(".select-status").value)
     console.log("edit page params")
-    fetch(`${window.location.origin}/create/${p_id}`, {
+    var res = await fetch(`${window.location.origin}/create/${p_id}`, {
         method: "PUT",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({"title": title, "category": category, "status": status})
-    }).then(response => response.json()).then(data => {
-        console.log(`[editProblemparams] ${data.DESCR}`)
-        if (data.status == 200) {
-            window.location.reload()
-        } 
     })
+    var json = await res.json()
+    console.log(`[editProblemparams] ${json.DESCR}`)
+    if (json.status == 200) {
+        window.location.reload()
+    } 
 }
 
