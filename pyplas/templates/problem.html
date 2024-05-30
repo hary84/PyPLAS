@@ -65,7 +65,7 @@
 {% block main %}
 <main class="col px-3">
     <div class="my-3" id="summary">
-        <p class="fs-3 border-bottom border-dark ps-1">Problem: {{ conponent["title"] }}</p>
+        <p class="fs-3 border-bottom border-dark ps-1">Problem: {{ title }}</p>
         <div class="ps-3">
             <nav>
                 <div class="nav nav-tabs" id="nav-tab" role="tablist">
@@ -78,13 +78,13 @@
                 {% import markdown %}
                 {% set md = markdown.Markdown() %}
                 <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
-                    {% raw md.convert(conponent["page"]["header"]["summary"]) %}
+                    {% raw md.convert(page["header"]["summary"]) %}
                 </div>
                 <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
-                    {% raw md.convert(conponent["page"]["header"]["source"]) %}
+                    {% raw md.convert(page["header"]["source"]) %}
                 </div>
                 <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-                    {% raw md.convert(conponent["page"]["header"]["env"]) %}
+                    {% raw md.convert(page["header"]["env"]) %}
                 </div>
             </div>
         </div>
@@ -92,14 +92,14 @@
     <div id="sourceCode">
         <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
         <div class="question-scrollspy" id="" data-bs-spy="scroll" data-bs-target="#question-nav" data-bs-smooth-scroll="true">
-            {% for d in conponent["page"]["body"]%}
+            {% for d in page["body"]%}
                 {% if d["type"] == "code" %}
                     {% module Code(**d) %}
                 {% elif d["type"] == "explain" %}
                     {% module Explain(**d) %}
                 {% elif d["type"] == "question" %}
-                    {% module Question(**d, progress=conponent['q_status'].get(str(d['q_id']), 0),
-                                        saved_answers=conponent['q_content'].get(str(d['q_id']), [])) %}
+                    {% module Question(**d, progress=q_status.get(str(d['q_id']), 0),
+                                        saved_answers=q_content.get(str(d['q_id']), [])) %}
                 {% end %}
             {% end %}
     </div>

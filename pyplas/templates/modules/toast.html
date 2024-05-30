@@ -1,9 +1,4 @@
-<!-- 
-@params
-    result_status:   "status-success" or "status-error"
-    result_content:  content to be displayed
--->
-<div class="toast position-absolute {{ result_status }}" style="z-index: 10; right: 1%;" 
+<div class="toast position-absolute" style="z-index: 10; right: 1%;" 
         data-bs-autohide="false" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="toast-header">
         <i class="bi bi-square-fill"></i>
@@ -11,7 +6,5 @@
         <span class="ms-2"></span>
         <button type="button" class="btn-close ms-auto" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
-    <div class="toast-body">
-        {% raw result_content %}
-    </div>
+    <div class="toast-body"></div>
 </div>

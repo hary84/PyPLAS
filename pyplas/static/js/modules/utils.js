@@ -97,15 +97,13 @@ function delme(btn) {
 }
 /**
  * サーバーに採点を要請する
- * @param {DOM} question_node 
+ * @param {str} p_id 問題id
+ * @param {DOM} question_node 採点対象のQuestion Node 
  */
-async function scoring(question_node) {
+async function scoring(p_id, question_node) {
     var params = extractQuestionNode(question_node, mode=0)
-    var sbm_btn = question_node.querySelector(".btn-testing")
-    sbm_btn.classList.add("disabled")
-    console.log(params.answers)
-    // POST /problems/<p_id>
-    var res = await fetch(window.location.href, {
+    // POST /problems/<p_id>/scoring
+    var res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -115,24 +113,27 @@ async function scoring(question_node) {
             "kernel_id": sessionStorage["kernel_id"] 
         })})
     var json = await res.json()
-    var toast = question_node.querySelector(".for-toast")
-    toast.innerHTML = json.html
-    toast.querySelector(".toast").classList.add("show")
-    sbm_btn.classList.remove("disabled")
-    question_node.setAttribute("progress", json.progress)
-    document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
+    if (res.ok) {
+        question_node.setAttribute("progress", json.progress)
+        var toast = question_node.querySelector(".for-toast > .toast")
+        toast.querySelector(".toast-body").innerHTML = json.content
+        toast.classList.add("show")
+        document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
+    }
+    else {
+        console.log(`[scoring] ${json.DESCR}`)
+    }
 }
 /**
  * Code Testingをキャンセルする
+ * @param {str} p_id 問題id
  */
-async function cancelScoring() {
-    var res = await fetch(`${window.location.origin}/problems/${sessionStorage["kernel_id"]}`, {
-        method: "DELETE",
+async function cancelScoring(p_id) {
+    var res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${sessionStorage["kernel_id"]}`, {
+        method: "POST",
     })
     var json = await res.json()
-    if (json.status == 200) {
-        console.log(`[cancelScoring()] ${json.DESCR}`)
-    }
+    console.log(json.DESCR)
 }
 /**
  * Question Nodeから各パラメータを抽出する
@@ -203,4 +204,38 @@ function extractQuestionNode(elem, mode) {
             "answers": answers      // list
         }
     }
+}
+
+function observeForm() {
+    var initialFormValue = {}
+    document.querySelectorAll("input, select").forEach(elem => {
+        var p_id = elem.closest("tr").getAttribute("target")
+        if (!(p_id in initialFormValue)) {
+            initialFormValue[p_id] = {}
+        }
+        var tag = elem.getAttribute("for")
+        initialFormValue[p_id][tag] = elem.value
+    })
+
+    document.querySelectorAll("input, select").forEach(elem => {
+        elem.addEventListener("change", () => {
+            var tr = elem.closest("tr")
+            var p_id = tr.getAttribute("target")
+            var changed = {}
+            tr.querySelectorAll("input, select").forEach(elem => {
+                var tag = elem.getAttribute("for")
+                changed[tag] = elem.value
+            })
+            if (initialFormValue[p_id]["title"] != changed["title"]
+                || initialFormValue[p_id]["category"] != changed["category"]
+                || initialFormValue[p_id]["status"] != changed["status"]) {
+                    changedParams[p_id] = changed
+                }
+            else {
+                delete changedParams[p_id]
+            }
+            console.log(changedParams)
+        })
+    })
+
 }

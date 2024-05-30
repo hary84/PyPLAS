@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (parent == "problems") {
                     await saveUserData(p_id)
                 } else if (parent == "create") {
-                    await registerProblem()
+                    await registerProblem(p_id)
                 }
             }
             target.classList.remove("disabled")
@@ -55,9 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (target.classList.contains("btn-interrupt")) { // interrupt ボタン
                 await kh.kernelInterrupt()
             } else if (target.classList.contains("btn-testing")) { // answer ボタン
-                await scoring(target.closest(".node.question"))
+                await scoring(p_id, target.closest(".node.question"))
             } else if (target.classList.contains("btn-cancel")) { // cancel ボタン
-                await cancelScoring()
+                await cancelScoring(p_id)
             }
             target.classList.remove("disabled")
         }
@@ -164,14 +164,12 @@ async function saveUserData(p_id) {
         var params = extractQuestionNode(elem, mode=0)
         q_content[params.q_id] = params.answers
     })
-    var res = await fetch(`${window.location.origin}/problems/${p_id}`, {
-        method: "PUT",
+    var res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
+        method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             "q_content": q_content
         })})
     var json = await res.json()
-    if (json.status == 200) {
-        console.log(`[SAVE] ${json.DESCR}`)
-    } 
+    console.log(`[save] ${json.DESCR}`)
 }

@@ -1,5 +1,7 @@
 <div class="node question card my-2 ms-3 me-2 position-relative" id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
-	<div class="for-toast"></div>
+	<div class="for-toast">
+		{% module Template("modules/toast.html") %}
+	</div>
 	<div class="card-header bg-success-subtle d-flex">
 		Question
 		{% if ptype == 0 %}

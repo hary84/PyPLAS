@@ -2,21 +2,14 @@ from datetime import datetime, date
 import json
 import sqlite3
 import traceback
-from typing import Union
+from typing import Any, Union
 import tornado
 from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
 
 
-class AppException(Exception):
-    def __init__(self, arg):
-        self.arg = arg
-
-class InvalidJSONException(AppException):
-    def __str__(self):
-        return (
-            f"無効なJSONフォーマットです"
-        )
+class InvalidJSONError(Exception):
+    """POST, PUT, DELETE等でRequest-Bodyから取得したJSONが無効な形式"""
     
 
 class ApplicationHandler(tornado.web.RequestHandler):
@@ -42,15 +35,14 @@ class ApplicationHandler(tornado.web.RequestHandler):
                 for key in keys:
                     self.json[key]
             except:
-                return False
+                raise InvalidJSONError
         elif isinstance(keys, dict):
             try:
                 for key, value in keys.items():
                     assert isinstance(self.json[key], value)
             except:
-                return False
+                raise InvalidJSONError
             
-        return True
             
     def load_json(self, validate:bool=False, keys:Union[list, dict]=[]) -> Union[None, bool]:
         """
@@ -66,11 +58,27 @@ class ApplicationHandler(tornado.web.RequestHandler):
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.json = json.loads(self.request.body)
             if validate:
-                return self.validate_JSON(keys)
+                self.validate_JSON(keys)
         else:
             self.json = {}
-            return None
             
+    def load_url_queries(self, names: Union[list[str], dict[str, Any]]):
+        """
+        URL queryをself.queryに格納する
+
+        Parameters
+        ----------
+        names: list or dict
+            queryの名前を指定する. dictの場合、keyがquery名, valueがデフォルトの値
+        """
+        self.query = {}
+        if isinstance(names, list):
+            for name in names:
+                self.query[name] = self.get_query_argument(name)
+        elif isinstance(names, dict):
+            for name, default in names.items():
+                self.query[name] = self.get_query_argument(name, default)
+
     def get_from_db(self, sql:str, **kwargs) -> list :
         """
         DBからデータを受け取る
@@ -111,6 +119,27 @@ class ApplicationHandler(tornado.web.RequestHandler):
             print(e)
             conn.rollback()
             raise
+        else:
+            conn.commit()
+
+    def write_to_db_many(self, sql:str, params:Union[tuple[dict], list[dict]]) -> None:
+        """
+        DBにデータを書き込む(executemanyを利用する)
+
+        Parameters
+        ----------
+        sql: str
+            sql文
+        params:
+            sqlのパラメータを指定する. 
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.executemany(sql, params)
+        except sqlite3.Error as e:
+            self.print_traceback()
+            conn.rollback()
+            raise 
         else:
             conn.commit()
 

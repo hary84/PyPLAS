@@ -45,9 +45,11 @@ class KernelHandler {
     isAliveKernel = async (kernel_id) => {
         var id = (kernel_id) ? kernel_id : this.kernel_id
         var res = await fetch(`${window.location.origin}/kernel/${id}`, {method: "GET"})
-        var json = await res.json()
-        console.log(`[KernelHandler] ${json.DESCR}`)
-        return json.is_alive
+        if (res.ok) {
+            var json = await res.json()
+            console.log(`[KernelHandler] ${json.DESCR}`)
+            return json.is_alive
+        }
     }
     /**
      * 有効なすべてのカーネルidを取得する
@@ -55,9 +57,11 @@ class KernelHandler {
      */
     getKernelIds = async () => {
         var res = await fetch(`${window.location.origin}/kernel`, {method: "GET"})
-        var json = await res.json()
-        console.log(`[KernelHandler] ${json.DESCR}`)
-        return json.is_alive
+        if (res.ok) {
+            var json = await res.json()
+            console.log(`[KernelHandler] ${json.DESCR}`)
+            return json.kernel_ids
+        }
     }
     /**
      * カーネルを起動する
@@ -68,11 +72,8 @@ class KernelHandler {
         var id = (this.kernel_id) ? this.kernel_id : ""
         var res = await fetch(`${window.location.origin}/kernel/${id}`, {method: "POST"})
         var json = await res.json()
-        if (json.status == 200) {
-            console.log(`[Kernelhandler] ${json.DESCR}`)
-            this.registerKernelId(json.kernel_id)
-        } else if (json.status == 500) {
-            console.log(`[KernelHandler] ${json.DESCR}`)
+        console.log(`[Kernelhandler] ${json.DESCR}`)   
+        if (!res.ok) {
             await this.kernelRestart()
         }
     }
@@ -81,14 +82,14 @@ class KernelHandler {
      * このメソッドは直接呼び出さず、kernelStart(), setUpKernel()からのみ呼び出す
      */
     kernelRestart = async () => {
-        var res = await fetch(`${window.location.origin}/kernel/${this.kernel_id}?action=restart`,
+        var res = await fetch(`${window.location.origin}/kernel/${this.kernel_id}/restart`,
                               {method: "POST"})
         var json = await res.json()
-        if (json.status == 200) {
-            console.log(`[KernelHandler] ${json.DESCR}`)
+        console.log(`[KernelHandler] ${json.DESCR}`)
+        if (res.ok) {
             this.registerKernelId(json.kernel_id)
-        } else if(json.status == 500) {
-            console.log(`[KernelHandler] ${json.DESCR}`)
+        }
+        else {
             throw new Error("Fail to start kernel.")
         }
     }
@@ -97,7 +98,7 @@ class KernelHandler {
      */
     kernelInterrupt = async (kernel_id) => {
         var id = (kernel_id) ? kernel_id : this.kernel_id
-        var res = await fetch(`${window.location.origin}/kernel/${id}?action=interrupt`,
+        var res = await fetch(`${window.location.origin}/kernel/${id}/interrupt`,
                               {method: "POST"})
         var json = await res.json()
         console.log(`[KernelHandler] ${json.DESCR}`)

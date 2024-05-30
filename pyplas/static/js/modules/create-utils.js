@@ -10,9 +10,10 @@
  *          {<q_id>: [ans, ans, ...] }
  *  (receive)
  *      status: int
+ * @param {str} p_id 問題id
  * @returns {none}
  */
-async function registerProblem() {
+async function registerProblem(p_id) {
 
     var title = document.querySelector("#titleForm").value
     if (title.length == 0) {
@@ -78,19 +79,19 @@ async function registerProblem() {
         "answers": answers
     }
 
-    var res = await fetch(window.location.href,{
+    var res = await fetch(`${window.location.origin}/create/${p_id}/register`,{
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(send_msg)
     })
     var json = await res.json()
-    if (json.status == 0) {
-        alert("SAVE FAILURE\n" + json.error)
-    }
-    else if (json.status == 1) {
+    if (res.ok) {
+        console.log(`[register] ${json.DESCR}`)
         window.location.href = `/create/${json.p_id}`
     }
-    console.log(send_msg)
+    else {
+        alert(json.DESCR)
+    }
 }
 /**
  * pageのstatus, category, titleを変更する
@@ -101,24 +102,22 @@ async function registerProblem() {
  *      status: int 
  *  (receive)
  *      status: int
- * @param {DOM} btn 
+ * @param {array} targets 変更の対象となるtr 
  */
-async function editPageParams(btn) {
-    var tr = btn.closest("tr")
-    var p_id = tr.getAttribute("target")
-    var title = tr.querySelector(".title-form").value
-    var category = Number(tr.querySelector(".select-category").value)
-    var status = Number(tr.querySelector(".select-status").value)
+async function editPageParams(targets) {
+
     console.log("edit page params")
-    var res = await fetch(`${window.location.origin}/create/${p_id}`, {
-        method: "PUT",
+    var res = await fetch(`${window.location.origin}/create/profile`, {
+        method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({"title": title, "category": category, "status": status})
+        body: JSON.stringify({"profiles": targets})
     })
     var json = await res.json()
-    console.log(`[editProblemparams] ${json.DESCR}`)
-    if (json.status == 200) {
+    if (res.ok) {
         window.location.reload()
-    } 
+    }
+    else {
+        alert(json.DESCR)
+    }
 }
 

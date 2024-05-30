@@ -3,16 +3,16 @@ from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 import signal
 import sqlite3
-import time
-from util import ApplicationHandler, custom_exec, datetime_encoda
+from util import ApplicationHandler, InvalidJSONError, custom_exec, datetime_encoda
 import uuid
-from typing import Tuple
+from typing import Optional, Tuple
 import tornado 
 import tornado.websocket 
 import tornado.ioloop as ioloop
 import os  
 import json
 from jupyter_client import AsyncMultiKernelManager, AsyncKernelManager, AsyncKernelClient
+from jupyter_client.multikernelmanager import DuplicateKernelError
 from jupyter_client.utils import run_sync
 import uimodules
 from uimodules import *
@@ -23,21 +23,21 @@ mult_km.updated = tornado.locks.Event()
 class MainHandler(ApplicationHandler):
     
     def prepare(self):
+        print(f"[{self.request.method}] {self.request.uri}")
         self.cat = self.get_query_argument("category", None)
 
     def get(self):
         """
-        問題一覧を表示
-        (PATH)
-            / -> カテゴリ一覧の表示
-            /?category=<category> -> そのカテゴリのすべての問題を表示
+        PATH
+            * / -> カテゴリ一覧の表示
+            * /?category=<category> -> そのカテゴリのすべての問題を表示
         """
-        if self.cat is None: # render categories index page
+        if self.cat is None: # カテゴリ一覧を表示
             sql = r"""SELECT cat_name FROM categories"""
             cat = self.get_from_db(sql)
             cat = [r["cat_name"] for r in cat]
             p_list = []
-        else: # render problem list page with specific category
+        else: # あるカテゴリに属する問題一覧を表示
             sql = r"""SELECT pages.p_id, pages.title, COALESCE(progress.p_status, 0) AS p_status 
             FROM pages INNER JOIN categories ON pages.category = categories.cat_id
             LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
@@ -52,95 +52,218 @@ class ProblemHandler(ApplicationHandler):
 
     execute_pool = {}
     def prepare(self):
-        """
-        JSONのロード
-        [POST] /problems/<p_id>
-            ptype:        問題のタイプ (0-> html, 1-> coding)
-            q_id:         問題id
-            answers:      解答のリスト
-            kernel_id:    コードを実行するカーネルのid
-        [PUT] /problems/<p_id>
-            q_content:    Question Nodeのconponent部分のdict {<q_id>: ['ans', ...]}
-        """ 
-        if self.request.method == "POST":
-            keys = ["ptype", "q_id", "answers", "kernel_id"]
-        elif self.request.method == "PUT":
-            keys = ["q_content"]
-        else:
-            keys = []
-        self.is_valid_json = self.load_json(validate=True, keys=keys)
+        print(f"[{self.request.method}] {self.request.uri}")
 
-    def get(self, p_id):
+    def get(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
-        問題回答ページ
-        (PATH)
-            /problems/<p_id>
+        PATH
+            * /problems           : / へリダイレクト
+            * /problems/<p_id>    : 問題を表示
         """
-        # 問題のタイトル, コンテンツ, 進捗, 過去の回答を取得
-        sql = r"""SELECT pages.title, pages.page, 
-            COALESCE(progress.q_status, '{}') AS q_status, 
-            COALESCE(progress.q_content, '{}') AS q_content
-            FROM pages 
-            LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
-            WHERE pages.p_id=:p_id AND status=1"""
-        page = self.get_from_db(sql, p_id=p_id)
-        try:
-            assert len(page) != 0
-            page:dict = page[0]
-        except (AssertionError, sqlite3.Error) as e:
-            print(f"[ERROR] {e.__class__.__name__}: {e}")
-            self.redirect("/")
-            return
-        else:
-            page = {"title": page["title"], # str
-                    "page": json.loads(page["page"]), 
-                    "q_status": json.loads(page["q_status"]), # dict: {"q_id": [0|1|2], ...}
-                    "q_content": json.loads(page["q_content"])  # dict: {"q_id": ['content', 'content'...], ...}
-                    }
-            self.render(f"./problem.html", conponent=page, progress=[])
-
-    async def post(self, p_id):
-        """
-        解答の採点
-        (PATH)
-            /problems/<p_id>
-        """
-        if self.is_valid_json: # Request-bodyのJSONが有効な形式の場合
-            print(f"[ProblemHandler POST] Scoring")
-            sql = r"""SELECT answers FROM pages WHERE p_id=:p_id"""
-            c_answers = self.get_from_db(sql, p_id=p_id)
+        # GET /problems
+        if p_id is None and action is None: 
+            self.redirect("/", permanent=True)
+            return 
+        
+        # GET /problems/<p_id>
+        elif p_id is not None and action is None: 
+            sql = r"""SELECT pages.title, pages.page, 
+                COALESCE(progress.q_status, '{}') AS q_status, 
+                COALESCE(progress.q_content, '{}') AS q_content
+                FROM pages 
+                LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
+                WHERE pages.p_id=:p_id AND status=1"""
             try:
-                assert len(c_answers) != 0, f"Problem({p_id}) does not exist."
-                c_answers: dict = json.loads(c_answers[0]["answers"])
-                self.c_answers:list = c_answers.get(self.json["q_id"], []) # 質問(q_id)の答え
-                assert len(self.c_answers) != 0, f"Question({self.json['q_id']}) does not exist."
-                keys: list = c_answers.keys() # 問題(p_id)に存在するq_idのリスト
-                assert len(keys) != 0, f"Problem({p_id}) has no questions."
-            except AssertionError as e:
-                content = str(e)
-                q_status = 0
-                status  = 500
+                page = self.get_from_db(sql, p_id=p_id)
+                assert len(page) != 0
+            except (AssertionError, sqlite3.Error) as e:
+                print(f"[ERROR] {e.__class__.__name__}: {e}")
+                self.write_error()
+                return
             else:
-                if self.json["ptype"] == 0: # html problem
-                    result, content = self.html_scoring()
-                elif self.json["ptype"] == 1: # coding problem    
-                    result, content = await self.code_scoring()
-                q_status = 2 if False not in result else 1
-                try:
-                    self._insert_and_update_progress(p_id, q_status, keys) # 結果をdbに書き込む
-                except sqlite3.Error as e:
-                    self.print_traceback()
-                    status = 500
-                else:
-                    status = 200
-            
-            self.finish({"html": self._render_toast(content, q_status),
-                         "progress": q_status,
-                         "status": status,
-                         "detail": json.dumps({"p_id": p_id, "q_id": self.json["q_id"], "result": q_status}),
-                        })
+                page:dict = page[0]
+                self.render(f"./problem.html", 
+                            title=page["title"],
+                            page=json.loads(page["page"]),
+                            q_status=json.loads(page["q_status"]),
+                            q_content=json.loads(page["q_content"]),
+                            progress=[])
 
-    def _insert_and_update_progress(self, p_id: str, q_status: int, keys: list) -> None:
+        # GET /problems/<p_id>/<action>    
+        elif p_id is not None and action is not None: 
+            self.write_error()
+
+    async def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
+        """
+        PATH
+            * /problems/<p_id>/save     : セーブ
+            * /problems/<p_id>/scoring  : 採点
+            * /problems/<p_id>/cancel   : 採点キャンセル
+        """
+        try:
+            # POST /problems
+            if p_id is None and action is None:
+                self.set_status(404)
+                self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+            
+            # POST /problems/<p_id>
+            elif p_id is not None and action is None:
+                self.set_status(404)
+                self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+
+            # POST /problems/<p_id>/<action>
+            elif p_id is not None and action is not None:
+                if action == "save":
+                    self.load_json(validate=True, keys=["q_content"])
+                    self.saving(p_id)
+                elif action == "scoring":
+                    self.load_json(validate=True, keys=["q_id", "ptype", "answers", "kernel_id"])
+                    await self.scoring(p_id)
+                elif action == "cancel":
+                    self.load_url_queries(["kernel_id"])
+                    self.canceling(p_id)
+                else:
+                    self.set_status(404)
+                    self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+        except (InvalidJSONError, tornado.web.MissingArgumentError, sqlite3.Error):
+            self.print_traceback()
+            self.set_status(400)
+            self.finish({"DESCR": "Invalid request message or Invalid url query"})
+
+    def saving(self, p_id:str) -> None:
+        """
+        問題<p_id>内のすべてのQuestion Nodeのユーザー入力を
+        progressテーブルのq_contentに保存する
+        """
+        write_content = r"""INSERT INTO progress(p_id, q_status, q_content)
+            VALUES (:p_id, '{}', :q_content) 
+            ON CONFLICT(p_id) DO UPDATE SET
+            q_content=:q_content
+            """
+        try:
+            for key, value in self.json["q_content"].items():
+                assert isinstance(key, str), "data key is invalid type. expected 'str'"
+                assert isinstance(value, list), "data value is invalid type. expected 'list'"
+            self.write_to_db(write_content, p_id=p_id, 
+                            q_content=json.dumps(self.json["q_content"]))
+        except AssertionError:
+            raise InvalidJSONError
+        except sqlite3.Error:
+            self.print_traceback()
+            raise
+        else:
+            self.finish({"body": json.dumps(self.json["q_content"]),
+                        "DESCR": "data is successfully saved."})
+
+    async def scoring(self, p_id:str) -> None:
+        """
+        問題<p_id>内の質問<q_id>について採点を行う
+        """
+        sql = r"""SELECT answers FROM pages WHERE p_id=:p_id"""
+        c_answers = self.get_from_db(sql, p_id=p_id)
+        try:
+            assert len(c_answers) != 0, f"Problem({p_id}) does not exist."
+            c_answers: dict = json.loads(c_answers[0]["answers"])
+            # get all question's <q_id>
+            keys: list = c_answers.keys() 
+            assert len(keys) != 0, f"Problem({p_id}) has no questions."
+            # get answers for specified <q_id>
+            self.target_answers:list = c_answers.get(self.json["q_id"], []) 
+            assert len(self.target_answers) != 0, f"Question({self.json['q_id']}) does not exist."
+        except AssertionError:
+            raise InvalidJSONError
+        else:
+            # html problem
+            if self.json["ptype"] == 0: 
+                result, content = self.html_scoring()
+            # code test problem
+            elif self.json["ptype"] == 1: #  
+                result, content = await self.code_scoring()
+            q_status = 2 if False not in result else 1
+            try:
+                # write result to logs, progress table
+                self._insert_and_update_progress(p_id=p_id, q_id=self.json["q_id"], 
+                                                 q_status=q_status,
+                                                 content=json.dumps(self.json["answers"]),
+                                                 keys=keys) 
+            except sqlite3.Error:
+                self.print_traceback()
+                raise 
+            else:
+                self.finish({"content": content,
+                             "progress": q_status,
+                             "DESCR": "Scoring complete."})
+
+    def canceling(self, p_id:Optional[str]=None) -> None:
+        """
+        カーネル<kernel_id>で実行中のコードテスティングを中断する
+        """
+        executor = ProblemHandler.execute_pool.pop(self.query["kernel_id"], None)
+        if executor is not None:
+            for e in executor._processes.values():
+                e.kill()
+        self.finish({"DESCR": "Code testing is successfully canceled."})
+
+    def html_scoring(self) -> Tuple[list, str]:
+        """
+        html problemの自動採点
+
+        Returns
+        -------
+        result: list
+            各質問の採点結果をTrue/Falseで表したlist
+        content: str
+            toastに表示される文字列
+        """
+        # 文字列マッチング
+        result = []
+        content = ''
+        try:
+            assert len(self.json["answers"]) == len(self.target_answers), "Does not match the number of questions in DB"
+        except AssertionError as e:
+            raise InvalidJSONError
+        else:
+            for i, ans in enumerate(self.json["answers"]):
+                result.append(ans == self.target_answers[i])
+                content += f"<p class='mb-0'>[{'o' if result[i] else 'x'}] {ans}</p>"
+
+        return (result, content)
+    
+    async def code_scoring(self) -> Tuple[list, str]:
+        """
+        coding problem 自動採点
+        
+        Returns
+        -------
+        result: list
+            各質問の採点結果をTrue/Falseで表したlist
+        content: str
+            toastに表示される文字列
+        """
+        # set up test kernel
+        kernel_id = self.json["kernel_id"]
+        code = "\n".join(self.json["answers"] + self.target_answers)
+        executor = ProcessPoolExecutor(max_workers=1)
+        future = ioloop.IOLoop.current().run_in_executor(executor, custom_exec, code)
+        ProblemHandler.execute_pool[kernel_id] = executor
+        try:
+            await future
+        except BrokenProcessPool as e:
+            result = [False]
+            content = f"[Cancel]: The code execution process has been destroyed."
+        except Exception as e:
+            result = [False]
+            content = f"[{e.__class__.__name__}] {e}"
+        else:
+            result = [True]
+            content = "Complete"
+        finally:
+            ProblemHandler.execute_pool.pop(kernel_id, None)
+
+        return (result, content)    
+
+    def _insert_and_update_progress(self, p_id: str, q_id:str, q_status:int, content:str,
+                                    keys: list) -> None:
         """
         採点結果logテーブル, progressテーブルに記録する
         """
@@ -169,127 +292,9 @@ class ProblemHandler(ApplicationHandler):
                  for key in keys]
             ))
         self.write_to_db((write_log, write_state, update_state), 
-                         p_id=p_id, q_id=str(self.json["q_id"]),
+                         p_id=p_id, q_id=q_id,
                          status=q_status,
-                         content=json.dumps(self.json["answers"]))
-
-    def _render_toast(self, content: str, stat: int) -> str:
-        """
-        templates/moduels/toast.htmlにパラメータを渡して文字列として返す
-        """
-        if stat == 1:
-            stat = "status-error"
-        elif stat == 2:
-            stat = "status-success"
-        return tornado.escape.to_unicode(
-            self.render_string("./modules/toast.html",
-                               **{"result_status": stat,
-                                "result_content": content})
-        )
-    
-    def html_scoring(self) -> Tuple[list, str]:
-        """
-        html problemの自動採点
-
-        Returns
-        -------
-        result: list
-            各質問の採点結果をTrue/Falseで表したlist
-        content: str
-            toastに表示される文字列
-        """
-        # 文字列マッチング
-        result = []
-        content = ''
-        try:
-            assert len(self.json["answers"]) == len(self.c_answers), "Does not match the number of questions in DB"
-        except AssertionError as e:
-            result = [False]
-            content = f"[{e.__class__.__name__}] {e}"
-        else:
-            for i, ans in enumerate(self.json["answers"]):
-                result.append(ans == self.c_answers[i])
-                content += f"<p class='mb-0'>[{'o' if result[i] else 'x'}] {ans}</p>"
-
-        return (result, content)
-    
-        
-    async def code_scoring(self) -> Tuple[list, str]:
-        """
-        coding problem 自動採点
-        
-        Returns
-        -------
-        result: list
-            各質問の採点結果をTrue/Falseで表したlist
-        content: str
-            toastに表示される文字列
-        """
-        # set up test kernel
-        kernel_id = self.json["kernel_id"]
-        code = "\n".join(self.json["answers"] + self.c_answers)
-        executor = ProcessPoolExecutor(max_workers=1)
-        future = ioloop.IOLoop.current().run_in_executor(executor, custom_exec, code)
-        ProblemHandler.execute_pool[kernel_id] = executor
-        try:
-            await future
-        except BrokenProcessPool as e:
-            result = [False]
-            content = f"[Cancel]: The code execution process has been destroyed."
-        except Exception as e:
-            result = [False]
-            content = f"[{e.__class__.__name__}] {e}"
-        else:
-            result = [True]
-            content = "Complete"
-        finally:
-            ProblemHandler.execute_pool.pop(kernel_id, None)
-
-        return (result, content)
-    
-
-    def put(self, p_id):
-        """
-        入力の保存
-        (path) 
-            /problems/<p_id     
-        """
-        if self.is_valid_json:
-            write_content = r"""INSERT INTO progress(p_id, q_status, q_content)
-                VALUES (:p_id, '{}', :q_content) 
-                ON CONFLICT(p_id) DO UPDATE SET
-                q_content=:q_content
-                """
-            try:
-                for key, value in self.json["q_content"].items():
-                    assert isinstance(key, str)
-                    assert isinstance(value, list)
-                self.write_to_db(write_content, p_id=p_id, 
-                             q_content=json.dumps(self.json["q_content"]))
-            except AssertionError:
-                status = 500
-                descr = "data key or value is not acceptable"
-            except sqlite3.Error:
-                self.print_traceback()
-            else:
-                status = 200
-                descr = "data is successfully saved"
-
-            self.finish({"status": status,
-                         "body": json.dumps(self.json["q_content"]),
-                         "DESCR": descr})
-                
-    def delete(self, p_id):
-        """
-        カーネル<p_id>で実行中のコードテスティングを中断する
-        """
-        print("[ProblemHandler PUT] cancel exec")
-        executor = ProblemHandler.execute_pool.pop(p_id, None)
-        if executor is not None:
-            for e in executor._processes.values():
-                e.kill()
-        self.finish({"status": 200,
-                     "DESCR": "CODE TESTING IS SUCCESSFULLY CANCELED"})
+                         content=content)
 
 class ExecutionHandler(tornado.websocket.WebSocketHandler):
     """コード実行管理"""
@@ -305,7 +310,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         self.kc: AsyncKernelClient = self.km.client()
         if not self.kc.channels_running:
             self.kc.start_channels()
-        print(f"[LOG] WS is connecting with {self.kernel_id}")
+        print(f"[WS] WS is connecting with {self.kernel_id}")
 
     async def on_message(self, received_msg: dict):
         """メッセージ受信時の処理
@@ -316,11 +321,10 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         """
         await self.kc.wait_for_ready()
         received_msg = json.loads(received_msg)
-        print(f"[LOG] WebSocket receive {received_msg}")
+        print(f"[WS] WebSocket receive {received_msg}")
         await self.exec.wait()
         _code = received_msg.get("code", None)
         self.node_id = received_msg.get("node_id", None)
-        self.has_error = False
         self.kc.execute(_code)
         self.exec.clear()
         ioloop.IOLoop.current().spawn_callback(self.messaging)
@@ -334,12 +338,9 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             try:
                 output = await self.kc.get_iopub_msg()
                 print(f"received {output['msg_type']}")
-                if output["msg_type"] == "error":
-                    self.has_error = True
                 if output["content"].get('execution_state', None) == "idle":
                     self.write_message(json.dumps({
                         "msg_type": "exec-end-sig", 
-                        "has_error": self.has_error,
                         "node_id": self.node_id}))
                     self.exec.set()
                     break
@@ -349,111 +350,165 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             except Exception as e:
                 print(e)
                 break
+        print("=========================")
 
     def on_close(self):
-        print("[LOG] websocket is closing")
+        print("[WS] websocket is closing")
         
 
 class KernelHandler(ApplicationHandler):
     """カーネル管理用 REST API"""
 
-    def prepare(self):
-        global mult_km
+    def prepare(self) -> None:
         mult_km.updated.clear()
-        self.action = self.get_query_argument("action", default=None)
+        print(f"[{self.request.method}] {self.request.uri}")
 
-    async def get(self, k_id=None):
+    async def get(self, k_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
-        (PATH)
-            /kernel/          -> 管理しているすべてのカーネルを出力
-            /kernel/<k_id>/   -> k_idをもつカーネルが管理下にあるか
+        PATH
+            * /kernel             :管理しているすべてのカーネルを出力
+            * /kernel/<k_id>/     :k_idをもつカーネルが管理下にあるか
         """
-        if k_id is None:
-            print(f"[KernelHandler GET] Check all kernel")
-            kernel_ids = await mult_km.list_kernel_ids()
-            self.finish({"status": 200,
-                        "kernel_ids": kernel_ids,
-                        "DESCR": "Get a list of kernels managed by the server"})
-        else:
+        # GET /kernel
+        if k_id is None and action is None:
+            kernel_ids = mult_km.list_kernel_ids()
+            self.finish({
+                "kernel_ids": kernel_ids,
+                "DESCR": "Get a list of kernels managed by the server."
+            })
+
+        # GET /kernel/<k_id>
+        elif k_id is not None and action is None:
             try:
-                print(f"[KernelHandler GET] Check kernel({k_id})")
                 is_alive = await mult_km.is_alive(k_id)
-                self.finish({"status": 200,
-                            "kernel_id": k_id,
-                            "is_alive": is_alive,
-                            "DESCR": f"kernel({k_id}) is alive."})
-            except KeyError as e:
-                self.finish({"status": 500,
-                             "kernel_id": k_id,
-                             "is_alive": False,
-                             "DESCR": str(e)})
+            except KeyError:
+                is_alive = False
+            self.finish({
+                "kernel_id": k_id,
+                "is_alive": is_alive,
+                "DESCR": "Get the kernel state(alive or not)"
+            })
 
-    async def post(self, k_id=None):
+        # GET /kernel/<k_id>/<action>
+        elif k_id is not None and action is not None:
+            self.write_error()
+
+
+    async def post(self, k_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
-        (PATH)
-            /kernel/                          -> ランダムなidでカーネルを起動
-            /kernel/<k_id>                    -> idを指定してカーネルを起動
-            /kernel/<k_id>/?action=restart    -> カーネルの再起動
-            /kernel/<k_id>/?action=interrupt  -> カーネルの中断
-        """
-        try:    
-            if k_id is not None:
-                self.kernel_id = k_id
-                if self.action == "interrupt": # interrupt
-                    print(f"[KernelHandler POST] kernel interrupt")
-                    km = mult_km.get_kernel(self.kernel_id)
-                    await km.interrupt_kernel()
-                    self.DESCR = "Kernel successfully interrupted"
-
-                elif self.action == "restart": # restart
-                    print(f"[KernelHandler POST] kernel restart")
-                    await mult_km.shutdown_kernel(kernel_id=self.kernel_id)
-                    await mult_km.start_kernel(kernel_id=self.kernel_id)
-                    self.DESCR = "Kernel successfully restarted"
-
-                elif self.action is None: # start with specific kernel_id
-                    print(f"[KernelHandler POST] kernel start")
-                    await mult_km.start_kernel(kernel_id=self.kernel_id)
-                    self.DESCR = "Kernel successfully booted"
-                else:
-                    raise ValueError
-            else: # start with random kernel_id
-                print(f"[KernelHandler POST] kernel start")
-                self.kernel_id = await mult_km.start_kernel()
-                self.DESCR = "kernel successfully booted"
-        except Exception as e:
-            self.status = 500
-            self.DESCR = f"{e.__class__.__name__}: {e}"
-        else:
-            self.status = 200
-
-        self.write({"status": self.status,
-                    "DESCR": self.DESCR,
-                    "kernel_id": self.kernel_id})
-        
-    async def delete(self, k_id=None):
-        """
-        カーネルを停止する.
-        (PATH)
-            /kernel/          -> すべてのカーネルを停止する
-            /kernel/<k_id>/   -> k_idのkernel_idをもつカーネルを停止する
+        PATH
+            * /kernel/                          : ランダムなidでカーネルを起動
+            * /kernel/<k_id>                    : idを指定してカーネルを起動
+            * /kernel/<k_id>/restart            : カーネルの再起動
+            * /kernel/<k_id>/interrupt          : カーネルの中断
         """
         try:
-            if k_id is not None: # shutdown specific kernel_id
-                await mult_km.shutdown_kernel(k_id, now=True)
-            else: # shutdown all kernel
-                await mult_km.shutdown_all(now=True) 
-        except Exception as e:
-            status = 500
-            descr = "FAIL TO SHUTDOWN KERNEL"
-        else:
-            status = 200
-            descr = "KERNEL IS SUCCESSFULLY SHUTDOWN"
+            # POST /kernel
+            if k_id is None and action is None:
+                await self.kernel_start()
 
-        self.write({"status": status,
-                    "kernel_id": k_id,
-                    "DESCR": descr})
+            # POST /kernel/<k_id>
+            elif k_id is not None and action is None:
+                await self.kernel_start(kernel_id=k_id)
+
+            # POST /kernel/<k_id>/<action>
+            elif k_id is not None and action is not None:
+                if action == "restart":
+                    await self.kernel_restart(kernel_id=k_id)
+                elif action == "interrupt":
+                    await self.kernel_interrupt(kernel_id=k_id)
+                else:
+                    self.set_status(404)
+                    self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+        except DuplicateKernelError as e:
+            self.set_status(400)
+            self.finish({"DESCR": "kernel_id is already started."})
+        except KeyError as e:
+            self.set_status(404)
+            self.finish({"DESCR": "kernel_id is not found in KM."})
+
+    async def kernel_start(self, kernel_id:Optional[str]=None) -> None:
+        """
+        カーネルを起動する
+        """
+        try:
+            if kernel_id is None:
+                self.kernel_id = await mult_km.start_kernel()
+            else:
+                self.kernel_id = await mult_km.start_kernel(kernel_id=kernel_id)
+        except DuplicateKernelError as e:
+            raise
+        else:
+            self.finish({"kernel_id": self.kernel_id,
+                         "DESCR": "Kernel is successfully started."})
+
+    async def kernel_restart(self, kernel_id:str) -> None:
+        """
+        カーネルを再起動する
+        """
+        try:
+            await mult_km.shutdown_kernel(kernel_id=kernel_id)
+            await mult_km.start_kernel(kernel_id=kernel_id)
+        except KeyError as e:
+            raise
+        else:
+            self.finish({"kernel_id": kernel_id,
+                         "DESCR": "Kernel is successfully restarted."})
+
+    async def kernel_interrupt(self, kernel_id:str) -> None:
+        """
+        カーネルの実行を中断する
+        """
+        try:
+            km = mult_km.get_kernel(kernel_id)
+            await km.interrupt_kernel()
+        except KeyError as e:
+            raise
+        else:
+            self.finish({"kernel_id": kernel_id,
+                         "DESCR": "Kernel is successfully interrupted."})
+
+    async def delete(self, k_id:Optional[str]=None, action:Optional[str]=None):
+        """
+        PATH
+            * /kernel          : すべてのカーネルを停止する
+            * /kernel/<k_id>   : k_idのkernel_idをもつカーネルを停止する
+        """
+        try:
+            # DELETE /kernel
+            if k_id is None and action is None:
+                await self.kernel_shutdown()
+
+            # DELETE /kernel/<k_id>
+            elif k_id is not None and action is None:
+                await self.kernel_shutdown(kernel_id=k_id)
             
+            # DELETE /kernel/<k_id>/<action>
+            elif k_id is not None and action is not None:
+                self.set_status(404)
+                self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+        except KeyError:
+            self.set_status(404)
+            self.finish({"DESCR": "Kernel_id is not found in KM."})
+           
+    async def kernel_shutdown(self, kernel_id:Optional[str]=None) -> None:
+        """
+        カーネルを停止する
+        """
+        # shutdown all
+        if kernel_id is None:
+            await mult_km.shutdown_all(now=True)
+            self.finish({"DESCR": "All kernel is successfully shutted down."})
+        # shutdown specified kernel
+        else:
+            try:
+                await mult_km.shutdown_kernel(kernel_id, now=True)
+            except KeyError:
+                raise
+            else:
+                self.finish({"kernel_id": kernel_id,
+                             "DESCR": f"Kernel({kernel_id}) is successfully shutted down."})
+
     def on_finish(self):
         mult_km.updated.set()
 
@@ -462,32 +517,17 @@ class ProblemCreateHandler(ApplicationHandler):
     問題作成モード
     """
     def prepare(self):
-        """
-        POST/PUT時のJSONをロード
-        [POST]
-            title:     タイトル
-            page:      ページの構成要素のJSON
-            answers:   {<q_id>: [ans...]}
-        [PUT]
-            title:     タイトル
-            category:  問題カテゴリ
-            status:    公開/非公開を決めるパラメータ
-        """
-        if self.request.method == "POST":
-            keys = ["title", "page", "answers"]
-            self.is_valid_json = self.load_json(validate=True, keys=keys)
-        elif self.request.method == "PUT":
-            keys = ["title", "category", "status"]
-            self.is_valid_json = self.load_json(validate=True, keys=keys)
+        print(f"[{self.request.method}] {self.request.uri}")
             
-    def get(self, p_id=None):
+    def get(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
-        (PATH)
-            /create/ -> 問題リスト
-            /create/new -> 新規問題作成ページ
-            /create/<p_id(uuid)> -> 問題編集ページ
+        PATH
+            * /create/              :問題リスト
+            * /create/new           :新規問題作成ページ
+            * /create/<p_id(uuid)>  :問題編集ページ
         """
-        if p_id is None: # 問題index
+        # GET /create
+        if p_id is None and action is None:
             sql = r"""SELECT p_id, title, category, status FROM pages"""
             problems = self.get_from_db(sql)
             sql = r"""SELECT * FROM categories"""
@@ -495,31 +535,83 @@ class ProblemCreateHandler(ApplicationHandler):
             problems = [r for r in problems] 
             cates = [r for r in cates]
             self.render("create_index.html", problem_list=problems, categories=cates)
+            
+        # GET /create/<p_id>
+        elif p_id is not None and action is None:
+            self.render_edit(p_id=p_id)
 
-        else: # 編集ページ
-            if p_id == "new": # 新規作成
-                self.render("create.html", conponent={}, answers={}, is_new=True)
-            else: # 編集
-                sql = r"SELECT title, page, answers FROM pages where p_id = :p_id"
-                page = self.get_from_db(sql, p_id=p_id)
-                try:
-                    assert len(page) != 0
-                except AssertionError:
-                    self.redirect("/create")
+        # GET /create/<p_id>/<action>
+        elif p_id is not None and action is not None:
+            self.write_error()
+
+    def render_edit(self, p_id:str) -> None:
+        """
+        問題編集ページを表示
+        """
+        # create new page
+        if p_id == "new": 
+            self.render("create.html", 
+                        title="",
+                        page={},
+                        answers={},
+                        is_new=True)
+
+        # edit exist page   
+        else:
+            sql = r"SELECT title, page, answers FROM pages where p_id = :p_id"
+            page = self.get_from_db(sql, p_id=p_id)
+            try:
+                assert len(page) != 0
+            except AssertionError:
+                self.redirect("/create")
+            else:
+                page = page[0]
+                self.render("create.html",
+                            title=page["title"],
+                            page=json.loads(page["page"]),
+                            answers=json.loads(page["answers"]),
+                            is_new=False)
+
+    def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
+        """
+        PATH
+            * /create/new/register      :新規問題登録
+            * /create/<p_id>/register   :登録済みの問題の編集保存
+            * /create/profile           :プロファイル(title, category, status)の変更
+        """
+        try:
+            # POST /create
+            if p_id is None and action is None:
+                self.set_status(404)
+                self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+
+            # POST /create/<p_id>
+            elif p_id is not None and action is None:
+                if p_id == "profile":
+                    self.load_json(validate=True, keys=["profiles"])
+                    self.update_profile()
                 else:
-                    page = page[0]
-                    page = {"title": page["title"],
-                            "page": json.loads(page["page"]),
-                            "answers": json.loads(page["answers"])}
-                    self.render("create.html", conponent=page, is_new=False)
+                    self.set_status(404)
+                    self.finish({"DESCR": f"{self.request.full_url()} is not found"})
 
-    def post(self, p_id):
+            # POST /create/<p_id>/<action>
+            elif p_id is not None and action is not None:
+                if action == "register":
+                    self.load_json(validate=True, keys=["title", "page", "answers"])
+                    self.register(p_id=p_id)
+                else:
+                    self.set_status(404)
+                    self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+        except (InvalidJSONError, sqlite3.Error):
+            self.set_status(400)
+            self.finish({"DESCR": "Invalid request message or Invalid url query"})
+
+    def register(self, p_id:str) -> None:
         """
-        (PATH)
-            /create/new/ -> 新規保存
-            /create/<p_id>/ -> 上書き保存
+        問題をpagesテーブルに登録する
         """
-        if p_id == "new": # 新規作成
+        # register new problem
+        if p_id == "new": 
             self.p_id = str(uuid.uuid4())
             sql = r"""INSERT INTO pages(p_id, title, page, answers) 
             VALUES(:p_id, :title, :page, :answers)"""
@@ -529,58 +621,67 @@ class ProblemCreateHandler(ApplicationHandler):
                                 answers=json.dumps(self.json["answers"]))
             except sqlite3.Error:
                 self.print_traceback()
-                self.finish({"status": 500, "DESCR": "Failure to register new problem."})
+                raise 
             else:
-                self.finish({"status": 200, "p_id": self.p_id,
+                self.finish({"p_id": self.p_id,
                              "DESCR": "New Problem is successfully registered."})
-
-        else: # 上書き保存
-            sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers WHERE p_id=:p_id"""
+        # edit exist problem
+        else: 
+            sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers 
+            WHERE p_id=:p_id"""
             try:
                 self.write_to_db(sql, p_id=p_id, title=self.json["title"],
                                 page=json.dumps(self.json["page"]),
                                 answers=json.dumps(self.json["answers"]))
             except sqlite3.Error:
                 self.print_traceback()
-                self.finish({"status": 500, "p_id": p_id,
-                             "DESCR": f"FAILURE TO EDIT {p_id}"})
+                raise 
             else:
-                self.finish({"status": 200, "p_id": p_id,
+                self.finish({"p_id": p_id,
                              "DESCR": f"Problem({p_id}) is successfully saved."})
 
-    def put(self, p_id):
+    def update_profile(self) -> None:
         """
-        ページの内容以外のパラメータ(title, category, status)の編集  
-        (PATH)
-            /create/<p_id>/
+        pagesテーブルのprofile(title, category, status)を変更する
         """
-        sql = r"""UPDATE pages SET title=:title, category=:category, status=:status WHERE p_id=:p_id"""
+        sql = r"""UPDATE pages SET title=:title, category=:category, status=:status 
+        WHERE p_id=:p_id"""
         try:
-            self.write_to_db(sql, p_id=p_id, title=self.json["title"],
-                            category=self.json["category"],
-                            status=self.json["status"])
+            params = [{"p_id": key} | v for key, v in self.json["profiles"].items()]
+            self.write_to_db_many(sql, params)
         except sqlite3.Error:
             self.print_traceback()
-            self.finish({"status": 500, "profile": json.dumps(self.json), 
-                         "DESCR": f"FAILURE TO UPDATE {p_id}'s PROFILE"})
+            raise 
         else:
-            self.write({"status": 200, "profile": json.dumps(self.json),
+            self.write({"profile": json.dumps(self.json),
                         "DESCR": "problem profile is successfully updated."})
 
-    def delete(self, p_id):
+    def delete(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
-        問題ページの削除
-        (PATH)
-            /create/<p_id>/
+        PATH
+            * /create/<p_id>    :問題<p_id>を削除する
         """
-        sql = r"""DELETE FROM pages WHERE p_id=:p_id"""
-        try:
-            self.write_to_db(sql, p_id=p_id)
-        except sqlite3.Error as e:
-            print(f"DELETE /create/{p_id}: {e}")
-            self.finish({"status": 500, "p_id": p_id})
-        else:
-            self.finish({"status": 200})
+        # DELETE /create
+        if p_id is None and action is None:
+            self.set_status(404)
+            self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+
+        # DELETE /create/<p_id>
+        elif p_id is not None and action is None:
+            sql = r"""DELETE FROM pages WHERE p_id=:p_id"""
+            try:
+                self.write_to_db(sql, p_id=p_id)
+            except sqlite3.Error as e:
+                self.print_traceback()
+                raise
+            else:
+                self.finish({"kernel_id": p_id,
+                             "DESCR": f"Problem({p_id}) is successfully deleted."})
+                
+        # DELETE /create/<p_id>/<action>
+        elif p_id is not None and action is not None:
+            self.set_status(404)
+            self.finish({"DESCR": f"{self.request.full_url()} is not found."})
 
 
 class RenderHTMLModuleHandler(tornado.web.RequestHandler):
@@ -620,12 +721,16 @@ class RenderHTMLModuleHandler(tornado.web.RequestHandler):
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
+        (r"/problems/?", ProblemHandler),
         (r"/problems/(?P<p_id>[\w-]+)/?", ProblemHandler),
+        (r"/problems/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemHandler),
         (r'/ws/([\w-]+)/?', ExecutionHandler),
         (r"/kernel/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/?", KernelHandler),
+        (r"/kernel/(?P<k_id>[\w-]+)/(?P<action>[\w]+)/?", KernelHandler),
         (r"/create/?", ProblemCreateHandler),
-        (r"/create/(?P<p_id>[\w-]+)/?", ProblemCreateHandler),
+        (r"/create/(?P<p_id>[\w-]*)/?", ProblemCreateHandler),
+        (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
         (r"/api/render/?", RenderHTMLModuleHandler)
     ],
     template_path=os.path.join(os.getcwd(), "templates"),

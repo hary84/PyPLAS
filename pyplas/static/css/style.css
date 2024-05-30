@@ -172,39 +172,6 @@
   question Node 
 =============== */
 .question {
-  .toast.status-success {
-    border: solid var(--bs-success);
-    background-color: rgb(182 216 182);
-    .toast-header {
-      i {
-        color: var(--bs-success);
-      }
-      span::before {
-        content: "SUCCESS";
-        color: var(--bs-success);
-      }
-    }
-  } 
-/* toast */ 
-  .toast.status-error {
-    border: solid var(--bs-danger); 
-    background-color: #ffdddd;
-    .toast-header {
-      i {
-        color: var(--bs-danger);
-      }
-      span::before {
-        content: "ERROR";
-        color: var(--bs-danger);
-      }
-    }
-    .toast-body {
-      white-space: pre-wrap;
-      font-size: 0.6rem;
-      overflow-y: auto;
-      max-height: 10rem;
-    }
-  }
 /* card-header */
   .card-header {
     .btn {
@@ -221,6 +188,38 @@
 /* card-body */
   .card-body {
     .mde  .toolbar  .only-inq { display: block; } 
+  }
+}
+.question[progress="1"] {
+  .toast {
+    border: solid var(--bs-danger);
+    background-color: #ffdddd;
+    .toast-header {
+      i { color: var(--bs-danger)}
+      span::before {
+        content: "ERROR";
+        color: var(--bs-danger)
+      }
+    }
+    .toast-body {
+      white-space: pre-wrap;
+      font-size: 0.6rem;
+      overflow-y: auto;
+      max-height: 10rem;
+    }
+  }
+}
+.question[progress="2"] {
+  .toast {
+    border: solid var(--bs-success);
+    background-color: rgb(182 216 182);
+    .toast-header {
+      i { color: var(--bs-success)}
+      span::before {
+        content: "SUCCESS";
+        color: var(--bs--success)
+      }
+    }
   }
 }
 

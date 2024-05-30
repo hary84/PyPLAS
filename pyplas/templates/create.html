@@ -31,7 +31,7 @@
 <main class="col-lg-10 col-xl-8 px-3">
     <div class="my-3" id="summary">
         <p class="fs-3 border-bottom border-dark ps-1">
-            <input class="form-control mb-1" id="titleForm" type="text" placeholder="Title" aria-label="problem title input" value="{{conponent.get('title', '')}}">
+            <input class="form-control mb-1" id="titleForm" type="text" placeholder="Title" aria-label="problem title input" value="{{ title }}">
         </p>
         <div class="ps-3">
             <nav>
@@ -43,13 +43,13 @@
             </nav>
             <div class="tab-content border bg-light" id="nav-tabContent">
                 <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
-                    {% module Template("modules/MDE.html", content=conponent.get("page", {}).get("header", {}).get("summary", ""), has_del=False, problem_builder=False) %}
+                    {% module Template("modules/MDE.html", content=page.get("header", {}).get("summary", ""), has_del=False, problem_builder=False) %}
                 </div>
                 <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
-                    {% module Template("modules/MDE.html", content=conponent.get("page", {}).get("header", {}).get("source", ""), has_del=False, problem_builder=False) %}
+                    {% module Template("modules/MDE.html", content=page.get("header", {}).get("source", ""), has_del=False, problem_builder=False) %}
                 </div>
                 <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-                    {% module Template("modules/MDE.html", content=conponent.get("page", {}).get("header", {}).get("env", ""), has_del=False, problem_builder=False) %}
+                    {% module Template("modules/MDE.html", content=page.get("header", {}).get("env", ""), has_del=False, problem_builder=False) %}
                 </div>
             </div>
         </div>
@@ -59,14 +59,14 @@
         <div class="p-content position-relative ms-3">
             {% module NodeControl() %}
             {% if not is_new %}
-                {% for d in conponent["page"]["body"] %}
+                {% for d in page["body"] %}
                     {% if d["type"] == "explain" %}
                         {% module Explain(**d, editor=True, allow_del=True) %}
                     {% elif d["type"] == "code" %}
                         {% module Code(**d, user=1, allow_del=True) %}
                     {% elif d["type"] == "question" %}
                         {% module Question(**d, user=1, 
-                            answers=conponent["answers"].get(str(d['q_id']), [])) %}
+                            answers=answers.get(str(d['q_id']), [])) %}
                     {% end %}
                     {% module NodeControl() %}
                 {% end %}
