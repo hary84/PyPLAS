@@ -1,15 +1,6 @@
 
 /**
- * ページをパースしてサーバーに投げる
- * POST /create/<p_id>
- *  (send)
- *      title: str
- *      page: dict
- *          headersとbodyのdict
- *      answers: dict
- *          {<q_id>: [ans, ans, ...] }
- *  (receive)
- *      status: int
+ * ページ全体をパースしてサーバーに登録を要請する
  * @param {str} p_id 問題id
  * @returns {none}
  */
@@ -57,12 +48,12 @@ async function registerProblem(p_id) {
             var params = extractQuestionNode(elem, mode=1)
             answers[`${q_id}`] = params.answers 
             body.push({
-                "type": "question",
-                "q_id": params.q_id,
-                "ptype": params.ptype,
-                "conponent": params.conponent,
-                "question": params.question,
-                "editable": params.editable,
+                "type": "question",             // str
+                "q_id": String(params.q_id),    // str
+                "ptype": params.ptype,          // int
+                "conponent": params.conponent,  // dict
+                "question": params.question,    // str
+                "editable": params.editable,    // bool
             })
             q_id += 1
         }
@@ -74,9 +65,9 @@ async function registerProblem(p_id) {
         "body": body
     }
     var send_msg = {
-        "title": title,
-        "page": page,
-        "answers": answers
+        "title": title,       // str
+        "page": page,         // dict
+        "answers": answers    // dict
     }
 
     var res = await fetch(`${window.location.origin}/create/${p_id}/register`,{
@@ -94,23 +85,31 @@ async function registerProblem(p_id) {
     }
 }
 /**
- * pageのstatus, category, titleを変更する
- * PUT /create/<p_id>
- *  (send)
- *      title: str
- *      category: int
- *      status: int 
- *  (receive)
- *      status: int
- * @param {array} targets 変更の対象となるtr 
+ * 問題の削除を要請する
+ * @param {string} p_id 対象となる問題のp_id
  */
-async function editPageParams(targets) {
-
-    console.log("edit page params")
+async function deleteProblem(p_id) {
+    var res = await fetch(`${window.location.origin}/create/${p_id}`, {
+        method: "DELETE",
+    })
+    var json = await res.json()
+    console.log(`[deleteProblem] ${json.DESCR}`)
+    if(!res.ok) {
+        alert(json.DESCR)
+    }
+    else {
+        window.location.reload()
+    }
+}
+/**
+ * pageのstatus, category, titleを変更する
+ * @param {array} changedParams {p_id: [title, category, status]}
+ */
+async function updateProfiles(changedParams) {
     var res = await fetch(`${window.location.origin}/create/profile`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({"profiles": targets})
+        body: JSON.stringify({"profiles": changedParams})
     })
     var json = await res.json()
     if (res.ok) {
@@ -120,4 +119,43 @@ async function editPageParams(targets) {
         alert(json.DESCR)
     }
 }
+/**
+ * create_index.htmlのform(input, select)の変更を監視する
+ * 
+ * formに変更があった際に、グローバル変数changedParamsにp_id, title, category, status
+ * を格納する。
+ */
+function observeForm() {
+    var initialFormValue = {}
+    document.querySelectorAll("input, select").forEach(elem => {
+        var p_id = elem.closest("tr").getAttribute("target")
+        if (!(p_id in initialFormValue)) {
+            initialFormValue[p_id] = {}
+        }
+        var tag = elem.getAttribute("for")
+        initialFormValue[p_id][tag] = elem.value
+    })
 
+    document.querySelectorAll("input, select").forEach(elem => {
+        elem.addEventListener("change", () => {
+            var tr = elem.closest("tr")
+            var p_id = tr.getAttribute("target")
+            var changed = {}
+            tr.querySelectorAll("input, select").forEach(elem => {
+                var tag = elem.getAttribute("for")
+                changed[tag] = elem.value
+            })
+            if (initialFormValue[p_id]["title"] != changed["title"]
+                || initialFormValue[p_id]["category"] != changed["category"]
+                || initialFormValue[p_id]["status"] != changed["status"]) {
+                    changedParams[p_id] = changed
+                    tr.classList.add("table-danger")
+                }
+            else {
+                delete changedParams[p_id]
+                tr.classList.remove("table-danger")
+            }
+            console.log(changedParams)
+        })
+    })
+}

@@ -1,63 +1,86 @@
 // for /create/<p_id> or /problems/<p_id>
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     const groups = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/).groups
-    var p_id = groups.p_id
-    var parent = groups.parent_path
+    const  p_id = groups.p_id
+    const parent = groups.parent_path
     console.log(`problem_id(p_id) is ${p_id}`)
     console.log(`parent path is ${parent}`)
-    document.querySelectorAll(".node-mde").forEach(elem => registerAceMDE(elem)) // AceMDEの登録
+    document.querySelectorAll(".node-mde").forEach(elem => registerAceMDE(elem))     // AceMDEの登録
     document.querySelectorAll(".node-code").forEach(elem => registerAceEditor(elem)) // AceEditorの登録
-
+    document.querySelector("#headTitle").href = `/${parent}`
     // 右サイドバーにquestion nodeのリンクを配置
+    await markdown.ready
     if (parent == "problems") {
-        var question_nav_bar = document.querySelector("#question-nav > .nav")
+        const question_nav_bar = document.querySelector("#question-nav > .nav")
         document.querySelectorAll(".question").forEach((elem, i) => {
-            question_nav_bar.insertAdjacentHTML("beforeend",
-            `<a class="nav-link position-relative" href="#${elem.id}" progress=${elem.getAttribute("progress")}>Q. ${i+1}<span class="progress-badge badge position-absolute" style="right: 5%;"> </span></a>`)
+            question_nav_bar.insertAdjacentHTML("beforeend", [
+                `<a class="nav-link position-relative" href="#${elem.id}" progress=${elem.getAttribute("progress")}>`, 
+                `   Q. ${i+1}<span class="progress-badge badge position-absolute" style="right: 5%;"> </span>`,
+                `</a>`
+            ].join("\n"))
+        })
+        document.querySelectorAll(".explain").forEach(elem => {
+            elem.innerHTML = markdown.parse(elem.innerHTML)
         })
     }
     // カーネルの起動, wsの接続
-    kh = new KernelHandler()
+    const kh = new KernelHandler()
 
     // イベントリスナー (左サイドバー)
     document.querySelector("#kernel-ops").addEventListener("click", async e => {
-        var target = e.target.closest(".btn-restart, .btn-interrupt, .btn-save")
+        const target = e.target.closest(".btn-restart, .btn-interrupt, .btn-save")
         if (target) {
             target.classList.add("disabled")
+              // kernel restart ボタン
             if (target.classList.contains("btn-restart")) {
                 kh.ws.close()
                 await kh.setUpKernel()
-            } else if (target.classList.contains("btn-interrupt")) {
+            } // kernel interrupt ボタン
+            else if (target.classList.contains("btn-interrupt")) {
                 await kh.kernelInterrupt()
-            } else if (target.classList.contains("btn-save")) {
-                if (parent == "problems") {
+            } // problem save ボタン
+            else if (target.classList.contains("btn-save")) {
+                if (parent == "problems") {         // problemページの場合
                     await saveUserData(p_id)
-                } else if (parent == "create") {
+                } else if (parent == "create") {    // createページの場合
                     await registerProblem(p_id)
                 }
             }
             target.classList.remove("disabled")
         }
     })
-    // イベントリスナー (右サイドバー)
+    const manageScoring = {}
+
+    // イベントリスナー (メイン)
     document.querySelector("#sourceCode").addEventListener("click", async e => {
-        var code = e.target.closest(".code")
+        const code = e.target.closest(".code")
         if (code) {
             $current_node = code
         }
-        var target = e.target.closest(".btn-exec, .btn-interrupt, .btn-testing, .btn-cancel")
+        const target = e.target.closest(".btn-exec, .btn-interrupt, .btn-testing, .btn-cancel")
         if (target) {
             target.classList.add("disabled")
-            if (target.classList.contains("btn-exec")) { // execute ボタン
+              // execute ボタン
+            if (target.classList.contains("btn-exec")) { 
                 $current_node = target.closest(".code")
                 await kh.execute($current_node)
-            } else if (target.classList.contains("btn-interrupt")) { // interrupt ボタン
+            } // interrupt ボタン
+            else if (target.classList.contains("btn-interrupt")) {
                 await kh.kernelInterrupt()
-            } else if (target.classList.contains("btn-testing")) { // answer ボタン
-                await scoring(p_id, target.closest(".node.question"))
-            } else if (target.classList.contains("btn-cancel")) { // cancel ボタン
-                await cancelScoring(p_id)
+            } // answer ボタン
+            else if (target.classList.contains("btn-testing")) { 
+                const q_id = target.closest(".node.question").getAttribute("q-id")
+                const kernel_id = crypto.randomUUID()
+                manageScoring[q_id] = kernel_id
+                await scoring(p_id, q_id, kernel_id)
+                delete manageScoring[q_id]
+            } // cancel ボタン
+            else if (target.classList.contains("btn-cancel")) {
+                const q_id = target.closest(".node.question").getAttribute("q-id")
+                const kernel_id = manageScoring[q_id]
+                await cancelScoring(p_id, kernel_id)
+                delete manageScoring[q_id]
             }
             target.classList.remove("disabled")
         }

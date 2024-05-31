@@ -33,9 +33,7 @@ class KernelHandler {
      */
     registerKernelId = (kernel_id) => {
         this.kernel_id = kernel_id
-        this.test_kernel_id = "test_" + kernel_id
         sessionStorage["kernel_id"] = this.kernel_id
-        sessionStorage["test_kernel_id"] = this.test_kernel_id
     }
     /**
      * カーネルidが有効かを調べる
@@ -64,9 +62,10 @@ class KernelHandler {
         }
     }
     /**
-     * カーネルを起動する
-     * カーネルがすでに存在している場合、kernelRestart()でカーネルを再起動する
-     * このメソッドは直接呼び出さず、setUpKernel()からのみ呼び出す
+     * カーネルを起動する.
+     * カーネルがすでに存在している場合、kernelRestart()でカーネルを再起動する.
+     * 
+     * このメソッドは直接呼び出さず、setUpKernel()からのみ呼び出す.
      */
     kernelStart = async () => {
         var id = (this.kernel_id) ? this.kernel_id : ""
@@ -76,9 +75,13 @@ class KernelHandler {
         if (!res.ok) {
             await this.kernelRestart()
         }
+        else {
+            this.registerKernelId(json.kernel_id)
+        }
     }
     /**
      * REST API を用いてカーネルを再起動する
+     * 
      * このメソッドは直接呼び出さず、kernelStart(), setUpKernel()からのみ呼び出す
      */
     kernelRestart = async () => {
@@ -105,7 +108,6 @@ class KernelHandler {
     }
     /**
      * websocketを用いてコードの実行命令を出す
-     * このメソッドは直接呼び出さず、execute()から呼び出す
      */
     executeCode = () => {
         var node = this.execute_task_q[0]

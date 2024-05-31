@@ -88,6 +88,9 @@
   p {
     margin-bottom: 0.5rem;
   }
+  pre > code {
+    display: block;
+  }
 }
 
 

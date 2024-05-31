@@ -96,11 +96,14 @@ function delme(btn) {
     node.remove()
 }
 /**
- * サーバーに採点を要請する
- * @param {str} p_id 問題id
- * @param {DOM} question_node 採点対象のQuestion Node 
+ * 質問の採点を行う
+ * @param {string} p_id      問題id
+ * @param {string} q_id      質問id
+ * @param {string} kernel_id 実行カーネルid
+ * @returns {none}
  */
-async function scoring(p_id, question_node) {
+async function scoring(p_id, q_id, kernel_id) {
+    var question_node = document.querySelector(`.node.question[q-id="${q_id}"]`)
     var params = extractQuestionNode(question_node, mode=0)
     // POST /problems/<p_id>/scoring
     var res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
@@ -110,10 +113,11 @@ async function scoring(p_id, question_node) {
             "ptype": params.ptype,     // int:   0 or 1
             "q_id": params.q_id,       // str:   e.g. "1"
             "answers": params.answers, // list:  ['ans', 'ans', ...]
-            "kernel_id": sessionStorage["kernel_id"] 
+            "kernel_id": kernel_id     // str:   uuid
         })})
     var json = await res.json()
     if (res.ok) {
+        console.log(`[scoring] ${json.DESCR}`)
         question_node.setAttribute("progress", json.progress)
         var toast = question_node.querySelector(".for-toast > .toast")
         toast.querySelector(".toast-body").innerHTML = json.content
@@ -126,10 +130,11 @@ async function scoring(p_id, question_node) {
 }
 /**
  * Code Testingをキャンセルする
- * @param {str} p_id 問題id
+ * @param {string} p_id       問題id
+ * @param {string} kernel_id  実行カーネルのid
  */
-async function cancelScoring(p_id) {
-    var res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${sessionStorage["kernel_id"]}`, {
+async function cancelScoring(p_id, kernel_id) {
+    var res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${kernel_id}`, {
         method: "POST",
     })
     var json = await res.json()
@@ -206,36 +211,3 @@ function extractQuestionNode(elem, mode) {
     }
 }
 
-function observeForm() {
-    var initialFormValue = {}
-    document.querySelectorAll("input, select").forEach(elem => {
-        var p_id = elem.closest("tr").getAttribute("target")
-        if (!(p_id in initialFormValue)) {
-            initialFormValue[p_id] = {}
-        }
-        var tag = elem.getAttribute("for")
-        initialFormValue[p_id][tag] = elem.value
-    })
-
-    document.querySelectorAll("input, select").forEach(elem => {
-        elem.addEventListener("change", () => {
-            var tr = elem.closest("tr")
-            var p_id = tr.getAttribute("target")
-            var changed = {}
-            tr.querySelectorAll("input, select").forEach(elem => {
-                var tag = elem.getAttribute("for")
-                changed[tag] = elem.value
-            })
-            if (initialFormValue[p_id]["title"] != changed["title"]
-                || initialFormValue[p_id]["category"] != changed["category"]
-                || initialFormValue[p_id]["status"] != changed["status"]) {
-                    changedParams[p_id] = changed
-                }
-            else {
-                delete changedParams[p_id]
-            }
-            console.log(changedParams)
-        })
-    })
-
-}

@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
 
 {% block head %}
+<title>PyPLAS - problem</title>
+<script src='https://cdn.jsdelivr.net/gh/rsms/markdown-wasm@v1.2.0/dist/markdown.js'></script>
 {% end %}
 
 {% block head-nav-li %}
@@ -77,14 +79,14 @@
             <div class="tab-content border bg-light" id="nav-tabContent">
                 {% import markdown %}
                 {% set md = markdown.Markdown() %}
-                <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
-                    {% raw md.convert(page["header"]["summary"]) %}
+                <div class="tab-pane fade show active p-2 explain" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
+                    {% raw page["header"]["summary"] %}
                 </div>
-                <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
-                    {% raw md.convert(page["header"]["source"]) %}
+                <div class="tab-pane fade p-2 explain" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
+                    {% raw page["header"]["source"] %}
                 </div>
-                <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-                    {% raw md.convert(page["header"]["env"]) %}
+                <div class="tab-pane fade p-2 explain" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
+                    {% raw page["header"]["env"] %}
                 </div>
             </div>
         </div>
