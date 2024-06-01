@@ -1,8 +1,7 @@
 {% extends "layout.html" %}
 
 {% block head %}
-<title>PyPLAS - problem</title>
-<script src='https://cdn.jsdelivr.net/gh/rsms/markdown-wasm@v1.2.0/dist/markdown.js'></script>
+<title>PyPLAS - {{ title }}</title>
 {% end %}
 
 {% block head-nav-li %}
@@ -67,7 +66,7 @@
 {% block main %}
 <main class="col px-3">
     <div class="my-3" id="summary">
-        <p class="fs-3 border-bottom border-dark ps-1">Problem: {{ title }}</p>
+        <p class="fs-3 border-bottom border-dark ps-1">{{ title }}</p>
         <div class="ps-3">
             <nav>
                 <div class="nav nav-tabs" id="nav-tab" role="tablist">
@@ -77,8 +76,6 @@
                 </div>
             </nav>
             <div class="tab-content border bg-light" id="nav-tabContent">
-                {% import markdown %}
-                {% set md = markdown.Markdown() %}
                 <div class="tab-pane fade show active p-2 explain" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
                     {% raw page["header"]["summary"] %}
                 </div>
@@ -110,6 +107,16 @@
     <div class="mt-5 position-sticky" style="top: 3rem;">
         <nav id="question-nav" class="h-100 flex-column align-items-stretch pe-4">
             <nav class="nav nav-pills flex-column">
+                {% set i = 1%}
+                {% for d in page["body"] %}
+                    {% if d["type"] == "question" %}
+                        <a class="nav-link position-relative" href="#q-id-{{ d['q_id'] }}" progress="{{ q_status.get(str(d['q_id']), 0) }}">
+                            Q. {{ i }}
+                            <span class="progress-badge badge position-absolute" style="right: 5%;"> </span>
+                        </a>
+                        {% set i = i + 1%}
+                    {% end%}
+                {% end %}
             </nav>
         </nav>
     </div>

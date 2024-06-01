@@ -2,8 +2,8 @@
 
 {% block head %}
 <title>PyPLAS - edit</title>
-<script src='https://cdn.jsdelivr.net/gh/rsms/markdown-wasm@v1.2.0/dist/markdown.js'></script>
 <link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
+<script src="{{ static_url('js/modules/create-utils.js') }}"></script>
 {% end %}
 
 {% block head-nav-li %}
@@ -72,9 +72,6 @@
                     {% module NodeControl() %}
                 {% end %}
             {% end %}
-            {% for i in range(100) %}
-                {% module Code(content="def say_hello():\n  print('hello')\n  return None") %}
-            {% end %}
             <i class="bi bi-file-earmark-code"></i>
         </div>
     </div>
@@ -82,5 +79,5 @@
 <div class="col-xxl-2 d-none d-xxl-block bg-white border-start">
 </div>
 
-<script src="{{ static_url('js/problem-event-listeners.js') }}"></script>
+<script src="{{ static_url('js/problem-event-listeners.js') }}" type="module"></script>
 {% end %}

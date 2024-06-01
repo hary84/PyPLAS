@@ -210,4 +210,22 @@ function extractQuestionNode(elem, mode) {
         }
     }
 }
-
+/**
+ * ユーザーの入力を保存する
+ * @param {string} p_id 
+ */
+async function saveUserData(p_id) {
+    var q_content = {}
+    document.querySelectorAll(".question").forEach(elem => {
+        var params = extractQuestionNode(elem, mode=0)
+        q_content[params.q_id] = params.answers
+    })
+    var res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "q_content": q_content
+        })})
+    var json = await res.json()
+    console.log(`[save] ${json.DESCR}`)
+}

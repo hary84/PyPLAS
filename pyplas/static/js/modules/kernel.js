@@ -1,8 +1,5 @@
 
 class KernelHandler {
-    constructor() {
-        this.setUpKernel()
-    }
     /**
      * インスタンス変数の初期化とカーネルの起動を行う
      */
@@ -107,7 +104,7 @@ class KernelHandler {
         console.log(`[KernelHandler] ${json.DESCR}`)
     }
     /**
-     * websocketを用いてコードの実行命令を出す
+     * execute_task_qの先頭の.node要素に対してwebsocketを用いてコードの実行命令を出す
      */
     executeCode = () => {
         var node = this.execute_task_q[0]
@@ -124,9 +121,10 @@ class KernelHandler {
         this.execute_counter += 1
     }
     /**
-     * Nodeを実行タスクキュー(execute_task_q)に格納する
+     * nodeを実行タスクキュー(execute_task_q)に格納する
+     * 
      * execute_task_qが空だった場合、即座に実装指示を出す
-     * @param {DOM} node 
+     * @param {DOM} node .node要素
      */
     execute = async (node) => {
         // 実行中のNodeと実行したいNodeが同じ場合
@@ -145,3 +143,5 @@ class KernelHandler {
         }
     } 
 }
+
+const kh = new KernelHandler()

@@ -5,6 +5,7 @@
  */
 function registerAceEditor(elem) {
     const defaultLineNumbers = 5
+    const maxLines = 25
     var id = crypto.randomUUID()
     elem.closest(".node").setAttribute("node-id", id)
 
@@ -12,13 +13,10 @@ function registerAceEditor(elem) {
         mode: "ace/mode/python",
         theme: "ace/theme/one_dark",
         showPrintMargin: false,
+        maxLines: maxLines,
+        minLines: defaultLineNumbers,
         readOnly: elem.classList.contains("readonly")
     });
-
-    resizeEditor(editor, defaultLineNumbers)
-    editor.getSession().on("change", function(delta) {
-        resizeEditor(editor, defaultLineNumbers)
-    })
 }
 /**
  * elemをmarkdown ace editorとして登録する 
@@ -26,62 +24,25 @@ function registerAceEditor(elem) {
  * @return {none}
  */
 function registerAceMDE(elem) {
-    const defaultLineNumbers = 3
+    const defaultLineNumbers = 5
+    const maxLines = 40
 
     var editor = ace.edit(elem, {
         mode: "ace/mode/markdown",
-        theme: "ace/theme/chrome",
+        theme: "ace/theme/sql_server",
         showGutter: false,
         highlightActiveLine: false,
-    })
-    resizeEditor(editor, defaultLineNumbers)
-
-    editor.getSession().on("change", function(delta) {
-        resizeEditor(editor, defaultLineNumbers)
-    })
-    var for_preview = elem.nextElementSibling
-    for_preview.addEventListener("dblclick", e=> showEditor(elem))
-    elem.addEventListener("keydown", e => {
-        if (e.ctrlKey && e.keyCode == 13) { // Ctrl-Enter
-            showPreview(elem)
-        }
+        maxLines: maxLines,
+        minLines: defaultLineNumbers
     })
 }
-/**
- * editorをリサイズする
- * @param {ace.editor} editor 
- * @param {*} defaultLineNumbers 最小行数 
- */
-function resizeEditor(editor, defaultLineNumbers) {
-    const lh = 1 //rem
-    var newHeight = editor.getSession().getScreenLength() * lh
-                          + editor.renderer.scrollBar.getWidth() 
-    if (newHeight < defaultLineNumbers) {
-        newHeight = defaultLineNumbers
-    } else {
-        newHeight += 1
-    }
-    editor.container.style.height = newHeight.toString() + "rem"
-    editor.resize()   
-}
-
 /**
  * elemに含まれるコードブロックをhighlight.jsでハイライトする
  * @param {*} elem 
  */
 function highlighting(elem) {
     elem.querySelectorAll("pre code").forEach(elem => {
-        // hljs.highlightBlock(elem)
-        var editor = ace.edit(elem, {
-            mode: "ace/mode/python",
-            theme: "ace/theme/one_dark",
-            showPrintMargin: false,
-            highlightActiveLine: false,
-            highlightGutterLine: false,
-            readOnly: true
-        });
-        editor.container.style.height = String(editor.getSession().getScreenLength()) + "rem"
-        editor.resize()
+        hljs.highlightBlock(elem)
     })
 }
 /**
@@ -93,7 +54,7 @@ function highlighting(elem) {
 function showPreview(elem) {
     var mde = elem.closest(".mde")
     var editor = ace.edit(elem)
-    var html = markdown.parse(editor.getValue())
+    var html = marked.parse(editor.getValue())
     var preview = mde.querySelector(".for-preview")
     preview.innerHTML = html
     highlighting(preview)
@@ -103,7 +64,7 @@ function showPreview(elem) {
  * editorを表示
  * 
  * キーボードショートカットから実行
- * @param {DOM} elem .node-mde要素 
+ * @param {DOM} elem .mde内の任意の要素 
  */
 function showEditor(elem) {
     var mde = elem.closest(".mde")
@@ -118,7 +79,7 @@ function showEditor(elem) {
 function togglePreview(e) {
     var mde = e.closest(".mde")
     var editor = ace.edit(mde.querySelector(".node-mde"))
-    var html = markdown.parse(editor.getValue())
+    var html = marked.parse(editor.getValue())
     var preview = mde.querySelector(".for-preview")
     preview.innerHTML = html
     highlighting(preview)

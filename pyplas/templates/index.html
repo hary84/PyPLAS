@@ -22,7 +22,7 @@
 {% block main %}
 <main class="col px-3 vh-100 mt-3">
     <div class="" id="progress">
-         {% if len(categories) != 0 %}
+        {% if len(categories) != 0 %}
             <p class="fs-3 border-bottom border-dark">Categories</p>
             <ul class="list-group">
                 {% for cat in categories %}
@@ -31,41 +31,39 @@
                     </li>
                 {% end %}
             </ul>
-         {% elif len(problem_list) != 0 %}
+        {% elif len(problem_list) != 0 %}
             <p class="fs-3 border-bottom border-dark">Problems</p>
             <ul class="list-group">
-            {% for p in problem_list %}
-                <table class="table table-hover ms-3">
-                    <thead>
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">title</th>
-                            <th scope="col">progress</th>
-                        </tr>
-                    </thead>
+            <table class="table table-hover ms-3">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">title</th>
+                        <th scope="col">progress</th>
+                    </tr>
+                </thead>
+                {% for i, d in enumerate(problem_list) %}
                     <tbody>
-                        {% for i, d in enumerate(problem_list) %}
-                            <tr onclick="location.href='./problems/{{ d['p_id']}}'">
-                                <th>{{ i }}</th>
-                                <td scope="row">{{ d['title'] }}</td>
-                                <td>
-                                    {% if d['p_status'] == 0 %}
-                                        <i class="bi bi-door-closed text-danger"></i>
-                                        未学習
-                                    {% elif d['p_status'] == 1 %}
-                                        <i class="bi bi-slash-circle text-warning"></i>
-                                        学習中
-                                    {% elif d['p_status'] == 2 %}
-                                        <i class="bi bi-check-circle text-success"></i>
-                                        完了
-                                    {% end %}
-                                </td>
-                            </tr>
-                        {% end %}
+                        <tr onclick="location.href='./problems/{{ d['p_id']}}'">
+                            <th>{{ i }}</th>
+                            <td scope="row">{{ d['title'] }}</td>
+                            <td>
+                                {% if d['p_status'] == 0 %}
+                                    <i class="bi bi-door-closed text-danger"></i>
+                                    未学習
+                                {% elif d['p_status'] == 1 %}
+                                    <i class="bi bi-slash-circle text-warning"></i>
+                                    学習中
+                                {% elif d['p_status'] == 2 %}
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    完了
+                                {% end %}
+                            </td>
+                        </tr>
                     </tbody>
-                </table>        
-      {% end %}
-    {% end %}
+                {% end %}
+            </table>        
+        {% end %}
   </div>
 
 </main>

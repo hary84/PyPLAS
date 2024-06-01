@@ -5,18 +5,21 @@
     user: int (0 or 1)
     allow_del: bool 
 -->
-<div class="code node px-2 my-2">
-    <div class="node-side">
+<div class="code node px-2 my-2" run-state="idle">
+    <div class="node-side bg-body-secondary rounded-start-2 border border-dark-subtle border-1">
         <button class="btn-exec btn btn-sm btn-outline-dark">
             <i class="bi bi-caret-right-fill blocked-bi text-dark"></i>
         </button>
-        <button class="btn-interrupt btn btn-sm btn-outline-dark executing">
+        <button class="btn-interrupt executing btn btn-sm btn-outline-dark">
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             <span class="visually-hidden">Loading...</span>
         </button>
+        <button class="btn-interrupt waiting btn btn-sm btn-outline-dark">
+            <i class="bi bi-stop-circle text-dark blocked-bi"></i>
+        </button>
     </div>
-    <div class="node-prime position-relative">
-        <div class="code-config bg-secondary-subtle m-1">
+    <div class="node-prime position-relative w-100">
+        <div class="code-config bg-secondary-subtle m-1 d-flex position-absolute end-0 top-0">
             <!-- creator mode -->
             {% if user == 1 %}
                 <input class="form-check-input readonly-flag my-auto mx-1" type="checkbox" {{ 'checked' if readonly else "" }}>
@@ -28,7 +31,7 @@
                 <button class="btn btn-danger" onclick="delme(this)"><i class="bi bi-trash blocked-bi"></i></button>
             {% end %}
         </div>
-        <div class="node-code border rounded {{ 'readonly' if readonly else None }} w-100">{{ content }}</div>
-        <div class="return-box border rounded"></div>            
+        <div class="node-code editor border rounded-end-2 {{ 'readonly' if readonly else '' }} w-100">{%raw content %}</div>
+        <div class="return-box border border-dark-subtle rounded-end-1"></div>            
     </div>
 </div>

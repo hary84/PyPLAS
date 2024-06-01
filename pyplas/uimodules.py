@@ -1,5 +1,4 @@
 from bs4 import BeautifulSoup
-import markdown
 from tornado.web import UIModule 
 from tornado.escape import to_unicode
 
@@ -47,9 +46,6 @@ class Explain(UIModule):
         """
         if type(content) == list:
             content = "\n".join(content)
-        # if not editor:
-        #     md = markdown.Markdown()
-        #     content = md.convert(content)
             
         return self.render_string("modules/explain.html",
                                   editor=editor,
