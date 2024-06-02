@@ -39,9 +39,13 @@
   padding: 1rem 0rem;
   .node-control {
       margin-left: 1rem;
+      height: 1.5rem;
   }
 } /* 共通 内部にNodeオブジェクトが存在する場合 */
 :is(.p-content, .q-content):has(:is(.explain, .code, .question)) {
+  .node-control .btn-group .btn {
+      display: none;
+  }
   .node-control:hover {
       .btn-group {
           .btn {
@@ -52,9 +56,6 @@
               border-radius: 0;
           }
       }
-  }
-  .node-control .btn-group .btn {
-      display: none;
   }
   .bi-file-earmark-code {
       display: none;

@@ -303,8 +303,8 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         global mult_km
 
         self.kernel_id = id
-        self.exec = tornado.locks.Event()
-        self.exec.set()
+        # self.exec = tornado.locks.Event()
+        # self.exec.set()
         await mult_km.updated.wait()
         self.km: AsyncKernelManager = mult_km.get_kernel(self.kernel_id)
         self.kc: AsyncKernelClient = self.km.client()
@@ -322,11 +322,11 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         await self.kc.wait_for_ready()
         received_msg = json.loads(received_msg)
         print(f"[WS] WebSocket receive {received_msg}")
-        await self.exec.wait()
+        # await self.exec.wait()
         _code = received_msg.get("code", None)
         self.node_id = received_msg.get("node_id", None)
         self.kc.execute(_code)
-        self.exec.clear()
+        # self.exec.clear()
         ioloop.IOLoop.current().spawn_callback(self.messaging)
 
     async def messaging(self):
@@ -342,7 +342,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
                     self.write_message(json.dumps({
                         "msg_type": "exec-end-sig", 
                         "node_id": self.node_id}))
-                    self.exec.set()
+                    # self.exec.set()
                     break
                 else:
                     output.update({"node_id": self.node_id})

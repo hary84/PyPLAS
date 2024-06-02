@@ -20,8 +20,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         })
     }
     hljs.highlightAll()
+
     // カーネルの起動, wsの接続
     await kh.setUpKernel()
+    watchValue(kh, "running", setExecuteAnimation)
+    watchValue(kh, "msg", renderMessage)
 
     // イベントリスナー (左サイドバー)
     document.querySelector("#kernel-ops").addEventListener("click", async e => {
@@ -30,7 +33,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             target.classList.add("disabled")
               // kernel restart ボタン
             if (target.classList.contains("btn-restart")) {
-                kh.ws.close()
                 await kh.setUpKernel()
             } // kernel interrupt ボタン
             else if (target.classList.contains("btn-interrupt")) {
@@ -48,16 +50,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     })
     const manageScoring = {}
 
-    // イベントリスナー (メイン)
+    // イベントリスナー (メイン, click)
     document.querySelector("#sourceCode").addEventListener("click", async e => {
         const target = e.target.closest(".btn-exec, .btn-interrupt, .btn-testing, .btn-cancel")
         if (target) {
             target.classList.add("disabled")
               // execute ボタン
             if (target.classList.contains("btn-exec")) { 
-                const node = target.closest(".code")
-                node.setAttribute("run-state", "suspending")
-                await kh.execute(node)
+                const node_id = target.closest(".code").getAttribute("node-id")
+                await kh.execute(node_id)
             } // interrupt ボタン
             else if (target.classList.contains("btn-interrupt")) {
                 await kh.kernelInterrupt()
@@ -81,26 +82,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     // イベントリスナー (Key down)
     window.addEventListener("keydown", async e => {
         // Ctrl-Enter
-        if (e.ctrlKey && e.code == "Enter") {
+        if (e.ctrlKey && e.key == "Enter") {
             const target = e.target.closest(".mde, .code")
               // In MDE
             if (target.classList.contains("mde")) {
                 showPreview(target.querySelector(".node-mde"))
             } // In Python editor
             else if (target.classList.contains("code")) {
-                if (target.getAttribute("run-state") == "suspending") {
-                    await kh.kernelInterrupt()
-                }
-                else {
-                    target.setAttribute("run-state", "suspending")
-                    await kh.execute(target)
+                kh.execute(target.getAttribute("node-id"))
+            }
+        }
+        // Ctrl-S
+        else if (e.ctrlKey && e.key == "s") {
+            if (e.target.tagName == "BODY") {
+                if (parent == "problems") {
+                    e.preventDefault()
+                    saveUserData(p_id)
+                } else if (parent == "create") {
+                    e.preventDefault()
+                    registerProblem(p_id)
                 }
             }
         }
     })
-
-    watchValue(kh, "running", setExecuteAnimation)
-    watchValue(kh, "msg", renderMessage)
+    // イベントリスナー (dblclick)
+    window.addEventListener("dblclick", e => {
+        const target = e.target.closest(".for-preview")
+        if (target) {
+            if (target.classList.contains("for-preview")) {
+                showEditor(target)
+            }
+        }
+    })
 })
 
 /**
@@ -111,7 +124,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 function setExecuteAnimation(kh, newValue) {
     // コード実行中(kh.running == true)の時
     if (newValue) {
-        kh.execute_task_q[0].setAttribute("run-state", "running")
+        getNodeElement(kh.execute_task_q[0]).setAttribute("run-state", "running")
+        kh.execute_task_q.slice(1, ).forEach(id => {
+            getNodeElement(id).setAttribute("run-state", "suspending")
+        })
     // 非コード実行中(kh.running == false)の時
     } else {
         document.querySelectorAll(".code").forEach(elem => {
@@ -123,7 +139,7 @@ function setExecuteAnimation(kh, newValue) {
 function renderMessage(kh, newValue) {
     if (newValue) {
         var content = newValue.content
-        var return_form = document.querySelector(`div[node-id='${newValue.node_id}'] .return-box`)
+        var return_form = getNodeElement(newValue.node_id).querySelector(".return-box")
         // console.log(newValue.msg_type)
         switch (newValue.msg_type) {
             case "execute_result":
@@ -139,14 +155,6 @@ function renderMessage(kh, newValue) {
             case "error":
                 var error_msg = content["traceback"].join("\n")
                 renderResult(error_msg, return_form, "error")
-                kh.execute_task_q = [kh.execute_task_q[0]]
-                break;
-            case "exec-end-sig":
-                kh.running = false
-                kh.execute_task_q.shift()
-                if (kh.execute_task_q[0]) {
-                    kh.executeCode()
-                }
                 break;
         }
     }

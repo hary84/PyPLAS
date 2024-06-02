@@ -1,31 +1,33 @@
 
 /**
  * ページ全体をパースしてサーバーに登録を要請する
+ * 
+ * p_id == 'new'の場合、新規登録, それ以外の値の場合は既存の問題の更新
  * @param {str} p_id 問題id
  * @returns {none}
  */
 async function registerProblem(p_id) {
 
-    var title = document.querySelector("#titleForm").value
+    const title = document.querySelector("#titleForm").value
     if (title.length == 0) {
         alert("input problem title")
         return 
     }
     // 概要欄のSummary, Data Source, Environmentを取得
-    var headers = []
+    const headers = []
     document.querySelectorAll("#summary .node-mde").forEach(function(elem) {
-        var editor = ace.edit(elem)
+        const editor = ace.edit(elem)
         headers.push(editor.getValue())
     })
     // The Source CodeからNodeを取得
-    var body = []
-    var answers = {}
-    var q_id = 1
+    const body = []
+    const answers = {}
+    const q_id = 1
     document.querySelectorAll("#sourceCode > .p-content > .node").forEach(function(elem) {
         // Explain Node
         if (elem.classList.contains("explain")) {
-            var editor = ace.edit(elem.querySelector(".node-mde"))
-            var content = editor.getValue()
+            const editor = ace.edit(elem.querySelector(".node-mde"))
+            const content = editor.getValue()
             body.push({
                 "type": "explain",
                 "content": content
@@ -33,9 +35,9 @@ async function registerProblem(p_id) {
         }
         // Code Node
         else if (elem.classList.contains("code")) {
-            var editor = ace.edit(elem.querySelector(".node-code"))
-            var content = editor.getValue()
-            var readonly = elem.querySelector(".readonly-flag").checked
+            const editor = ace.edit(elem.querySelector(".node-code"))
+            const content = editor.getValue()
+            const readonly = elem.querySelector(".readonly-flag").checked
             body.push({
                 "type": "code",
                 "content": content,
@@ -45,7 +47,7 @@ async function registerProblem(p_id) {
         // Question Node
         else if (elem.classList.contains("question")) {
             elem.setAttribute("q-id", q_id)
-            var params = extractQuestionNode(elem, mode=1)
+            const params = extractQuestionNode(elem, mode=1)
             answers[`${q_id}`] = params.answers 
             body.push({
                 "type": "question",             // str
@@ -58,24 +60,24 @@ async function registerProblem(p_id) {
             q_id += 1
         }
     })
-    var page = {
+    const page = {
         "header": {"summary": headers[0],
                    "source": headers[1],
                    "env": headers[2]},
         "body": body
     }
-    var send_msg = {
+    const send_msg = {
         "title": title,       // str
         "page": page,         // dict
         "answers": answers    // dict
     }
 
-    var res = await fetch(`${window.location.origin}/create/${p_id}/register`,{
+    const res = await fetch(`${window.location.origin}/create/${p_id}/register`,{
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(send_msg)
     })
-    var json = await res.json()
+    const json = await res.json()
     if (res.ok) {
         console.log(`[register] ${json.DESCR}`)
         window.location.href = `/create/${json.p_id}`
@@ -89,16 +91,19 @@ async function registerProblem(p_id) {
  * @param {string} p_id 対象となる問題のp_id
  */
 async function deleteProblem(p_id) {
-    var res = await fetch(`${window.location.origin}/create/${p_id}`, {
-        method: "DELETE",
-    })
-    var json = await res.json()
-    console.log(`[deleteProblem] ${json.DESCR}`)
-    if(!res.ok) {
-        alert(json.DESCR)
-    }
-    else {
-        window.location.reload()
+    const agree = confirm("本当に削除しますか？")
+    if (agree) {
+        const res = await fetch(`${window.location.origin}/create/${p_id}`, {
+            method: "DELETE",
+        })
+        const json = await res.json()
+        console.log(`[deleteProblem] ${json.DESCR}`)
+        if(!res.ok) {
+            alert(json.DESCR)
+        }
+        else {
+            window.location.reload()
+        }
     }
 }
 /**
@@ -106,12 +111,12 @@ async function deleteProblem(p_id) {
  * @param {array} changedParams {p_id: [title, category, status]}
  */
 async function updateProfiles(changedParams) {
-    var res = await fetch(`${window.location.origin}/create/profile`, {
+    const res = await fetch(`${window.location.origin}/create/profile`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({"profiles": changedParams})
     })
-    var json = await res.json()
+    const json = await res.json()
     if (res.ok) {
         window.location.reload()
     }
@@ -126,23 +131,23 @@ async function updateProfiles(changedParams) {
  * を格納する。
  */
 function observeForm() {
-    var initialFormValue = {}
+    const initialFormValue = {}
     document.querySelectorAll("input, select").forEach(elem => {
-        var p_id = elem.closest("tr").getAttribute("target")
+        const p_id = elem.closest("tr").getAttribute("target")
         if (!(p_id in initialFormValue)) {
             initialFormValue[p_id] = {}
         }
-        var tag = elem.getAttribute("for")
+        const tag = elem.getAttribute("for")
         initialFormValue[p_id][tag] = elem.value
     })
 
     document.querySelectorAll("input, select").forEach(elem => {
         elem.addEventListener("change", () => {
-            var tr = elem.closest("tr")
-            var p_id = tr.getAttribute("target")
-            var changed = {}
+            const tr = elem.closest("tr")
+            const p_id = tr.getAttribute("target")
+            const changed = {}
             tr.querySelectorAll("input, select").forEach(elem => {
-                var tag = elem.getAttribute("for")
+                const tag = elem.getAttribute("for")
                 changed[tag] = elem.value
             })
             if (initialFormValue[p_id]["title"] != changed["title"]

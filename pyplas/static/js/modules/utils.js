@@ -1,7 +1,15 @@
 /**
+ * node-id属性を持ち、classにnodeを持つelementを返す
+ * @param {string} node_id 
+ * @returns {Element}
+ */
+function getNodeElement(node_id) {
+    return document.querySelector(`div[node-id='${node_id}'].node`)
+}
+/**
  * HTML文字列からdom要素に変換する
  * @param {string} str 
- * @returns {[DOM]}
+ * @returns {HTMLCollection}
  */
 function domFromStr(str) {
     var div = document.createElement("div")
