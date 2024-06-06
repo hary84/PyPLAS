@@ -1,3 +1,7 @@
 /venv/ 
 /dev/
 __pycache__/
+
+
+/pyplas/*.db
+!/pyplas/pyplas.db

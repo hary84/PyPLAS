@@ -22,7 +22,7 @@ async function registerProblem(p_id) {
     // The Source CodeからNodeを取得
     const body = []
     const answers = {}
-    const q_id = 1
+    let q_id = 1
     document.querySelectorAll("#sourceCode > .p-content > .node").forEach(function(elem) {
         // Explain Node
         if (elem.classList.contains("explain")) {

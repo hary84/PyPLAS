@@ -1,9 +1,11 @@
+import argparse
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 import signal
 import sqlite3
-from util import ApplicationHandler, InvalidJSONError, custom_exec, datetime_encoda
+from util import (ApplicationHandler, InvalidJSONError, custom_exec, datetime_encoda, 
+                  print_traceback, DBHandler)
 import uuid
 from typing import Optional, Tuple
 import tornado 
@@ -17,8 +19,19 @@ from jupyter_client.utils import run_sync
 import uimodules
 from uimodules import *
 
+# parse command-line argment
+parser = argparse.ArgumentParser(description="PyPLAS server options")
+parser.add_argument("-p", "--port", default=8888, type=str, help="Port number to run the server on")
+parser.add_argument("-d", "--develop", action="store_true", help="Run the server in developer mode")
+args = parser.parse_args()
+
+# set up global variables
 mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
+db_handler = DBHandler(page_path=os.path.join(os.getcwd(), "pyplas.db"),
+                       user_path=os.path.join(os.getcwd(), "user.db"),
+                       dev_user_path=os.path.join(os.getcwd(), "dev-user.db"),
+                       dev_mode=args.develop)
 
 class MainHandler(ApplicationHandler):
     
@@ -29,20 +42,20 @@ class MainHandler(ApplicationHandler):
     def get(self):
         """
         PATH
-            * / -> カテゴリ一覧の表示
-            * /?category=<category> -> そのカテゴリのすべての問題を表示
+            * / → カテゴリ一覧の表示
+            * /?category=<category> → そのカテゴリのすべての問題を表示
         """
         if self.cat is None: # カテゴリ一覧を表示
             sql = r"""SELECT cat_name FROM categories"""
-            cat = self.get_from_db(sql)
+            cat = db_handler.get_from_db(sql)
             cat = [r["cat_name"] for r in cat]
             p_list = []
         else: # あるカテゴリに属する問題一覧を表示
-            sql = r"""SELECT pages.p_id, pages.title, COALESCE(progress.p_status, 0) AS p_status 
+            sql = r"""SELECT pages.p_id, pages.title, COALESCE(user.progress.p_status, 0) AS p_status 
             FROM pages INNER JOIN categories ON pages.category = categories.cat_id
-            LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
+            LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
             WHERE categories.cat_name = :cat_name AND pages.status = 1"""
-            p_list = self.get_from_db(sql, cat_name=self.cat)
+            p_list = db_handler.get_from_db(sql, cat_name=self.cat)
             p_list = [r for r in p_list]
             cat = []
 
@@ -68,13 +81,13 @@ class ProblemHandler(ApplicationHandler):
         # GET /problems/<p_id>
         elif p_id is not None and action is None: 
             sql = r"""SELECT pages.title, pages.page, 
-                COALESCE(progress.q_status, '{}') AS q_status, 
-                COALESCE(progress.q_content, '{}') AS q_content
+                COALESCE(user.progress.q_status, '{}') AS q_status, 
+                COALESCE(user.progress.q_content, '{}') AS q_content
                 FROM pages 
-                LEFT OUTER JOIN progress ON pages.p_id = progress.p_id
+                LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
                 WHERE pages.p_id=:p_id AND status=1"""
             try:
-                page = self.get_from_db(sql, p_id=p_id)
+                page = db_handler.get_from_db(sql, p_id=p_id)
                 assert len(page) != 0
             except (AssertionError, sqlite3.Error) as e:
                 print(f"[ERROR] {e.__class__.__name__}: {e}")
@@ -126,7 +139,7 @@ class ProblemHandler(ApplicationHandler):
                     self.set_status(404)
                     self.finish({"DESCR": f"{self.request.full_url()} is not found."})
         except (InvalidJSONError, tornado.web.MissingArgumentError, sqlite3.Error):
-            self.print_traceback()
+            print_traceback()
             self.set_status(400)
             self.finish({"DESCR": "Invalid request message or Invalid url query"})
 
@@ -135,7 +148,7 @@ class ProblemHandler(ApplicationHandler):
         問題<p_id>内のすべてのQuestion Nodeのユーザー入力を
         progressテーブルのq_contentに保存する
         """
-        write_content = r"""INSERT INTO progress(p_id, q_status, q_content)
+        write_content = r"""INSERT INTO user.progress(p_id, q_status, q_content)
             VALUES (:p_id, '{}', :q_content) 
             ON CONFLICT(p_id) DO UPDATE SET
             q_content=:q_content
@@ -144,12 +157,12 @@ class ProblemHandler(ApplicationHandler):
             for key, value in self.json["q_content"].items():
                 assert isinstance(key, str), "data key is invalid type. expected 'str'"
                 assert isinstance(value, list), "data value is invalid type. expected 'list'"
-            self.write_to_db(write_content, p_id=p_id, 
+            db_handler.write_to_db(write_content, p_id=p_id, 
                             q_content=json.dumps(self.json["q_content"]))
         except AssertionError:
             raise InvalidJSONError
         except sqlite3.Error:
-            self.print_traceback()
+            print_traceback()
             raise
         else:
             self.finish({"body": json.dumps(self.json["q_content"]),
@@ -158,15 +171,22 @@ class ProblemHandler(ApplicationHandler):
     async def scoring(self, p_id:str) -> None:
         """
         問題<p_id>内の質問<q_id>について採点を行う
+
+        Parameters
+        ----------
+        p_id: str
+            問題のid
         """
         sql = r"""SELECT answers FROM pages WHERE p_id=:p_id"""
-        c_answers = self.get_from_db(sql, p_id=p_id)
+        c_answers = db_handler.get_from_db(sql, p_id=p_id)
         try:
             assert len(c_answers) != 0, f"Problem({p_id}) does not exist."
             c_answers: dict = json.loads(c_answers[0]["answers"])
+
             # get all question's <q_id>
             keys: list = c_answers.keys() 
             assert len(keys) != 0, f"Problem({p_id}) has no questions."
+
             # get answers for specified <q_id>
             self.target_answers:list = c_answers.get(self.json["q_id"], []) 
             assert len(self.target_answers) != 0, f"Question({self.json['q_id']}) does not exist."
@@ -176,6 +196,7 @@ class ProblemHandler(ApplicationHandler):
             # html problem
             if self.json["ptype"] == 0: 
                 result, content = self.html_scoring()
+
             # code test problem
             elif self.json["ptype"] == 1: #  
                 result, content = await self.code_scoring()
@@ -187,7 +208,7 @@ class ProblemHandler(ApplicationHandler):
                                                  content=json.dumps(self.json["answers"]),
                                                  keys=keys) 
             except sqlite3.Error:
-                self.print_traceback()
+                print_traceback()
                 raise 
             else:
                 self.finish({"content": content,
@@ -197,6 +218,11 @@ class ProblemHandler(ApplicationHandler):
     def canceling(self, p_id:Optional[str]=None) -> None:
         """
         カーネル<kernel_id>で実行中のコードテスティングを中断する
+
+        Parameters
+        ----------
+        p_id: str
+            問題のid
         """
         executor = ProblemHandler.execute_pool.pop(self.query["kernel_id"], None)
         if executor is not None:
@@ -267,10 +293,10 @@ class ProblemHandler(ApplicationHandler):
         """
         採点結果logテーブル, progressテーブルに記録する
         """
-        write_log = r"""INSERT INTO logs(p_id, q_id, content, result) 
-            VALUES(:p_id, :q_id, :content, :status)
+        write_log = r"""INSERT INTO user.logs(p_id, category, q_id, content, result) 
+            VALUES(:p_id, 1, :q_id, :content, :status)
             """
-        write_state = r"""INSERT INTO progress(p_id, q_status, q_content)
+        write_state = r"""INSERT INTO user.progress(p_id, q_status, q_content)
             VALUES (
             :p_id,
             JSON_OBJECT(:q_id, :status),
@@ -279,7 +305,7 @@ class ProblemHandler(ApplicationHandler):
             q_status=JSON_SET(q_status, '$.' || :q_id, :status),
             q_content=JSON_SET(q_content, '$.' || :q_id, JSON(:content))
             """
-        update_state = r"""UPDATE progress 
+        update_state = r"""UPDATE user.progress 
             SET p_status= 
             CASE
                 WHEN {condition} AND SUM(stat.value != 2) = 0 THEN 2 
@@ -291,7 +317,7 @@ class ProblemHandler(ApplicationHandler):
                 [r"JSON_TYPE(q_status, '$.{key}') IS NOT NULL".format(key=key) 
                  for key in keys]
             ))
-        self.write_to_db((write_log, write_state, update_state), 
+        db_handler.write_to_db((write_log, write_state, update_state), 
                          p_id=p_id, q_id=q_id,
                          status=q_status,
                          content=content)
@@ -313,11 +339,14 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         print(f"[WS] WS is connecting with {self.kernel_id}")
 
     async def on_message(self, received_msg: dict):
-        """メッセージ受信時の処理
+        """
+        メッセージ受信時の処理
 
+        Parameters
+        ----------
         received_msg: dict
-            code: str
-            node_id: str
+            * <key> code    | <value> 実行したいコード
+            * <key> node_id | <value> 実行ノードのid
         """
         await self.kc.wait_for_ready()
         received_msg = json.loads(received_msg)
@@ -529,9 +558,9 @@ class ProblemCreateHandler(ApplicationHandler):
         # GET /create
         if p_id is None and action is None:
             sql = r"""SELECT p_id, title, category, status FROM pages"""
-            problems = self.get_from_db(sql)
+            problems = db_handler.get_from_db(sql)
             sql = r"""SELECT * FROM categories"""
-            cates = self.get_from_db(sql)
+            cates = db_handler.get_from_db(sql)
             problems = [r for r in problems] 
             cates = [r for r in cates]
             self.render("create_index.html", problem_list=problems, categories=cates)
@@ -559,7 +588,7 @@ class ProblemCreateHandler(ApplicationHandler):
         # edit exist page   
         else:
             sql = r"SELECT title, page, answers FROM pages where p_id = :p_id"
-            page = self.get_from_db(sql, p_id=p_id)
+            page = db_handler.get_from_db(sql, p_id=p_id)
             try:
                 assert len(page) != 0
             except AssertionError:
@@ -616,11 +645,11 @@ class ProblemCreateHandler(ApplicationHandler):
             sql = r"""INSERT INTO pages(p_id, title, page, answers) 
             VALUES(:p_id, :title, :page, :answers)"""
             try:
-                self.write_to_db(sql, p_id=self.p_id, title=self.json["title"], 
+                db_handler.write_to_db(sql, p_id=self.p_id, title=self.json["title"], 
                                 page=json.dumps(self.json["page"]),
                                 answers=json.dumps(self.json["answers"]))
             except sqlite3.Error:
-                self.print_traceback()
+                print_traceback()
                 raise 
             else:
                 self.finish({"p_id": self.p_id,
@@ -630,11 +659,11 @@ class ProblemCreateHandler(ApplicationHandler):
             sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers 
             WHERE p_id=:p_id"""
             try:
-                self.write_to_db(sql, p_id=p_id, title=self.json["title"],
+                db_handler.write_to_db(sql, p_id=p_id, title=self.json["title"],
                                 page=json.dumps(self.json["page"]),
                                 answers=json.dumps(self.json["answers"]))
             except sqlite3.Error:
-                self.print_traceback()
+                print_traceback()
                 raise 
             else:
                 self.finish({"p_id": p_id,
@@ -648,9 +677,9 @@ class ProblemCreateHandler(ApplicationHandler):
         WHERE p_id=:p_id"""
         try:
             params = [{"p_id": key} | v for key, v in self.json["profiles"].items()]
-            self.write_to_db_many(sql, params)
+            db_handler.write_to_db_many(sql, params)
         except sqlite3.Error:
-            self.print_traceback()
+            print_traceback()
             raise 
         else:
             self.write({"profile": json.dumps(self.json),
@@ -670,9 +699,9 @@ class ProblemCreateHandler(ApplicationHandler):
         elif p_id is not None and action is None:
             sql = r"""DELETE FROM pages WHERE p_id=:p_id"""
             try:
-                self.write_to_db(sql, p_id=p_id)
+                db_handler.write_to_db(sql, p_id=p_id)
             except sqlite3.Error as e:
-                self.print_traceback()
+                print_traceback()
                 raise
             else:
                 self.finish({"kernel_id": p_id,
@@ -719,6 +748,13 @@ class RenderHTMLModuleHandler(tornado.web.RequestHandler):
 
 
 def make_app():
+    create_path = []
+    if args.develop:
+        create_path = [
+            (r"/create/?", ProblemCreateHandler),
+            (r"/create/(?P<p_id>[\w-]*)/?", ProblemCreateHandler),
+            (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
+        ]
     return tornado.web.Application([
         (r"/", MainHandler),
         (r"/problems/?", ProblemHandler),
@@ -728,24 +764,22 @@ def make_app():
         (r"/kernel/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/(?P<action>[\w]+)/?", KernelHandler),
-        (r"/create/?", ProblemCreateHandler),
-        (r"/create/(?P<p_id>[\w-]*)/?", ProblemCreateHandler),
-        (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
-        (r"/api/render/?", RenderHTMLModuleHandler)
-    ],
+        (r"/api/render/?", RenderHTMLModuleHandler),
+    ] + create_path,
     template_path=os.path.join(os.getcwd(), "templates"),
     static_path=os.path.join(os.getcwd(), "static"),
-    db_path=os.path.join(os.getcwd(), "pyplas.db"),
     debug=True,
-    ui_modules=uimodules
+    ui_modules=uimodules,
+    develop=args.develop
     )
 
 async def main():
     app = make_app()
-    app.listen(8888)
+    app.listen(args.port)
     shutdown_event = asyncio.Event()
 
     def shutdown_server(signum, frame):
+        db_handler.close()
         for ex, f in ProblemHandler.execute_pool.values():
             for e in ex._processes.values():
                 print(f"[LOG] Process: {e} is killed")
