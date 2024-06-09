@@ -72,16 +72,16 @@ class Question(UIModule):
             1: problem creator 
         *conponent: list
             contents 
-            Only used in ptype=1 and editable=False
-            e.g. [Node, Node, ...]
+            :Only used in ptype=1 and editable=False
+            :e.g. [Node, Node, ...]
         *question: str
             question text
         answers: list
             correct answer list
-            e.g. [{<q_id>: [answer, answer...], ...}]
+            :e.g. [answer, answer, ...]
         saved_answers: list
             answers saved in DB -> progress
-            e.g. [answer, answer, ...]
+            :e.g. [answer, answer, ...]
         *editable: bool
             False: CAN NOT add/remove Markdown, Code
             True : CAN add/remove Markdown, Code

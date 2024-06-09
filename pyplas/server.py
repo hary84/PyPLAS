@@ -713,36 +713,36 @@ class ProblemCreateHandler(ApplicationHandler):
             self.finish({"DESCR": f"{self.request.full_url()} is not found."})
 
 
-class RenderHTMLModuleHandler(tornado.web.RequestHandler):
+class RenderHTMLModuleHandler(ApplicationHandler):
     def prepare(self):
-        self.action = self.get_query_argument("action", None)
-        if self.request.headers.get("Content-Type", None) == "application/json":
-            self.j: dict = json.loads(self.request.body)
+        print(f"[{self.request.method}] {self.request.uri}")
+        self.load_url_queries({"action": None})
 
     def post(self):
-        if self.action == "addMD":
-            self.write({"html": self._gen_node_string(node="Explain")})
-        elif self.action == "addCode":
-            self.write({"html": self._gen_node_string(node="Code", 
-                                                      explain=bool(self.j.get("user", 0)),
-                                                      question=not(self.j.get("inQ", True)))
+        if self.query["action"] == "addMD":
+            self.load_json(validate=True, keys=["content", "allow_del", "editor", "inQ"])
+            self.write({"html": self._gen_node_string(node="Explain", **self.json)})
+        elif self.query["action"] == "addCode":
+            self.load_json(validate=True, keys=["content", "user", "allow_del", "inQ"])
+            self.write({"html": self._gen_node_string(node="Code", **self.json)
                         })
-        elif self.action == "addQ":
-            self.write({"html": self._gen_node_string(node="Question")})
+        elif self.query["action"] == "addQ":
+            self.load_json(validate=True, keys=["ptype"])
+            self.write({"html": self._gen_node_string(node="Question", **self.json)})
         else:
             self.write_error()
 
     def _gen_node_string(self, node:str="Explain", **kwargs):
         if node == "Explain":
-            _html = strfmodule(Explain(self), editor=True, allow_del=True)
+            _html = strfmodule(Explain(self), **kwargs)
         elif node == "Code":
-            _html = strfmodule(Code(self), allow_del=True, user=self.j.get("user", 0))
+            _html = strfmodule(Code(self), **kwargs)
         elif node == "Question":
-            _html = strfmodule(Question(self),q_id=uuid.uuid4(), user=1, editable=True, 
-                               ptype=self.j.get("ptype", 0))
+            _html = strfmodule(Question(self), q_id="temp", user=1, editable=True, 
+                               **kwargs)
         else:
             raise KeyError
-        _nc = strfmodule(NodeControl(self), **kwargs)
+        _nc = strfmodule(NodeControl(self), question=not kwargs["inQ"])
             
         return _html + "\n" + _nc 
 

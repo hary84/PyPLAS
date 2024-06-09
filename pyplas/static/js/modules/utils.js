@@ -35,68 +35,84 @@ function watchValue(obj, propName, func) {
     });
 }
 /**
- * Explain Nodeをappend_tailの後ろに追加する
- * @param {DOM} append_tail 
+ * Explain Nodeを追加する
+ * @param {Element} loc 
+ * @param {string} pos
  */
-async function addMD(append_tail) {
-    await fetch(`${window.location.origin}/api/render?action=addMD`, {
+async function addMD(loc, pos, {content=String(), allow_del=true, inQ=true}={}) {
+    if (loc === undefined || pos === undefined) {
+        new Error("argument Error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addMD`, {
         method: "POST",
         headers: {
             "Content-type": "application/json"},
-        body: JSON.stringify({"inQ": append_tail.closest(".question") ? true:false})
+        body: JSON.stringify({
+            "content": content,
+            "allow_del": allow_del,
+            "editor": true,
+            "inQ": inQ
+        })
     })
-    .then(response => response.json()).then(data => {
-        var l = domFromStr(data.html)
-        append_tail.insertAdjacentElement("afterend", l[1])
-        append_tail.insertAdjacentElement("afterend", l[0])
-        registerAceMDE(append_tail.nextElementSibling.querySelector(".node-mde"))
-    })
+    const json = await res.json()
+    const htmlString = json.html 
+    loc.insertAdjacentHTML(pos, htmlString)
+    const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
+    registerAceMDE(mde)
 }
 /**
- * Code Nodeをappend_tailの後ろに追加する
- * @param {DOM} append_tail 
+ * Code Nodeを追加する.
+ * @param {Element} loc 
+ * @param {string} pos 
  */
-async function addCode(append_tail) {
-    await fetch(`${window.location.origin}/api/render?action=addCode`, {
+async function addCode(loc, pos, {content=String(), user=0, allow_del=true, inQ=true} = {}) {
+    if (loc === undefined || pos === undefined) {
+        new Error("argument error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addCode`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            "inQ": append_tail.closest(".question") ? true:false,
-            "user": window.location.pathname.split("/")[1] == "create"
+            "content": content, 
+            "user": user, 
+            "allow_del": allow_del, 
+            "inQ": inQ
         })
     })
-    .then(response => response.json()).then(data => {
-        var l = domFromStr(data.html)
-        append_tail.insertAdjacentElement("afterend", l[1])
-        append_tail.insertAdjacentElement("afterend", l[0])
-        registerAceEditor(append_tail.nextElementSibling.querySelector(".node-code"))
-
-    })
+    const json = await res.json()
+    const htmlString = json.html 
+    loc.insertAdjacentHTML(pos, htmlString)
+    const codeEditor = document.querySelector("#sourceCode .code:not([node-id]) .node-code")
+    registerAceEditor(codeEditor)
 }
 /**
  * Question Nodeをappend_tailの後ろに追加する
- * @param {DOM} append_tail 
- * @param {int} ptype 
+ * @param {Element} loc 
+ * @param {string} pos 
+ * @param {Number} ptype
  */
-async function addQ(append_tail, ptype) {
-    await fetch(`${window.location.origin}/api/render?action=addQ`, {
+async function addQ(loc, pos, ptype) {
+    if (loc === undefined || pos == undefined || ptype === undefined) {
+        new Error("argument error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addQ`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({"ptype": ptype})
+        body: JSON.stringify({
+            "ptype": ptype,
+            "inQ": false
+        })
     })
-    .then(response => response.json()).then(data => {
-        var l = domFromStr(data.html)
-        append_tail.insertAdjacentElement("afterend", l[1])
-        append_tail.insertAdjacentElement("afterend", l[0])
-        if (ptype == 1) {
-            registerAceEditor(append_tail.nextElementSibling.querySelector(".node-code"))
-        }
-        registerAceMDE(append_tail.nextElementSibling.querySelector(".node-mde"))
-    })
+    const json = await res.json()
+    loc.insertAdjacentHTML(pos, json.html)
+    if (ptype == 1) {
+        registerAceEditor(document.querySelector("#sourceCode .code:not([node-id]) .node-code"))
+    }
+    registerAceMDE(document.querySelector("#sourceCode .explain:not([node-id]) .node-mde"))
 }
 /**
  * btnの親要素のNodeを削除する
- * @param {DOM} btn 
+ * @param {Element} btn 
  */
 function delme(btn) {
     var node = btn.closest(".node")

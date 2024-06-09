@@ -1,15 +1,15 @@
 /**
  * elemをPython用ace editorとして登録する
- * @param {DOM} elem .node-code要素
+ * @param {Element} elem .node-code要素
  * @returns {none}
  */
 function registerAceEditor(elem) {
     const defaultLineNumbers = 5
     const maxLines = 25
-    var id = crypto.randomUUID()
+    const id = crypto.randomUUID()
     elem.closest(".node").setAttribute("node-id", id)
 
-    var editor = ace.edit(elem, {
+    const editor = ace.edit(elem, {
         mode: "ace/mode/python",
         theme: "ace/theme/one_dark",
         showPrintMargin: false,
@@ -20,14 +20,16 @@ function registerAceEditor(elem) {
 }
 /**
  * elemをmarkdown ace editorとして登録する 
- * @param {DOM} elem .node-mde要素
+ * @param {Element} elem .node-mde要素
  * @return {none}
  */
 function registerAceMDE(elem) {
     const defaultLineNumbers = 5
     const maxLines = 40
+    const id = crypto.randomUUID()
+    elem.closest(".node").setAttribute("node-id", id)
 
-    var editor = ace.edit(elem, {
+    const editor = ace.edit(elem, {
         mode: "ace/mode/markdown",
         theme: "ace/theme/sql_server",
         showGutter: false,

@@ -52,7 +52,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // イベントリスナー (メイン, click)
     document.querySelector("#sourceCode").addEventListener("click", async e => {
-        const target = e.target.closest(".btn-exec, .btn-interrupt, .btn-testing, .btn-cancel")
+        const target = e.target.closest("a, button")
+        console.log(target)
         if (target) {
             target.classList.add("disabled")
               // execute ボタン
@@ -75,6 +76,21 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const kernel_id = manageScoring[q_id]
                 await cancelScoring(p_id, kernel_id)
                 delete manageScoring[q_id]
+            } // add MD ボタン
+            else if (target.classList.contains("btn-addMD")) {
+                await addMD(target.closest(".node-control"), "afterend", {
+                    inQ: !!target.closest(".question")
+                })
+            } // add Code ボタン
+            else if (target.classList.contains("btn-addCode")) {
+                await addCode(target.closest(".node-control"), "afterend", {
+                    user: Number(parent == "create"),
+                    inQ: !!target.closest(".question"),
+                })
+            } // add Question ボタン
+            else if (target.classList.contains("btn-addQ")) {
+                await addQ(target.closest(".node-control"), "afterend", 
+                            Number(target.dataset.ptype))
             }
             target.classList.remove("disabled")
         }
