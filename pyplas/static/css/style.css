@@ -1,8 +1,3 @@
-:root {
-  --text-danger: #dc3545;
-  --text-success: #198754;
-}
-
 .only-inq {
   display: none;
 }
@@ -21,28 +16,36 @@
   }
 }
 
-/* accordion status control */
+/* ========
+  accordion 
+=========== */
 .accordion-button:focus {
   box-shadow: none;
   border-color: rgba(0,0,0,.125);
 }
-
 .accordion-button:not(.collapsed) {
   opacity: 100%;
   background-color: white;
 }
 
 
+/* ===================
+  p-content, q-content
+====================== */
+/* 共通 */
 :is(.p-content, .q-content) {
   border: dotted;
-  background-color: rgb(242 243 247);
+  background-color: rgb(247 247 247);
   padding: 1rem 0rem;
   .node-control {
       margin-left: 1rem;
+      height: 1.5rem;
   }
-
-}
+} /* 共通 内部にNodeオブジェクトが存在する場合 */
 :is(.p-content, .q-content):has(:is(.explain, .code, .question)) {
+  .node-control .btn-group .btn {
+      display: none;
+  }
   .node-control:hover {
       .btn-group {
           .btn {
@@ -54,13 +57,10 @@
           }
       }
   }
-  .node-control .btn-group .btn {
-      display: none;
-  }
   .bi-file-earmark-code {
       display: none;
   }
-}
+} /* .p-content 内部にNodeオブジェクトが存在しない場合 */
 .p-content:not(:has(:is(.explain, .code, .question))) {
   text-align: center;
   height: 350px;
@@ -70,7 +70,7 @@
       margin-top: auto;
       opacity: 0.6;
   }
-}
+} /* .q-content 内部にNodeオブジェクトが存在しない場合 */
 .q-content:not(:has(:is(.explain, .code, .question))) {
   .node-control .btn-group .btn {
       display: inline;
@@ -81,8 +81,33 @@
   }
 }
 
+/* ===========
+  editor
+============== */
+.editor {
+  height: auto;
+  padding-bottom: 1rem;
+  box-sizing: content-box;
+}
 
-/* code node */
+/* ===========
+  Explain Node
+============== */
+.explain {
+  p {
+    margin-bottom: 0.5rem;
+  }
+  pre {margin-bottom: 0.5rem;}
+  pre > code {
+    display: block;
+    padding: 0.5rem !important;
+  }
+}
+
+
+/* ==========
+  Code Node
+============= */
 .code {
   display: flex;
   .node-side {
@@ -90,12 +115,8 @@
       .btn {
         padding: 0rem;
         border: none;
-        i {
-          font-size: 1.1rem;
-        }
-        i:before {
-          padding: 0.1rem;
-        }
+        i {font-size: 1.1rem;}
+        i:before {padding: 0.1rem;}
         .spinner-border {
           width: 0.9rem;
           height: 0.9rem;
@@ -106,141 +127,136 @@
           color: white;
         }
       }
-      .executing {
-        display: none;
-        padding: 0rem 0.2rem;
-      }
-  }
-  .node-side.running {
-    .btn-exec {
-      display: none;
-    }
-    .executing {
-      display: block;
-    }
+      .btn-interrupt {padding: 0rem 0.2rem;}
   }
   .node-prime {
-      width: 100%;
       .code-config {
         height: 1.7rem;
         border-radius: 5px;
         z-index: 1;
-        display: flex;
-        position: absolute;
-        right: 0;
-        top: 0;
         .btn {
           height: 1.5rem;
           padding: 0.2rem 0.3rem;
           margin: 0.1rem;
-          i {
-            font-size: 0.9rem;
-          }
+          i {font-size: 0.9rem;}
         }
       }
-      .node-code {
-          width: 100%;
-      }
       .return-box {
-          position: relative;
           padding: 0.1rem 0 1rem 0;
-          .node-sidebutton {
-            position: absolute;
-            transform: translate(-100%, -100%);
-            top: 0;
-            left: 0;
-          }
           p {
               padding: 0 1rem;
               margin-bottom: 0rem;
               white-space: pre-wrap;
               font-size: 0.7rem;
           }
-
       }
   }
 }
+.code[run-state] > .node-side {
+  .btn-exec {display: block;}
+  .executing {display: none;}
+  .waiting {display: none;}
+}
+.code[run-state="running"] > .node-side {
+  .btn-exec {display: none;}
+  .executing {display: block;}
+  .waiting {display: none;}
+}
+.code[run-state="suspending"] > .node-side {
+  .btn-exec {display: none;}
+  .executing {display: none;}
+  .waiting {display: block;}
+}
 
+
+/* ============
+  question Node 
+=============== */
 .question {
-  /* toast */
-  .toast {
-    z-index: 10;
-    right: 1%;
-    .toast-body {
-      overflow-y: auto;
-      max-height: 10rem;
-    }
-  }
-  .toast.status-success {
-    border: solid var(--text-success);
-    background-color: rgb(182 216 182);
-    .toast-header {
-      i {
-        color: var(--text-success);
-      }
-      span::before {
-        content: "SUCCESS";
-        color: var(--text-success);
-      }
-    }
-  }
-  .toast.status-error {
-    border: solid var(--text-danger); 
-    background-color: #ffdddd;
-    .toast-header {
-      i {
-        color: var(--text-danger);
-      }
-      span::before {
-        content: "ERROR";
-        color: var(--text-danger);
-      }
-    }
-    .toast-body {
-      white-space: pre-wrap;
-      font-size: 0.6rem;
-    }
-  }
-
+/* card-header */
   .card-header {
     .btn {
       height: 1.5rem;
       padding: 0.2rem;
       i {
         font-size: 0.9rem;
-      }
-      i:before {
-        display: block;
-      }
-    }
-    span.badge {
-      display: none;
-    }
-  }
-
-  .card-body {
-    .mde {
-      .toolbar {
-        .only-inq {
+        &::before {
           display: block;
         }
       }
     }
   }
-}
-
-.question[progress="0"] {
-  .card-header > .progress-0 {
-    display: block;
+/* card-body */
+  .card-body {
+    .mde  .toolbar  .only-inq { display: block; } 
   }
 }
 .question[progress="1"] {
-  .card-header > .progress-1 {
-    display: block;
+  .toast {
+    border: solid var(--bs-danger);
+    background-color: #ffdddd;
+    .toast-header {
+      i { color: var(--bs-danger)}
+      span::before {
+        content: "ERROR";
+        color: var(--bs-danger)
+      }
+    }
+    .toast-body {
+      white-space: pre-wrap;
+      font-size: 0.6rem;
+      overflow-y: auto;
+      max-height: 10rem;
+    }
   }
 }
 .question[progress="2"] {
-  .card-header > .progress-2 {
-    display: block;
+  .toast {
+    border: solid var(--bs-success);
+    background-color: rgb(182 216 182);
+    .toast-header {
+      i { color: var(--bs-success)}
+      span::before {
+        content: "SUCCESS";
+        color: var(--bs--success)
+      }
+    }
+  }
+}
+
+
+/* 各question Nodeの進捗バッチ */
+*[progress="0"] {
+  .progress-badge {
+    background-color: var(--bs-gray-300);
+    color: var(--bs-dark);
+    &::before {
+      content: "Untried";
+    }
+  }
+}
+*[progress="1"] {
+  .progress-badge {
+    background-color: var(--bs-warning);
+    color: var(--bs-dark);
+    &::before {
+      content: "Tried"
+    }
+  }
+}
+*[progress="2"] {
+  .progress-badge {
+    background-color: var(--bs-success);
+    &::before {
+      content: "Complete"
+    }
+  }
+}
+
+
+#question-nav {
+  .nav-link.active {
+    background-color: var(--bs-success-bg-subtle);
+    color: var(--bs-dark);
   }
 }

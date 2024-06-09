@@ -2,6 +2,10 @@
     height: 100vh;
 }
 
+/* =======
+ MDE Node
+========== */
+/* 共通 */
 .mde {
     border: solid 0.6px rgb(168, 168, 168);
     border-radius: 5px;
@@ -23,9 +27,6 @@
             .bi-eye {
                 display: block;
             }
-            .bi-eye-slash {
-                display: none;
-            }
         }
     }
     .node-mde {
@@ -35,26 +36,24 @@
     }
     .for-preview {
         display: none;
-        padding: 1rem;
+        padding: 0.25rem;
+        word-break: break-all;
+        min-height: 1.5rem;
     }
 }
-
+/* プレビュー状態 */
 .mde.preview-active {
-    .toolbar .btn-preview {
-        .bi-eye {
-            display: none;
-        }
-        .bi-eye-slash {
-            display: block;
-        }
+    border: none;
+    &:hover {
+        border: solid 0.6px rgb(168, 168, 168);
+        border-radius: 5px;
     }
+    .toolbar {display: none !important;}
     .node-mde {
         display: none;
     }
     .for-preview {
         display: block;
-        border: solid 0.6px rgb(168, 168, 168);
-        border-radius: 5px;
     }
 }
 

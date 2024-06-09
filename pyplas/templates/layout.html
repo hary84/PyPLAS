@@ -3,23 +3,28 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>PyPLAS</title>
     <link rel="icon" type="image/x-icon" href="{{ static_url('img/logo.jpg')}}">
-
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <link rel="stylesheet" href="{{ static_url('css/style.css') }}">
-
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
-    <script src="{{ static_url('js/modules/kernel.js') }}"></script>
+    <!-- <script src='https://cdn.jsdelivr.net/gh/rsms/markdown-wasm@v1.2.0/dist/markdown.js'></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/base16/onedark.min.css">
+
+    <script src="{{ static_url('js/modules/ace-utils.js') }}"></script>
     <script src="{{ static_url('js/modules/utils.js') }}"></script>
+    <script src="{{ static_url('js/modules/kernel.js') }}"></script>
     {% block head %}
     {% end %}
   </head>
   <body>
       <header class="navbar bg-dark d-frex flex-wrap py-2 px-5 justify-content-center shadow z-1">
-          <a href="/" class="d-frex text-decoration-none me-md-auto">
+          <a href="/" class="d-frex text-decoration-none me-md-auto" id="headTitle">
               <img src="{{ static_url('img/logo.jpg') }}" alt="logo" height=45 class="align-middle rounded">
               <span class="text-light fs-2 px-2 d-inline-block align-middle">PyPLAS</span>
               <span class="text-light fs-4 d-none d-xxl-inline-block align-bottom">Python Programming Learning Assistant System</span>

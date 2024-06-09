@@ -1,4 +1,4 @@
-import markdown
+from bs4 import BeautifulSoup
 from tornado.web import UIModule 
 from tornado.escape import to_unicode
 
@@ -46,9 +46,6 @@ class Explain(UIModule):
         """
         if type(content) == list:
             content = "\n".join(content)
-        if not editor:
-            md = markdown.Markdown()
-            content = md.convert(content)
             
         return self.render_string("modules/explain.html",
                                   editor=editor,
@@ -93,6 +90,21 @@ class Question(UIModule):
             1: tried
             2: complete
         """
+        if ptype == 0 and user == 0:
+            soup = BeautifulSoup(question, "html.parser")
+            elems = soup.find_all(["select", "input"], attrs={"ans", True})
+            for i, e in enumerate(elems):
+                del e.attrs["ans"]
+                try:
+                    if e.name == "input":
+                        e["value"] = saved_answers[i]
+                    elif e.name == "select":
+                        e.find("option", {"value": saved_answers[i]})["selected"] = ""
+                except (IndexError, AttributeError, TypeError):
+                    continue
+
+            question = soup.prettify()
+
         return self.render_string("modules/question.html",
                                   q_id=q_id, ptype=ptype, user=user,
                                   question=question,

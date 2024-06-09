@@ -1,149 +1,15 @@
 /**
- * elemをpython ace editorとして登録する
- * @param {DOM} elem 
- * @returns {none}
+ * node-id属性を持ち、classにnodeを持つelementを返す
+ * @param {string} node_id 
+ * @returns {Element}
  */
-function registerAceEditor(elem) {
-
-    var id = crypto.randomUUID()
-    elem.closest(".node").setAttribute("node-id", id)
-
-    const lh = 1.3
-    var editor = ace.edit(elem, {
-        mode: "ace/mode/python",
-        theme: "ace/theme/twilight"
-    });
-
-    if (elem.classList.contains("readonly")) {
-        editor.setReadOnly(true)
-    }
-
-    editor.container.style.lineHeight = `${lh}rem`;
-    editor.container.style.height = lh * 5 + "rem"
-    editor.renderer.updateFontSize()
-
-    editor.getSession().on("change", function(delta) {
-        var line = editor.session.getLength()
-        if (line > 4) {
-            editor.container.style.height = lh * (line+1) + "rem"
-        } else {
-            editor.container.style.height = lh * 5 + "rem"
-        }
-        editor.resize()
-    })
-}
-
-/**
- * elemをmarkdown ace editorとして登録する 
- * @param {DOM} elem 
- * @return {none}
- */
-function registerAceMDE(elem) {
-    const lh = 1
-    const defaultLineNumbers = 7
-
-    var editor = ace.edit(elem, {
-        mode: "ace/mode/markdown",
-        theme: "ace/theme/chrome"
-    })
-
-    editor.setOptions({
-        showGutter: false,
-        fontSize: `${lh}rem`,
-        highlightActiveLine: false
-    })
-    editor.container.style.height = lh * defaultLineNumbers + "rem"
-
-    editor.getSession().on("change", function(delta) {
-        var line = editor.session.getLength()
-        if (line >= defaultLineNumbers-2) {
-            editor.container.style.height = lh * (line+2) + "rem"
-        } else {
-            editor.container.style.height = lh * defaultLineNumbers + "rem"
-        }
-    })
+function getNodeElement(node_id) {
+    return document.querySelector(`div[node-id='${node_id}'].node`)
 }
 /**
- * 選択された要素を**で囲む
- * @param {DOM} btn 
- */
-function embedBold(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
-    editor.insert(`**${editor.getCopyText()}**`)
-}
-/**
- * 選択された要素を*で囲む
- * @param {DOM} btn 
- */
-function embedItalic(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
-    editor.insert(`*${editor.getCopyText()}*`)
-}
-/**
- * カーソルの位置にリンクを挿入する
- * @param {DOM} btn 
- */
-function embedLink(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
-    editor.insert("[](http:~)")
-}
-/**
- * カーソルの位置に画像を埋め込む
- * @param {DOM} btn 
- */
-function embedImg(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
-    editor.insert("![](./~)")
-}
-/**
- * カーソルの位置に空欄補充問題を埋め込む
- * @param {DOM} btn 
- */
-function addFillInBlankProblem(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
-    var tag = [
-        '<p class="mb-0 q-text">',
-        '   <label class="form-label">?????</label>',
-        '   <input type="text" class="form-control q-form" placeholder="answer" ans=?????>',
-        '</p>'
-    ].join("\n")
-    editor.insert(tag)
-}
-/**
- * カーソルの位置に選択問題を埋め込む
- * @param {DOM} btn 
- */
-function addSelectionProblem(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
-    var tag = [
-        '<p class="mb-0 q-text">',
-        '   <label class="form-label">?????</label>',
-        '   <select class="form-select" ans=?????>',
-        '       <option selected>Open this select menu</option>',
-        '       <option value="1">?????</option>',
-        '       <option value="2">?????</option>',
-        '   </select>',
-        '</p>'
-    ].join("\n")
-    editor.insert(tag)
-}
-/**
- * markdownからプレビューに切り替える
- * @param {DOM} $e 
- */
-function togglePreview(e) {
-    var parent = e.closest(".mde")
-    var editor = ace.edit(parent.querySelector(".node-mde"))
-    var html = marked.parse(editor.getValue())
-    var for_preview = parent.querySelector(".for-preview")
-    for_preview.innerHTML = ""
-    for_preview.innerHTML = html
-    parent.classList.toggle("preview-active")
-}
-/**
- * stringからdom(node?)を生成する
+ * HTML文字列からdom要素に変換する
  * @param {string} str 
- * @returns {[DOM]}
+ * @returns {HTMLCollection}
  */
 function domFromStr(str) {
     var div = document.createElement("div")
@@ -151,7 +17,25 @@ function domFromStr(str) {
     return div.children
 }
 /**
- * GET MDE from localserver
+ * objのpropertyが変化した際にfuncを実行する
+ * @param {object} obj 
+ * @param {property} propName 
+ * @param {function} func 
+ */
+function watchValue(obj, propName, func) {
+    let value = obj[propName];
+    Object.defineProperty(obj, propName, {
+        get: () => value,
+        set: newValue => {
+            const oldValue = value;
+            value = newValue;
+            func(obj, newValue);
+        },
+        configurable: true
+    });
+}
+/**
+ * Explain Nodeをappend_tailの後ろに追加する
  * @param {DOM} append_tail 
  */
 async function addMD(append_tail) {
@@ -169,7 +53,7 @@ async function addMD(append_tail) {
     })
 }
 /**
- * GET CodeEditor from localserver
+ * Code Nodeをappend_tailの後ろに追加する
  * @param {DOM} append_tail 
  */
 async function addCode(append_tail) {
@@ -190,7 +74,7 @@ async function addCode(append_tail) {
     })
 }
 /**
- * GET Question Node from localhost
+ * Question Nodeをappend_tailの後ろに追加する
  * @param {DOM} append_tail 
  * @param {int} ptype 
  */
@@ -211,7 +95,7 @@ async function addQ(append_tail, ptype) {
     })
 }
 /**
- * DEL Node 
+ * btnの親要素のNodeを削除する
  * @param {DOM} btn 
  */
 function delme(btn) {
@@ -220,54 +104,136 @@ function delme(btn) {
     node.remove()
 }
 /**
- * auto scoring
- * @param {DOM} question_node 
+ * 質問の採点を行う
+ * @param {string} p_id      問題id
+ * @param {string} q_id      質問id
+ * @param {string} kernel_id 実行カーネルid
+ * @returns {none}
  */
-function scoring(question_node) {
-    var ptype = Number(question_node.getAttribute("ptype"))
-    var q_id = question_node.getAttribute("q-id")
-    var answers = []
-
-    // html problem
-    if (ptype == 0) {
-        question_node.querySelectorAll(".card-body > .explain > .q-text").forEach(elem => {
-            answers.push(elem.querySelector("select, input").value)
-        })
-    }
-    // code writing problem
-    else if (ptype == 1) {
-        question_node.querySelectorAll(".node-code").forEach(elem => {
-            answers.push(ace.edit(elem).getValue())
-        })
-    }
-    var sbm_btn = question_node.querySelector(".btn-testing")
-    sbm_btn.classList.add("disabled")
-
-    // POST /problems/<p_id>
-    fetch(window.location.href, {
+async function scoring(p_id, q_id, kernel_id) {
+    var question_node = document.querySelector(`.node.question[q-id="${q_id}"]`)
+    var params = extractQuestionNode(question_node, mode=0)
+    // POST /problems/<p_id>/scoring
+    var res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            "ptype": ptype,
-            "q_id": q_id,
-            "answers": answers,
-            "kernel_id": sessionStorage["test_kernel_id"] 
-        })
-    }).then(response => response.json()).then(data => {
-        var toast = question_node.querySelector(".for-toast")
-        toast.innerHTML = data.html
-        toast.querySelector(".toast").classList.add("show")
-        sbm_btn.classList.remove("disabled")
-        question_node.setAttribute("progress", data.progress)
-    })
+            "ptype": params.ptype,     // int:   0 or 1
+            "q_id": params.q_id,       // str:   e.g. "1"
+            "answers": params.answers, // list:  ['ans', 'ans', ...]
+            "kernel_id": kernel_id     // str:   uuid
+        })})
+    var json = await res.json()
+    if (res.ok) {
+        console.log(`[scoring] ${json.DESCR}`)
+        question_node.setAttribute("progress", json.progress)
+        var toast = question_node.querySelector(".for-toast > .toast")
+        toast.querySelector(".toast-body").innerHTML = json.content
+        toast.classList.add("show")
+        document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
+    }
+    else {
+        console.log(`[scoring] ${json.DESCR}`)
+    }
 }
-
-function cancelScoring() {
-    fetch(window.location.href, {
-        method: "PUT",
+/**
+ * Code Testingをキャンセルする
+ * @param {string} p_id       問題id
+ * @param {string} kernel_id  実行カーネルのid
+ */
+async function cancelScoring(p_id, kernel_id) {
+    var res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${kernel_id}`, {
+        method: "POST",
+    })
+    var json = await res.json()
+    console.log(json.DESCR)
+}
+/**
+ * Question Nodeから各パラメータを抽出する
+ * @param {DOM} elem 
+ * @param {int} mode 0: learner, 1: creator
+ * @returns {object}
+ */
+function extractQuestionNode(elem, mode) {
+    var q_id = elem.getAttribute("q-id")
+    var ptype = Number(elem.getAttribute("ptype"))
+    var conponent = []
+    var question = ""
+    var editable = false 
+    var answers = []
+    const parser = new DOMParser()
+    // learner mode 
+    if (mode == 0) {
+        if (ptype == 0) {
+            elem.querySelectorAll(".card-body > .explain > .q-text").forEach(elem => {
+                answers.push(elem.querySelector("select, input").value) // answers
+            }) 
+        }
+        else if (ptype == 1) {
+            elem.querySelectorAll(".q-content  .node-code").forEach(elem => {
+                answers.push(ace.edit(elem).getValue()) // answers
+            })
+        }
+        return {
+            "q_id": q_id,      // str
+            "ptype": ptype,    // int 
+            "answers": answers // list
+        }
+    }
+    // creator mode 
+    if (mode == 1) {
+        if (ptype == 0) {
+            var md_string = ace.edit(elem.querySelector(".node-mde")).getValue()
+            var md_dom = parser.parseFromString(md_string, "text/html").querySelector("body")
+            md_dom.querySelectorAll(".q-text > *[ans]").forEach(elem => { // answers
+                answers.push(elem.getAttribute("ans"))
+            })
+            question = md_dom.innerHTML // question
+        }
+        else if (ptype == 1) {
+            answers.push(ace.edit(elem.querySelector(".test-code .node-code")).getValue()) // answers
+            question = ace.edit(elem.querySelector(".q-text .node-mde")).getValue() // question
+            editable = elem.querySelector(".editable-flag").checked // editable
+            if (!editable) { // conponent
+                elem.querySelectorAll(".q-content > .node").forEach(elem => {
+                    if (elem.classList.contains("explain")) {
+                        var type = "explain"
+                        var content = ace.edit(elem.querySelector(".node-mde")).getValue()
+                    }
+                    else if (elem.classList.contains("code")) {
+                        var type = "code"
+                        var content = ace.edit(elem.querySelector(".node-code")).getValue()
+                    }
+                    conponent.push({"type": type, content: content})
+                })
+            }
+        }
+        return {
+            "q_id": q_id,           // str
+            "ptype": ptype,         // int 
+            "conponent": conponent, // list
+            "question": question,   // str
+            "editable": editable,   // bool
+            "answers": answers      // list
+        }
+    }
+}
+/**
+ * ユーザーの入力を保存する
+ * @param {string} p_id 
+ */
+async function saveUserData(p_id) {
+    var q_content = {}
+    document.querySelectorAll(".question").forEach(elem => {
+        var params = extractQuestionNode(elem, mode=0)
+        q_content[params.q_id] = params.answers
+    })
+    var res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
+        method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            "kernel_id": sessionStorage["test_kernel_id"]
-        })
-    })
+            "q_content": q_content
+        })})
+    var json = await res.json()
+    console.log(`[save] ${json.DESCR}`)
 }
