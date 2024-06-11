@@ -57,12 +57,10 @@
           }
       }
   }
-  .bi-file-earmark-code {
+  .bi-file-earmark-code, #loadIpynb, .ipynb-loader {
       display: none;
   }
-  #loadIpynb {
-    display: none;
-  }
+
 } /* .p-content 内部にNodeオブジェクトが存在しない場合 */
 .p-content:not(:has(:is(.explain, .code, .question))) {
   text-align: center;

@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelectorAll(".explain").forEach(elem => {
             elem.innerHTML = marked.parse(elem.innerHTML)
         })
+    }else if (parent == "create") {
+        document.querySelectorAll(".node-mde").forEach(elem => showPreview(elem))
     }
     hljs.highlightAll()
 
@@ -53,7 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // イベントリスナー (メイン, click)
     document.querySelector("#sourceCode").addEventListener("click", async e => {
         const target = e.target.closest("a, button")
-        console.log(target)
+        // console.log(target)
         if (target) {
             target.classList.add("disabled")
               // execute ボタン
@@ -78,14 +80,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                 delete manageScoring[q_id]
             } // add MD ボタン
             else if (target.classList.contains("btn-addMD")) {
+                const inQ = !!target.closest(".question")
                 await addMD(target.closest(".node-control"), "afterend", {
-                    inQ: !!target.closest(".question")
+                    explain: parent == "create",
+                    question: parent == "create" && !inQ
                 })
             } // add Code ボタン
             else if (target.classList.contains("btn-addCode")) {
+                const inQ = !!target.closest(".question")
                 await addCode(target.closest(".node-control"), "afterend", {
                     user: Number(parent == "create"),
-                    inQ: !!target.closest(".question"),
+                    explain: parent == "create",
+                    question: parent == "create" && !inQ
                 })
             } // add Question ボタン
             else if (target.classList.contains("btn-addQ")) {

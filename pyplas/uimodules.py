@@ -115,7 +115,7 @@ class Question(UIModule):
                                   progress=progress)
     
 class NodeControl(UIModule):
-    def render(self, code:bool=True, explain:bool=True, question:bool=True):
+    def render(self, code:bool=True, explain:bool=True, question:bool=True, **kwargs):
         return self.render_string("modules/node-control.html",
                                   code=code,
                                   explain=explain,

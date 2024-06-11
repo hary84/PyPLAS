@@ -39,7 +39,18 @@
 				{% module Explain(editor=user, content=question, allow_del=False) %}
 			</div>
 
-			<div class="q-content ms-4">
+			<div class="q-content ms-4 px-2">
+				{% if ptype == 1 and editable == True and user == 0%}
+					<div class="ipynb-loader mb-3 border border-start-0 border-end-0 border-dark border-3 pb-2 bg-dark-subtle text-center">
+						<label for="ipynbForm" class="form-label mb-1">Answer from Jupyter Notebook</label>
+						<input class="form-control form-control-sm w-50 mx-auto border border-dark" id="ipynbForm" type="file" 
+							accept=".ipynb" name="mynote" 
+							onchange="loadIpynb(this, this.closest('.q-content'), markdown=false, {
+								user: 0, 
+								inQ: true
+							})">
+					</div>
+				{% end %}
 				{% if user == 1 %}
 					{% module NodeControl(question=False) %}
 					{% for d in conponent %}

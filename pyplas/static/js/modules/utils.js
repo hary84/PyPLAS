@@ -38,8 +38,15 @@ function watchValue(obj, propName, func) {
  * Explain Nodeを追加する
  * @param {Element} loc 
  * @param {string} pos
+ * @returns {Promise<Element>} .node-mde要素
  */
-async function addMD(loc, pos, {content=String(), allow_del=true, inQ=true}={}) {
+async function addMD(loc, pos, {
+        content=String(), 
+        allow_del=true, 
+        code=true,
+        explain=true,
+        question=true} = {}) 
+    {
     if (loc === undefined || pos === undefined) {
         new Error("argument Error")
     }
@@ -51,7 +58,9 @@ async function addMD(loc, pos, {content=String(), allow_del=true, inQ=true}={}) 
             "content": content,
             "allow_del": allow_del,
             "editor": true,
-            "inQ": inQ
+            "code": code,
+            "explain": explain,
+            "question": question
         })
     })
     const json = await res.json()
@@ -59,13 +68,22 @@ async function addMD(loc, pos, {content=String(), allow_del=true, inQ=true}={}) 
     loc.insertAdjacentHTML(pos, htmlString)
     const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
     registerAceMDE(mde)
+    return mde
 }
 /**
  * Code Nodeを追加する.
  * @param {Element} loc 
  * @param {string} pos 
+ * @returns {Promise<Element>} .node-code要素
  */
-async function addCode(loc, pos, {content=String(), user=0, allow_del=true, inQ=true} = {}) {
+async function addCode(loc, pos, {
+        content=String(), 
+        user=0, 
+        allow_del=true, 
+        code=true, 
+        explain=true, 
+        question=true} = {}) 
+    {
     if (loc === undefined || pos === undefined) {
         new Error("argument error")
     }
@@ -76,7 +94,9 @@ async function addCode(loc, pos, {content=String(), user=0, allow_del=true, inQ=
             "content": content, 
             "user": user, 
             "allow_del": allow_del, 
-            "inQ": inQ
+            "code": code, 
+            "explain": explain, 
+            "question": question
         })
     })
     const json = await res.json()
@@ -84,6 +104,7 @@ async function addCode(loc, pos, {content=String(), user=0, allow_del=true, inQ=
     loc.insertAdjacentHTML(pos, htmlString)
     const codeEditor = document.querySelector("#sourceCode .code:not([node-id]) .node-code")
     registerAceEditor(codeEditor)
+    return codeEditor
 }
 /**
  * Question Nodeをappend_tailの後ろに追加する
@@ -100,7 +121,9 @@ async function addQ(loc, pos, ptype) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             "ptype": ptype,
-            "inQ": false
+            "code": true, 
+            "explain": true,
+            "question": true
         })
     })
     const json = await res.json()
@@ -108,7 +131,9 @@ async function addQ(loc, pos, ptype) {
     if (ptype == 1) {
         registerAceEditor(document.querySelector("#sourceCode .code:not([node-id]) .node-code"))
     }
-    registerAceMDE(document.querySelector("#sourceCode .explain:not([node-id]) .node-mde"))
+    const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
+    registerAceMDE(mde)
+    return mde.closest(".question")
 }
 /**
  * btnの親要素のNodeを削除する
@@ -252,4 +277,45 @@ async function saveUserData(p_id) {
         })})
     var json = await res.json()
     console.log(`[save] ${json.DESCR}`)
+}
+/**
+ * ipynbをparseして, locの末尾にnodeとして挿入する
+ * @param {Element} input       form type="file"の要素 
+ * @param {Element} loc         nodeを追加する要素
+ * @param {boolean} markdown    markdownを追加するか
+ */
+async function loadIpynb(input, loc, markdown=true, {user=1, inQ=false}={}) {
+    const ipynb = input.files[0]
+    console.log(`[FileReader] Load '${ipynb.name}' and embed in page.`)
+    const reader = new FileReader()
+    reader.readAsText(ipynb)
+
+    reader.onload = async () => {
+        const cells = JSON.parse(reader.result).cells
+    
+        for (const cell of cells) {
+            if (cell.cell_type == "code") {
+                await addCode(loc, "beforeend", {
+                    content: cell.source.join(""), 
+                    user:user, 
+                    allow_del:true,
+                    explain: !inQ, 
+                    question: !inQ
+                })
+            }
+            else if (markdown && cell.cell_type == "markdown") {
+                const mde = await addMD(loc, "beforeend", {
+                    content:cell.source.join(""), 
+                    allow_del:true,
+                    explain: !inQ, 
+                    question: !inQ
+                })
+                showPreview(mde)
+            }
+        }
+    }
+    
+    reader.onerror = () => {
+        alert("Ipynbファイルの読み込みに失敗しました.")
+    }
 }

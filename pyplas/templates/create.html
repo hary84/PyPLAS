@@ -60,7 +60,8 @@
         <div class="p-content position-relative ms-3 px-3">
             <div class="mb-3 border border-start-0 border-end-0 border-success border-3 pb-2 bg-success-subtle" id="loadIpynb">
                 <label for="ipynbForm" class="form-label">Create from Jupyter Notebook</label>
-                <input class="form-control form-control-sm w-50 mx-auto border border-dark" id="ipynbForm" type="file" accept=".ipynb" name="mynote" onchange="loadIpynb(this, this.closest('.p-content'))">
+                <input class="form-control form-control-sm w-50 mx-auto border border-dark" id="ipynbForm" type="file" accept=".ipynb" name="mynote" 
+                    onchange="loadIpynb(this, this.closest('.p-content'))">
             </div>
             {% module NodeControl() %}
             {% if not is_new %}

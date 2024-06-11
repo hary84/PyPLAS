@@ -720,14 +720,14 @@ class RenderHTMLModuleHandler(ApplicationHandler):
 
     def post(self):
         if self.query["action"] == "addMD":
-            self.load_json(validate=True, keys=["content", "allow_del", "editor", "inQ"])
+            self.load_json(validate=False)
             self.write({"html": self._gen_node_string(node="Explain", **self.json)})
         elif self.query["action"] == "addCode":
-            self.load_json(validate=True, keys=["content", "user", "allow_del", "inQ"])
+            self.load_json(validate=False)
             self.write({"html": self._gen_node_string(node="Code", **self.json)
                         })
         elif self.query["action"] == "addQ":
-            self.load_json(validate=True, keys=["ptype"])
+            self.load_json(validate=False)
             self.write({"html": self._gen_node_string(node="Question", **self.json)})
         else:
             self.write_error()
@@ -742,7 +742,7 @@ class RenderHTMLModuleHandler(ApplicationHandler):
                                **kwargs)
         else:
             raise KeyError
-        _nc = strfmodule(NodeControl(self), question=not kwargs["inQ"])
+        _nc = strfmodule(NodeControl(self), **kwargs)
             
         return _html + "\n" + _nc 
 
