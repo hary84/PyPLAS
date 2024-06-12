@@ -25,7 +25,7 @@ parser.add_argument("-p", "--port", default=8888, type=str, help="Port number to
 parser.add_argument("-d", "--develop", action="store_true", help="Run the server in developer mode")
 args = parser.parse_args()
 
-# set up global variables
+# setup global variables
 mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
 db_handler = DBHandler(page_path=os.path.join(os.getcwd(), "pyplas.db"),
@@ -95,13 +95,16 @@ class ProblemHandler(ApplicationHandler):
                 return
             else:
                 page:dict = page[0]
-                self.render(f"./problem.html", 
-                            title=page["title"],
-                            page=json.loads(page["page"]),
-                            q_status=json.loads(page["q_status"]),
-                            q_content=json.loads(page["q_content"]),
-                            progress=[])
-
+                try:
+                    self.render(f"./problem.html", 
+                                title=page["title"],
+                                page=json.loads(page["page"]),
+                                q_status=json.loads(page["q_status"]),
+                                q_content=json.loads(page["q_content"]),
+                                progress=[])
+                except:
+                    print_traceback()
+                    self.write_error(500)
         # GET /problems/<p_id>/<action>    
         elif p_id is not None and action is not None: 
             self.write_error(404)
@@ -514,7 +517,7 @@ class KernelHandler(ApplicationHandler):
             
             # DELETE /kernel/<k_id>/<action>
             elif k_id is not None and action is not None:
-                self.set_status(405)
+                self.set_status(404)
                 self.finish({"DESCR": f"{self.request.full_url()} is not found."})
         except KeyError:
             self.set_status(500)
@@ -565,7 +568,11 @@ class ProblemCreateHandler(ApplicationHandler):
             cates = db_handler.get_from_db(sql)
             problems = [r for r in problems] 
             cates = [r for r in cates]
-            self.render("create_index.html", problem_list=problems, categories=cates)
+            try:
+                self.render("create_index.html", problem_list=problems, categories=cates)
+            except: 
+                print_traceback()
+                self.write_error(500)
             
         # GET /create/<p_id>
         elif p_id is not None and action is None:
@@ -573,7 +580,7 @@ class ProblemCreateHandler(ApplicationHandler):
 
         # GET /create/<p_id>/<action>
         elif p_id is not None and action is not None:
-            self.write_error()
+            self.write_error(404)
 
     def render_edit(self, p_id:str) -> None:
         """
@@ -597,11 +604,15 @@ class ProblemCreateHandler(ApplicationHandler):
                 self.redirect("/create")
             else:
                 page = page[0]
-                self.render("create.html",
-                            title=page["title"],
-                            page=json.loads(page["page"]),
-                            answers=json.loads(page["answers"]),
-                            is_new=False)
+                try:
+                    self.render("create.html",
+                                title=page["title"],
+                                page=json.loads(page["page"]),
+                                answers=json.loads(page["answers"]),
+                                is_new=False)
+                except:
+                    print_traceback()
+                    self.write_error(500)
 
     def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -778,13 +789,15 @@ async def main():
     shutdown_event = asyncio.Event()
 
     def shutdown_server(signum, frame):
+        print()
         db_handler.close()
+        print(f"[Server Stop] DB is successfully closed.")
         for ex, f in ProblemHandler.execute_pool.values():
             for e in ex._processes.values():
-                print(f"[LOG] Process: {e} is killed")
+                print(f"[Server Stop] Process: {e} is killed")
                 e.kill()
         run_sync(mult_km._async_shutdown_all)()
-        print("[LOG] Server has been safely shut down.")
+        print("[Server Stop] All Ipykernel is successfully shutteddown.")
         shutdown_event.set()
 
     signal.signal(signal.SIGTERM, shutdown_server)

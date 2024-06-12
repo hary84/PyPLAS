@@ -32,10 +32,15 @@
                 <h2 class="card-title text-danger border-bottom border-danger text-center">404 Not Found </h2>
                 <p class="card-text w-50 text-center my-4 mx-auto">The page you are looking for might have been removed, had its name changed or is temporarily unavailable.</p>
                 <a class="btn btn-primary text-center" href="/"><i class="bi bi-house"></i>  Go To Home</a>
+            {% elif status_code == 500 %}
+                <h2 class="card-title text-danger-emphasis border-bottom border-danger text-center">500 Internal Server Error </h2>
+                <p class="card-text w-50 text-center my-4 mx-auto">Sorry, something went wrong.<br><br>
+                    Try to refresh this page or feel free to contact us if the problem persists.</p>
+                <a class="btn btn-primary text-center" href="/"><i class="bi bi-house"></i>  Go To Home</a>
             {% end %}
         </div>
     </div>
 </main>
-<div class="col-xl-2 border-start"></div>
+<div class="col-lg-2 border-start"></div>
 {% end %}
 
