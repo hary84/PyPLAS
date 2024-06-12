@@ -9,6 +9,7 @@
 .mde {
     border: solid 0.6px rgb(168, 168, 168);
     border-radius: 5px;
+    padding: 1px 0px;
     .toolbar {
         height: 1.5rem;
         background-color: #ececed;
@@ -47,6 +48,7 @@
     &:hover {
         border: solid 0.6px rgb(168, 168, 168);
         border-radius: 5px;
+        padding: 0px;
     }
     .toolbar {display: none !important;}
     .node-mde {
