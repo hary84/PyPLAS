@@ -8,10 +8,6 @@ import tornado
 from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
 
-
-class InvalidJSONError(Exception):
-    """POST, PUT, DELETE等でRequest-Bodyから取得したJSONが無効な形式"""
-    
 def print_traceback():
     """
     error時のtracebackをきれいに標準出力にprintする
@@ -41,6 +37,10 @@ def custom_exec(code: str) -> None:
     )
     asyncio.run(ls["__ex"]())
 
+class InvalidJSONError(Exception):
+    """POST, PUT, DELETE等でRequest-Bodyから取得したJSONが無効な形式"""
+
+
 def datetime_encoda(obj: object) -> str:
     """
     objがdatetimeオブジェクトであれば、isoformatの文字列に変換する
@@ -55,6 +55,9 @@ class ApplicationHandler(tornado.web.RequestHandler):
         super().__init__(application, request, **kwargs)
         self.json: dict = None
         self.is_dev_mode: bool = self.settings["develop"]
+
+    def write_error(self, status_code: int, **kwargs: Any) -> None:
+        self.render("error.html", status_code=status_code)
     
     def validate_JSON(self, keys:Union[list, dict]) -> bool:
         """
@@ -116,6 +119,14 @@ class ApplicationHandler(tornado.web.RequestHandler):
             for name, default in names.items():
                 self.query[name] = self.get_query_argument(name, default)
 
+class ErrorHandler(ApplicationHandler): 
+    """
+    For 404 errors, use in the default_handler_class, Application setting.
+    """
+    def prepare(self):
+        self.write_error(status_code=404)
+
+
 class DBHandler:
     """
     DBに関わる処理を行うクラス
@@ -128,12 +139,19 @@ class DBHandler:
         self.conn:Optional[sqlite3.Connection] = None
 
         self.conn = self._connect(page_path)
-        if self.dev_mode or not os.path.exists(self.user_path):
+        # create user.db if not exist
+        if os.path.exists(user_path):
+            self._setup_user_db(user_path)
+
+        # create or initialize dev-user.db if dev_mode is True
+        if self.dev_mode:
             self.user_path = dev_user_path
             self._setup_user_db(dev_user_path)
-
-        self.conn.execute(r"ATTACH DATABASE :user_path AS user", 
-                               {"user_path": self.user_path})
+        
+        # attach user.db in pyplas.db
+        self.conn.execute(
+            r"ATTACH DATABASE :user_path AS user", 
+            {"user_path": self.user_path})
 
     def _connect(self, path:str) -> sqlite3.Connection:
         """
@@ -145,6 +163,11 @@ class DBHandler:
         ----------
         path: str
             dbファイルのパス
+
+        Returns
+        -------
+        conn: sqlite3.Connection 
+            dbとのコネクションオブジェクト
         """
         if not os.path.exists(path):
             raise FileNotFoundError
@@ -152,7 +175,7 @@ class DBHandler:
         conn.row_factory = self._dict_factory
         return conn
     
-    def _setup_user_db(self, db_path:str):
+    def _setup_user_db(self, db_path:str) -> None:
         """
         userデータ用DBを用意する. テーブルが存在しないならば, logsテーブルとprogressテーブルを作成し,
         内部を空にする. 
@@ -196,7 +219,7 @@ class DBHandler:
         fields = [column[0] for column in cursor.description]
         return {key: value for key, value in zip(fields, row)}
     
-    def get_from_db(self, sql:str, **kwargs) -> list :
+    def get_from_db(self, sql:str, **kwargs) -> list:
         """
         DBからデータを受け取る
         

@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 import signal
 import sqlite3
-from util import (ApplicationHandler, InvalidJSONError, custom_exec, datetime_encoda, 
+from util import (ApplicationHandler, ErrorHandler, InvalidJSONError, custom_exec, datetime_encoda, 
                   print_traceback, DBHandler)
 import uuid
 from typing import Optional, Tuple
@@ -25,7 +25,7 @@ parser.add_argument("-p", "--port", default=8888, type=str, help="Port number to
 parser.add_argument("-d", "--develop", action="store_true", help="Run the server in developer mode")
 args = parser.parse_args()
 
-# set up global variables
+# setup global variables
 mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
 db_handler = DBHandler(page_path=os.path.join(os.getcwd(), "pyplas.db"),
@@ -88,23 +88,26 @@ class ProblemHandler(ApplicationHandler):
                 WHERE pages.p_id=:p_id AND status=1"""
             try:
                 page = db_handler.get_from_db(sql, p_id=p_id)
-                assert len(page) != 0
+                assert len(page) != 0, f"p_id='{p_id}' does not exist in DB."
             except (AssertionError, sqlite3.Error) as e:
                 print(f"[ERROR] {e.__class__.__name__}: {e}")
-                self.write_error()
+                self.write_error(404)
                 return
             else:
                 page:dict = page[0]
-                self.render(f"./problem.html", 
-                            title=page["title"],
-                            page=json.loads(page["page"]),
-                            q_status=json.loads(page["q_status"]),
-                            q_content=json.loads(page["q_content"]),
-                            progress=[])
-
+                try:
+                    self.render(f"./problem.html", 
+                                title=page["title"],
+                                page=json.loads(page["page"]),
+                                q_status=json.loads(page["q_status"]),
+                                q_content=json.loads(page["q_content"]),
+                                progress=[])
+                except:
+                    print_traceback()
+                    self.write_error(500)
         # GET /problems/<p_id>/<action>    
         elif p_id is not None and action is not None: 
-            self.write_error()
+            self.write_error(404)
 
     async def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -420,8 +423,8 @@ class KernelHandler(ApplicationHandler):
 
         # GET /kernel/<k_id>/<action>
         elif k_id is not None and action is not None:
-            self.write_error()
-
+            self.set_status(404)
+            self.finish({"DESCR": "The URL is not valid."})
 
     async def post(self, k_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -450,10 +453,10 @@ class KernelHandler(ApplicationHandler):
                     self.set_status(404)
                     self.finish({"DESCR": f"{self.request.full_url()} is not found."})
         except DuplicateKernelError as e:
-            self.set_status(400)
-            self.finish({"DESCR": "kernel_id is already started."})
+            self.set_status(500)
+            self.finish({"DESCR": f"kernel_id({k_id}) is already started."})
         except KeyError as e:
-            self.set_status(404)
+            self.set_status(500)
             self.finish({"DESCR": "kernel_id is not found in KM."})
 
     async def kernel_start(self, kernel_id:Optional[str]=None) -> None:
@@ -517,7 +520,7 @@ class KernelHandler(ApplicationHandler):
                 self.set_status(404)
                 self.finish({"DESCR": f"{self.request.full_url()} is not found."})
         except KeyError:
-            self.set_status(404)
+            self.set_status(500)
             self.finish({"DESCR": "Kernel_id is not found in KM."})
            
     async def kernel_shutdown(self, kernel_id:Optional[str]=None) -> None:
@@ -547,6 +550,8 @@ class ProblemCreateHandler(ApplicationHandler):
     """
     def prepare(self):
         print(f"[{self.request.method}] {self.request.uri}")
+        if not self.is_dev_mode:
+            self.write_error(403)
             
     def get(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -563,7 +568,11 @@ class ProblemCreateHandler(ApplicationHandler):
             cates = db_handler.get_from_db(sql)
             problems = [r for r in problems] 
             cates = [r for r in cates]
-            self.render("create_index.html", problem_list=problems, categories=cates)
+            try:
+                self.render("create_index.html", problem_list=problems, categories=cates)
+            except: 
+                print_traceback()
+                self.write_error(500)
             
         # GET /create/<p_id>
         elif p_id is not None and action is None:
@@ -571,7 +580,7 @@ class ProblemCreateHandler(ApplicationHandler):
 
         # GET /create/<p_id>/<action>
         elif p_id is not None and action is not None:
-            self.write_error()
+            self.write_error(404)
 
     def render_edit(self, p_id:str) -> None:
         """
@@ -595,11 +604,15 @@ class ProblemCreateHandler(ApplicationHandler):
                 self.redirect("/create")
             else:
                 page = page[0]
-                self.render("create.html",
-                            title=page["title"],
-                            page=json.loads(page["page"]),
-                            answers=json.loads(page["answers"]),
-                            is_new=False)
+                try:
+                    self.render("create.html",
+                                title=page["title"],
+                                page=json.loads(page["page"]),
+                                answers=json.loads(page["answers"]),
+                                is_new=False)
+                except:
+                    print_traceback()
+                    self.write_error(500)
 
     def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -748,13 +761,6 @@ class RenderHTMLModuleHandler(ApplicationHandler):
 
 
 def make_app():
-    create_path = []
-    if args.develop:
-        create_path = [
-            (r"/create/?", ProblemCreateHandler),
-            (r"/create/(?P<p_id>[\w-]*)/?", ProblemCreateHandler),
-            (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
-        ]
     return tornado.web.Application([
         (r"/", MainHandler),
         (r"/problems/?", ProblemHandler),
@@ -764,8 +770,12 @@ def make_app():
         (r"/kernel/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/(?P<action>[\w]+)/?", KernelHandler),
+        (r"/create/?", ProblemCreateHandler),
+        (r"/create/(?P<p_id>[\w-]*)/?", ProblemCreateHandler),
+        (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
         (r"/api/render/?", RenderHTMLModuleHandler),
-    ] + create_path,
+    ],
+    default_handler_class=ErrorHandler,
     template_path=os.path.join(os.getcwd(), "templates"),
     static_path=os.path.join(os.getcwd(), "static"),
     debug=True,
@@ -779,13 +789,15 @@ async def main():
     shutdown_event = asyncio.Event()
 
     def shutdown_server(signum, frame):
+        print()
         db_handler.close()
+        print(f"[Server Stop] DB is successfully closed.")
         for ex, f in ProblemHandler.execute_pool.values():
             for e in ex._processes.values():
-                print(f"[LOG] Process: {e} is killed")
+                print(f"[Server Stop] Process: {e} is killed")
                 e.kill()
         run_sync(mult_km._async_shutdown_all)()
-        print("[LOG] Server has been safely shut down.")
+        print("[Server Stop] All Ipykernel is successfully shutteddown.")
         shutdown_event.set()
 
     signal.signal(signal.SIGTERM, shutdown_server)
