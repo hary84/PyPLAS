@@ -4,6 +4,8 @@ import os
 import sqlite3
 import traceback
 from typing import Any, Optional, Union
+import urllib.parse
+
 import tornado
 from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
@@ -114,11 +116,16 @@ class ApplicationHandler(tornado.web.RequestHandler):
         self.query = {}
         if isinstance(names, list):
             for name in names:
-                self.query[name] = self.get_query_argument(name)
+                self.query[name] = urllib.parse.quote(self.get_query_argument(name))
         elif isinstance(names, dict):
             for name, default in names.items():
-                self.query[name] = self.get_query_argument(name, default)
-
+                query = self.get_query_argument(name, default)
+                if isinstance(query, str):
+                    query = urllib.parse.quote(query)
+                self.query[name] = query
+        else:
+            raise TypeError
+        
 class ErrorHandler(ApplicationHandler): 
     """
     For 404 errors, use in the default_handler_class, Application setting.
@@ -138,16 +145,17 @@ class DBHandler:
         self.dev_mode:bool = dev_mode
         self.conn:Optional[sqlite3.Connection] = None
 
-        self.conn = self._connect(page_path)
-        # create user.db if not exist
-        if os.path.exists(user_path):
-            self._setup_user_db(user_path)
-
-        # create or initialize dev-user.db if dev_mode is True
+        # set dev_user_path in self.user_path if dev_mode is true
         if self.dev_mode:
             self.user_path = dev_user_path
-            self._setup_user_db(dev_user_path)
-        
+
+        # create user.db/dev-user.db if not exist
+        if not os.path.exists(self.user_path):
+            self._setup_user_db(user_path)
+
+        # connect pyplas.db 
+        self.conn = self._connect(self.page_path)
+
         # attach user.db in pyplas.db
         self.conn.execute(
             r"ATTACH DATABASE :user_path AS user", 
@@ -177,8 +185,7 @@ class DBHandler:
     
     def _setup_user_db(self, db_path:str) -> None:
         """
-        userデータ用DBを用意する. テーブルが存在しないならば, logsテーブルとprogressテーブルを作成し,
-        内部を空にする. 
+        userデータ用DBを用意する. テーブルが存在しないならば, logsテーブルとprogressテーブルを作成する.
 
         このメソッドは直接呼び出さない.
 
@@ -207,7 +214,6 @@ class DBHandler:
         )"""
         conn.execute(create_logs)
         conn.execute(create_progress)
-        self._clean_up(conn=conn)
         conn.commit()
         conn.close()
 
@@ -280,7 +286,9 @@ class DBHandler:
 
     def _clean_up(self, conn:Optional[sqlite3.Connection]=None) -> None:
         """
-        user DBをクリーンアップする. このメソッドは直接呼び出さない.
+        self.user_pathのuser DBをクリーンアップする. 
+        
+        このメソッドは直接呼び出さない.
 
         Parameters
         ----------
@@ -296,7 +304,7 @@ class DBHandler:
 
     def close(self) -> None:
         """
-        DBとの接続を切り, user DBをクリーンアップする.
+        DBとの接続を切る. dev_modeがtrueの時, user DBをクリーンアップする.
         """
         self.conn.close()
         if self.dev_mode:

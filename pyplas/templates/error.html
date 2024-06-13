@@ -22,7 +22,12 @@
 {% block main %}
 <main class="col px-3 vh-100 mt-3">
     <div class="card border-0 my-3">
-        <img src="{{ static_url(f'img/{status_code}-error.jpg') }}" height=300px width=100% class="card-img-top" alt="404 error img" style="object-fit: cover;">
+        {% import os %}
+        {% if os.path.exists(os.path.join(os.getcwd(), f'static/img/{status_code}-error.jpg')) %}
+            <img src="{{ static_url(f'img/{status_code}-error.jpg') }}" height=300px width=100% class="card-img-top" alt="{{status_code}} error img" style="object-fit: cover;">
+        {% else %}
+            <img src="{{ static_url('img/default-error.jpg') }}" height=300px width=100% class="card-img-top" alt="error img" style="object-fit: cover;">
+        {% end %}
         <div class="card-body text-center">
             {% if status_code == 403 %}
                 <h2 class="card-title text-danger border-bottom border-danger text-center">403 Forbidden </h2>
@@ -32,8 +37,14 @@
                 <h2 class="card-title text-danger border-bottom border-danger text-center">404 Not Found </h2>
                 <p class="card-text w-50 text-center my-4 mx-auto">The page you are looking for might have been removed, had its name changed or is temporarily unavailable.</p>
                 <a class="btn btn-primary text-center" href="/"><i class="bi bi-house"></i>  Go To Home</a>
-            {% elif status_code == 500 %}
-                <h2 class="card-title text-danger-emphasis border-bottom border-danger text-center">500 Internal Server Error </h2>
+            {% else %}
+                <h2 class="card-title text-danger-emphasis border-bottom border-danger text-center">
+                    {% if status_code // 100 == 4 %}
+                        {{ status_code}} Client Error
+                    {% elif status_code // 100 == 5 %}
+                        {{ status_code }} Server Error
+                    {% end %}
+                </h2>
                 <p class="card-text w-50 text-center my-4 mx-auto">Sorry, something went wrong.<br><br>
                     Try to refresh this page or feel free to contact us if the problem persists.</p>
                 <a class="btn btn-primary text-center" href="/"><i class="bi bi-house"></i>  Go To Home</a>

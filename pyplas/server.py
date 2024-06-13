@@ -2,20 +2,23 @@ import argparse
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
+import json
+import os  
+from io import StringIO
 import signal
 import sqlite3
-from util import (ApplicationHandler, ErrorHandler, InvalidJSONError, custom_exec, datetime_encoda, 
-                  print_traceback, DBHandler)
+from typing import Optional, Tuple, Union
 import uuid
-from typing import Optional, Tuple
-import tornado 
-import tornado.websocket 
-import tornado.ioloop as ioloop
-import os  
-import json
+
 from jupyter_client import AsyncMultiKernelManager, AsyncKernelManager, AsyncKernelClient
 from jupyter_client.multikernelmanager import DuplicateKernelError
 from jupyter_client.utils import run_sync
+import pandas as pd
+import tornado 
+import tornado.websocket
+from tornado.ioloop import IOLoop
+
+import util
 import uimodules
 from uimodules import *
 
@@ -28,16 +31,16 @@ args = parser.parse_args()
 # setup global variables
 mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
-db_handler = DBHandler(page_path=os.path.join(os.getcwd(), "pyplas.db"),
+db_handler = util.DBHandler(page_path=os.path.join(os.getcwd(), "pyplas.db"),
                        user_path=os.path.join(os.getcwd(), "user.db"),
                        dev_user_path=os.path.join(os.getcwd(), "dev-user.db"),
                        dev_mode=args.develop)
 
-class MainHandler(ApplicationHandler):
+class MainHandler(util.ApplicationHandler):
     
     def prepare(self):
         print(f"[{self.request.method}] {self.request.uri}")
-        self.cat = self.get_query_argument("category", None)
+        self.load_url_queries({"category": None})
 
     def get(self):
         """
@@ -45,7 +48,7 @@ class MainHandler(ApplicationHandler):
             * / → カテゴリ一覧の表示
             * /?category=<category> → そのカテゴリのすべての問題を表示
         """
-        if self.cat is None: # カテゴリ一覧を表示
+        if self.query["category"] is None: # カテゴリ一覧を表示
             sql = r"""SELECT cat_name FROM categories"""
             cat = db_handler.get_from_db(sql)
             cat = [r["cat_name"] for r in cat]
@@ -55,13 +58,13 @@ class MainHandler(ApplicationHandler):
             FROM pages INNER JOIN categories ON pages.category = categories.cat_id
             LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
             WHERE categories.cat_name = :cat_name AND pages.status = 1"""
-            p_list = db_handler.get_from_db(sql, cat_name=self.cat)
+            p_list = db_handler.get_from_db(sql, cat_name=self.query["category"])
             p_list = [r for r in p_list]
             cat = []
 
         self.render("index.html", categories=cat, problem_list=p_list)
 
-class ProblemHandler(ApplicationHandler):
+class ProblemHandler(util.ApplicationHandler):
 
     execute_pool = {}
     def prepare(self):
@@ -70,8 +73,9 @@ class ProblemHandler(ApplicationHandler):
     def get(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
         PATH
-            * /problems           : / へリダイレクト
-            * /problems/<p_id>    : 問題を表示
+            * /problems                 : / へリダイレクト
+            * /problems/<p_id>          : 問題を表示
+            * /problems/log/download    : logをcsvファイルとしてダウンロードする
         """
         # GET /problems
         if p_id is None and action is None: 
@@ -80,34 +84,64 @@ class ProblemHandler(ApplicationHandler):
         
         # GET /problems/<p_id>
         elif p_id is not None and action is None: 
-            sql = r"""SELECT pages.title, pages.page, 
-                COALESCE(user.progress.q_status, '{}') AS q_status, 
-                COALESCE(user.progress.q_content, '{}') AS q_content
-                FROM pages 
-                LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
-                WHERE pages.p_id=:p_id AND status=1"""
-            try:
-                page = db_handler.get_from_db(sql, p_id=p_id)
-                assert len(page) != 0, f"p_id='{p_id}' does not exist in DB."
-            except (AssertionError, sqlite3.Error) as e:
-                print(f"[ERROR] {e.__class__.__name__}: {e}")
-                self.write_error(404)
-                return
-            else:
-                page:dict = page[0]
-                try:
-                    self.render(f"./problem.html", 
-                                title=page["title"],
-                                page=json.loads(page["page"]),
-                                q_status=json.loads(page["q_status"]),
-                                q_content=json.loads(page["q_content"]),
-                                progress=[])
-                except:
-                    print_traceback()
-                    self.write_error(500)
+            self.render_problem(p_id=p_id)
+
         # GET /problems/<p_id>/<action>    
         elif p_id is not None and action is not None: 
+            if p_id == "log" and action == "download":
+                self.load_url_queries(["cat", "name", "num"])
+                self.log_downdload(**self.query)
+            else:    
+                self.write_error(404)
+
+
+    def render_problem(self, p_id:str):
+        """
+        DBから問題を取得し, レンダリングする
+        """
+        sql = r"""SELECT pages.title, pages.page, 
+            COALESCE(user.progress.q_status, '{}') AS q_status, 
+            COALESCE(user.progress.q_content, '{}') AS q_content
+            FROM pages 
+            LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
+            WHERE pages.p_id=:p_id AND status=1"""
+        try:
+            page = db_handler.get_from_db(sql, p_id=p_id)
+            assert len(page) != 0, f"p_id='{p_id}' does not exist in DB."
+        except (AssertionError, sqlite3.Error) as e:
+            util.print_traceback()
             self.write_error(404)
+        else:
+            page:dict = page[0]
+            try:
+                self.render(f"./problem.html", 
+                            title=page["title"],
+                            page=json.loads(page["page"]),
+                            q_status=json.loads(page["q_status"]),
+                            q_content=json.loads(page["q_content"]),
+                            progress=[])
+            except:
+                util.print_traceback()
+                self.write_error(500)
+
+
+    def log_downdload(self,  cat:str, name:str, num:Union[int, str], **kwargs) -> list[dict]:
+        """
+        user.dbのlogsテーブルからあるカテゴリcat_nameに属するログをdictのlistとして返す.
+        """
+        sql = r"""SELECT p_id, q_id, content, result, answer_at FROM user.logs
+                INNER JOIN categories ON user.logs.category = categories.cat_id
+                WHERE categories.cat_name = :cat_name"""
+        logs = db_handler.get_from_db(sql, cat_name=cat)
+        logs_string = StringIO(json.dumps(logs))
+        df = pd.read_json(logs_string)
+        csv_bin = df.to_csv(header=True, index=False).encode("utf-8")
+
+        self.set_header("Content-Type", "text/csv")
+        self.set_header("Content-Disposition", 
+                        f'attachment; filename="{num}_{name}_{cat}.csv"')
+        self.set_header("Content-Length", len(csv_bin))
+        self.write(csv_bin)
 
     async def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -141,8 +175,8 @@ class ProblemHandler(ApplicationHandler):
                 else:
                     self.set_status(404)
                     self.finish({"DESCR": f"{self.request.full_url()} is not found."})
-        except (InvalidJSONError, tornado.web.MissingArgumentError, sqlite3.Error):
-            print_traceback()
+        except (util.InvalidJSONError, tornado.web.MissingArgumentError, sqlite3.Error):
+            util.print_traceback()
             self.set_status(400)
             self.finish({"DESCR": "Invalid request message or Invalid url query"})
 
@@ -163,9 +197,9 @@ class ProblemHandler(ApplicationHandler):
             db_handler.write_to_db(write_content, p_id=p_id, 
                             q_content=json.dumps(self.json["q_content"]))
         except AssertionError:
-            raise InvalidJSONError
+            raise util.InvalidJSONError
         except sqlite3.Error:
-            print_traceback()
+            util.print_traceback()
             raise
         else:
             self.finish({"body": json.dumps(self.json["q_content"]),
@@ -194,7 +228,7 @@ class ProblemHandler(ApplicationHandler):
             self.target_answers:list = c_answers.get(self.json["q_id"], []) 
             assert len(self.target_answers) != 0, f"Question({self.json['q_id']}) does not exist."
         except AssertionError:
-            raise InvalidJSONError
+            raise util.InvalidJSONError
         else:
             # html problem
             if self.json["ptype"] == 0: 
@@ -211,7 +245,7 @@ class ProblemHandler(ApplicationHandler):
                                                  content=json.dumps(self.json["answers"]),
                                                  keys=keys) 
             except sqlite3.Error:
-                print_traceback()
+                util.print_traceback()
                 raise 
             else:
                 self.finish({"content": content,
@@ -250,7 +284,7 @@ class ProblemHandler(ApplicationHandler):
         try:
             assert len(self.json["answers"]) == len(self.target_answers), "Does not match the number of questions in DB"
         except AssertionError as e:
-            raise InvalidJSONError
+            raise util.InvalidJSONError
         else:
             for i, ans in enumerate(self.json["answers"]):
                 result.append(ans == self.target_answers[i])
@@ -273,7 +307,7 @@ class ProblemHandler(ApplicationHandler):
         kernel_id = self.json["kernel_id"]
         code = "\n".join(self.json["answers"] + self.target_answers)
         executor = ProcessPoolExecutor(max_workers=1)
-        future = ioloop.IOLoop.current().run_in_executor(executor, custom_exec, code)
+        future = IOLoop.current().run_in_executor(executor, util.custom_exec, code)
         ProblemHandler.execute_pool[kernel_id] = executor
         try:
             await future
@@ -359,7 +393,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         self.node_id = received_msg.get("node_id", None)
         self.kc.execute(_code)
         # self.exec.clear()
-        ioloop.IOLoop.current().spawn_callback(self.messaging)
+        IOLoop.current().spawn_callback(self.messaging)
 
     async def messaging(self):
         """
@@ -378,7 +412,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
                     break
                 else:
                     output.update({"node_id": self.node_id})
-                    self.write_message(json.dumps(output, default=datetime_encoda))
+                    self.write_message(json.dumps(output, default=util.datetime_encoda))
             except Exception as e:
                 print(e)
                 break
@@ -388,7 +422,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         print("[WS] websocket is closing")
         
 
-class KernelHandler(ApplicationHandler):
+class KernelHandler(util.ApplicationHandler):
     """カーネル管理用 REST API"""
 
     def prepare(self) -> None:
@@ -544,7 +578,7 @@ class KernelHandler(ApplicationHandler):
     def on_finish(self):
         mult_km.updated.set()
 
-class ProblemCreateHandler(ApplicationHandler):
+class ProblemCreateHandler(util.ApplicationHandler):
     """
     問題作成モード
     """
@@ -571,7 +605,7 @@ class ProblemCreateHandler(ApplicationHandler):
             try:
                 self.render("create_index.html", problem_list=problems, categories=cates)
             except: 
-                print_traceback()
+                util.print_traceback()
                 self.write_error(500)
             
         # GET /create/<p_id>
@@ -611,7 +645,7 @@ class ProblemCreateHandler(ApplicationHandler):
                                 answers=json.loads(page["answers"]),
                                 is_new=False)
                 except:
-                    print_traceback()
+                    util.print_traceback()
                     self.write_error(500)
 
     def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
@@ -644,7 +678,7 @@ class ProblemCreateHandler(ApplicationHandler):
                 else:
                     self.set_status(404)
                     self.finish({"DESCR": f"{self.request.full_url()} is not found."})
-        except (InvalidJSONError, sqlite3.Error):
+        except (util.InvalidJSONError, sqlite3.Error):
             self.set_status(400)
             self.finish({"DESCR": "Invalid request message or Invalid url query"})
 
@@ -662,7 +696,7 @@ class ProblemCreateHandler(ApplicationHandler):
                                 page=json.dumps(self.json["page"]),
                                 answers=json.dumps(self.json["answers"]))
             except sqlite3.Error:
-                print_traceback()
+                util.print_traceback()
                 raise 
             else:
                 self.finish({"p_id": self.p_id,
@@ -676,7 +710,7 @@ class ProblemCreateHandler(ApplicationHandler):
                                 page=json.dumps(self.json["page"]),
                                 answers=json.dumps(self.json["answers"]))
             except sqlite3.Error:
-                print_traceback()
+                util.print_traceback()
                 raise 
             else:
                 self.finish({"p_id": p_id,
@@ -692,7 +726,7 @@ class ProblemCreateHandler(ApplicationHandler):
             params = [{"p_id": key} | v for key, v in self.json["profiles"].items()]
             db_handler.write_to_db_many(sql, params)
         except sqlite3.Error:
-            print_traceback()
+            util.print_traceback()
             raise 
         else:
             self.write({"profile": json.dumps(self.json),
@@ -714,7 +748,7 @@ class ProblemCreateHandler(ApplicationHandler):
             try:
                 db_handler.write_to_db(sql, p_id=p_id)
             except sqlite3.Error as e:
-                print_traceback()
+                util.print_traceback()
                 raise
             else:
                 self.finish({"kernel_id": p_id,
@@ -726,7 +760,7 @@ class ProblemCreateHandler(ApplicationHandler):
             self.finish({"DESCR": f"{self.request.full_url()} is not found."})
 
 
-class RenderHTMLModuleHandler(ApplicationHandler):
+class RenderHTMLModuleHandler(util.ApplicationHandler):
     def prepare(self):
         print(f"[{self.request.method}] {self.request.uri}")
         self.load_url_queries({"action": None})
@@ -775,7 +809,7 @@ def make_app():
         (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
         (r"/api/render/?", RenderHTMLModuleHandler),
     ],
-    default_handler_class=ErrorHandler,
+    default_handler_class=util.ErrorHandler,
     template_path=os.path.join(os.getcwd(), "templates"),
     static_path=os.path.join(os.getcwd(), "static"),
     debug=True,
