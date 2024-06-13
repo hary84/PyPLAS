@@ -21,20 +21,27 @@
 
 {% block main %}
 <main class="col px-3 vh-100 mt-3">
-    <div class="" id="progress">
+    <div class="px-2" id="progress">
         {% if len(categories) != 0 %}
-            <p class="fs-3 border-bottom border-dark">Categories</p>
-            <ul class="list-group">
+            <p class="fs-3 border-bottom border-dark fw-bold">Categories</p>
+            <div id="catContainer" class="d-flex justify-content-center" style="flex-wrap: wrap;">
+                {% import os %}
                 {% for cat in categories %}
-                    <li class="list-group-item">
-                        <a onclick="location.href='?category={{ cat }}'">{{ cat }}</a>
-                    </li>
+                    <div class="card m-2" style="width: 45%;" onclick="location.href='./?category={{cat}}'">
+                        {% if os.path.exists(os.path.join(os.getcwd(), f"static/img/{cat}.png")) %}
+                            <img src="{{ static_url(f'img/{cat}.png') }}" width="50%" height="100px" class="card-img-top" alt="category logo" style="object-fit: cover;">
+                        {% else %}
+                            <img src="{{ static_url(f'img/logo.jpg') }}" width="50%" height="100px" class="card-img-top" alt="category logo" style="object-fit: cover;">
+                        {% end %}
+                        <div class="card-body">
+                            <h5>{{ cat }}</h5>
+                        </div>
+                    </div>
                 {% end %}
-            </ul>
+            </div>
         {% elif len(problem_list) != 0 %}
             <p class="fs-3 border-bottom border-dark">Problems</p>
-            <ul class="list-group">
-            <table class="table table-hover ms-3">
+            <table class="table table-hover">
                 <thead>
                     <tr>
                         <th scope="col">#</th>
@@ -67,7 +74,7 @@
         <div class="card border-0 my-3">
             <img src="{{ static_url(f'img/in-preparation.jpg') }}" height=300px width=100% class="card-img-top" alt="404 error img" style="object-fit: cover;">
             <div class="card-body text-center">
-                <h2 class="card-title text-primary-emphasis border-bottom border-primary text-center pb-1">In preparation</h2>
+                <h2 class="card-title text-primary-emphasis border-bottom border-primary text-center pb-1">In Preparation</h2>
                 <p class="card-text w-50 text-center my-4 mx-auto">Sorry, this category is currently under preparation!</p>
                 <a class="btn btn-primary text-center" href="/"><i class="bi bi-house"></i>  Go To Home</a>
             </div>
