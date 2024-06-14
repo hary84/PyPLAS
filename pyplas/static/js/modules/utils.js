@@ -334,5 +334,5 @@ async function downloadLog() {
 
     const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/).groups.cat_name
     window.location.href = 
-        `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${name}`
+        `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
 }
