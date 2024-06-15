@@ -35,7 +35,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             target.classList.add("disabled")
               // kernel restart ボタン
             if (target.classList.contains("btn-restart")) {
-                await kh.setUpKernel()
+                await kh.setUpKernel(true)
+                document.querySelectorAll(".node.code .return-box").forEach(elem => {
+                    elem.innerHTML = ""
+                })
             } // kernel interrupt ボタン
             else if (target.classList.contains("btn-interrupt")) {
                 await kh.kernelInterrupt()

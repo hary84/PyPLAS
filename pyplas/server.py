@@ -419,7 +419,12 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         print("=========================")
 
     def on_close(self):
-        print("[WS] websocket is closing")
+        print(f"[WS] websocket is closing (close_code = {self.close_code})")
+        if self.close_code == 1000: 
+            print(f"[WS] {self.close_reason}")
+            pass 
+        elif self.close_code == 1001:
+            IOLoop.current().spawn_callback(mult_km.shutdown_kernel, kernel_id=self.kernel_id)
         
 
 class KernelHandler(util.ApplicationHandler):

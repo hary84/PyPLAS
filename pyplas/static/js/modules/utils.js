@@ -7,16 +7,6 @@ function getNodeElement(node_id) {
     return document.querySelector(`div[node-id='${node_id}'].node`)
 }
 /**
- * HTML文字列からdom要素に変換する
- * @param {string} str 
- * @returns {HTMLCollection}
- */
-function domFromStr(str) {
-    var div = document.createElement("div")
-    div.innerHTML = str 
-    return div.children
-}
-/**
  * objのpropertyが変化した際にfuncを実行する
  * @param {object} obj 
  * @param {property} propName 
@@ -48,7 +38,7 @@ async function addMD(loc, pos, {
         question=true} = {}) 
     {
     if (loc === undefined || pos === undefined) {
-        new Error("argument Error")
+        throw new Error("argument Error")
     }
     const res = await fetch(`${window.location.origin}/api/render?action=addMD`, {
         method: "POST",
@@ -85,7 +75,7 @@ async function addCode(loc, pos, {
         question=true} = {}) 
     {
     if (loc === undefined || pos === undefined) {
-        new Error("argument error")
+        throw new Error("argument error")
     }
     const res = await fetch(`${window.location.origin}/api/render?action=addCode`, {
         method: "POST",

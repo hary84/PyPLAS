@@ -2,26 +2,36 @@
 class KernelHandler {
     /**
      * インスタンス変数の初期化とカーネルの起動を行う
+     * @param {boolean} alreadyExist カーネルとの新規接続か、既存の接続を再接続するか
      */
-    setUpKernel = async () => {
-        this.execute_task_q = [] // 実行したいnodeのnode-idを格納する
-        this.execute_counter = 0
-        this.running = false // コードを実行中かを表す.
-        this.msg = undefined
-        this.kernel_id = sessionStorage["kernel_id"]
-        
-        await this.kernelStart()
+    setUpKernel = async (alreadyExist=false) => {
+        this.execute_task_q = []    // 実行したいnodeのnode-idを格納する
+        this.execute_counter = 0    // 実行回数カウンター
+        this.running = false        // コードを実行中かを表す
+        this.msg = undefined        // ipykernelから受信したJSONを格納する
 
-        // WebSocketで:ws/<kernel_id>に接続
         if (this.ws && this.ws.readyState != 3) {
-            this.ws.close()
+            this.ws.close(1000, "Disconnect to restart the kernel.")
         }
+        
+        if (alreadyExist) {
+            await this.kernelRestart()
+            
+        } else {
+            this.kernel_id = crypto.randomUUID()
+            await this.kernelStart()
+        }
+        
+        // WebSocketで:ws/<kernel_id>に接続
         this.ws = new WebSocket(`ws://${window.location.host}/ws/${this.kernel_id}`)
         this.ws.onopen = () => {
             console.log("[WS] WS connecting ...")
         }
         this.ws.onmessage = (event) => {
             const data = JSON.parse(event.data)
+            if (data.msg_type == "status" && data.content.execution_state == "busy") {
+                this.running = true
+            }
             if (data.msg_type == "error") {
                 this.execute_task_q = [this.execute_task_q[0]]
             }
@@ -29,7 +39,6 @@ class KernelHandler {
                 this.execute_task_q.shift()
                 this.running = false
                 if (this.execute_task_q[0]) {
-                    this.running = true
                     this._executeCode()
                 }
             }
@@ -38,14 +47,6 @@ class KernelHandler {
         this.ws.onclose = () => {
             console.log("[WS] WS disconnecting ...")
         }
-    }
-    /**
-     * カーネルidをインスタンスとsessionStorageに保存する
-     * @param {String} kernel_id 
-     */
-    registerKernelId = (kernel_id) => {
-        this.kernel_id = kernel_id
-        sessionStorage["kernel_id"] = this.kernel_id
     }
     /**
      * カーネルidが有効かを調べる
@@ -75,7 +76,6 @@ class KernelHandler {
     }
     /**
      * カーネルを起動する.
-     * カーネルがすでに存在している場合、kernelRestart()でカーネルを再起動する.
      * 
      * このメソッドは直接呼び出さず、setUpKernel()からのみ呼び出す.
      */
@@ -85,10 +85,8 @@ class KernelHandler {
         const json = await res.json()
         console.log(`[Kernelhandler] ${json.DESCR}`)   
         if (!res.ok) {
-            await this.kernelRestart()
-        }
-        else {
-            this.registerKernelId(json.kernel_id)
+            alert("Failed to start kernel.\nPlease restart the server.")
+            throw new Error("Failed to start new kernel.")
         }
     }
     /**
@@ -101,11 +99,9 @@ class KernelHandler {
                               {method: "POST"})
         const json = await res.json()
         console.log(`[KernelHandler] ${json.DESCR}`)
-        if (res.ok) {
-            this.registerKernelId(json.kernel_id)
-        }
-        else {
-            throw new Error("Fail to start kernel.")
+        if (!res.ok) {
+            alert("Failed to restart kernel.\nPlease restart the server.")
+            throw new Error("Failed to restart kernel.")
         }
     }
     /**
@@ -158,9 +154,8 @@ class KernelHandler {
             "node_id": node_id
         })
         this.ws.send(msg)
-        this.running = true
         this.execute_counter += 1
-        console.log(`[KernelHandler] Executing code (node-id=${node_id})`)
+        console.log(`[KernelHandler] Executing code (node-id='${node_id}')`)
     }
 }
 
