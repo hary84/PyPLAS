@@ -319,3 +319,20 @@ async function loadIpynb(input, loc, markdown=true, {user=1, inQ=false}={}) {
         alert("Ipynbファイルの読み込みに失敗しました.")
     }
 }
+/**
+ * DBからログを取得し, csvとしてダウンロードする
+ * @returns {none}
+ */
+async function downloadLog() {
+    const number = document.querySelector("#inputNumber").value 
+    const name = document.querySelector("#inputName").value 
+
+    if (number.length == 0 || name.length == 0) {
+        alert("Input your name or student number.")
+        return 
+    }
+
+    const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/).groups.cat_name
+    window.location.href = 
+        `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
+}

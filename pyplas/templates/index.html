@@ -23,7 +23,7 @@
 <main class="col px-3 vh-100 mt-3">
     <div class="px-2" id="progress">
         {% if len(categories) != 0 %}
-            <p class="fs-3 border-bottom border-dark fw-bold">Categories</p>
+            <p class="fs-3 border-bottom border-dark fw-bold">  Categories</p>
             <div id="catContainer" class="d-flex justify-content-center" style="flex-wrap: wrap;">
                 {% import os %}
                 {% for cat in categories %}
@@ -40,8 +40,8 @@
                 {% end %}
             </div>
         {% elif len(problem_list) != 0 %}
-            <p class="fs-3 border-bottom border-dark">Problems</p>
-            <table class="table table-hover">
+            <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-bookmarks"></i>  Problems</p>
+            <table class="table table-hover mb-5">
                 <thead>
                     <tr>
                         <th scope="col">#</th>
@@ -69,7 +69,23 @@
                         </tr>
                     </tbody>
                 {% end %}
-            </table>        
+            </table> 
+
+            <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-terminal"></i>  Log</p>
+            <form>
+                <div class="mb-3">
+                  <label for="inputNumber" class="form-label">Student ID</label>
+                  <input type="input" class="form-control" id="inputNumber" autocomplete="off">
+                  <div id="numberHelp" class="form-text">Input your student ID.</div>
+                </div>
+                <div class="mb-3">
+                  <label for="inputName" class="form-label">Name</label>
+                  <input type="input" class="form-control" id="inputName" autocomplete="off">
+                  <div id="nameHelp" class="form-text">Input your Name.</div>
+                </div>
+                <a class="btn btn-primary" onclick="downloadLog()">Download</a>
+              </form>       
+              
         {% else %}
         <div class="card border-0 my-3">
             <img src="{{ static_url(f'img/in-preparation.jpg') }}" height=300px width=100% class="card-img-top" alt="404 error img" style="object-fit: cover;">
