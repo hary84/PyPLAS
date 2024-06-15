@@ -190,11 +190,14 @@ class ProblemHandler(util.ApplicationHandler):
             ON CONFLICT(p_id) DO UPDATE SET
             q_content=:q_content
             """
+        write_p_status = r"""UPDATE user.progress SET 
+            p_status = 1
+            WHERE p_id = :p_id AND p_status == 0"""
         try:
             for key, value in self.json["q_content"].items():
                 assert isinstance(key, str), "data key is invalid type. expected 'str'"
                 assert isinstance(value, list), "data value is invalid type. expected 'list'"
-            db_handler.write_to_db(write_content, p_id=p_id, 
+            db_handler.write_to_db((write_content, write_p_status), p_id=p_id, 
                             q_content=json.dumps(self.json["q_content"]))
         except AssertionError:
             raise util.InvalidJSONError
@@ -331,8 +334,14 @@ class ProblemHandler(util.ApplicationHandler):
         採点結果logテーブル, progressテーブルに記録する
         """
         write_log = r"""INSERT INTO user.logs(p_id, category, q_id, content, result) 
-            VALUES(:p_id, 1, :q_id, :content, :status)
-            """
+            VALUES(
+                :p_id, 
+                (SELECT category FROM pages WHERE p_id=:p_id),
+                :q_id, 
+                :content,
+                :status
+            )
+    """
         write_state = r"""INSERT INTO user.progress(p_id, q_status, q_content)
             VALUES (
             :p_id,
