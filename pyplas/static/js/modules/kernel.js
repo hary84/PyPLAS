@@ -106,6 +106,7 @@ class KernelHandler {
     }
     /**
      * REST API を用いてカーネルに中断指示を出す
+     * 
      * @param {string} kernel_id カーネルid
      */
     kernelInterrupt = async (kernel_id) => {
@@ -156,6 +157,43 @@ class KernelHandler {
         this.ws.send(msg)
         this.execute_counter += 1
         console.log(`[KernelHandler] Executing code (node-id='${node_id}')`)
+    }
+    /**
+     * locの直下に存在する.node.codeをすべて実行する
+     * @param {Element} loc 
+     */
+    executeAll = async (loc) => {
+        await this.kernelInterrupt()
+
+        let count = 0
+        try {
+            await new Promise((resolve, reject) => {
+                const intervalId = setInterval(()=> {
+                    if (this.execute_task_q.length == 0 && this.running == false) {
+                        clearInterval(intervalId)
+                        console.log("[KernelHandler] Ready for execute all!")
+                        resolve()
+                    } else {
+                        console.log("[KernelHandler] Wait for execute all.")
+                        count ++
+                        if (count > 5) {
+                            clearInterval(intervalId)
+                            reject()
+                        }
+                    }
+                }, 500)
+            })
+        } catch (err) {
+            alert("Execute Timeout")
+            return 
+        }
+
+        loc.querySelectorAll(":scope > .node.code").forEach(elem => {
+            const node_id = elem.getAttribute("node-id")
+            this.execute_task_q.push(node_id)
+        })
+
+        this._executeCode()
     }
 }
 

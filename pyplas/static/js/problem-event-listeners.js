@@ -30,11 +30,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // イベントリスナー (左サイドバー)
     document.querySelector("#kernel-ops").addEventListener("click", async e => {
-        const target = e.target.closest(".btn-restart, .btn-interrupt, .btn-save")
+        const target = e.target.closest("a, button")
         if (target) {
             target.classList.add("disabled")
+              // execute all ボタン
+            if (target.classList.contains("btn-exec-all")) {
+                await kh.executeAll(document.querySelector("#nodesContainer"))
+            }
               // kernel restart ボタン
-            if (target.classList.contains("btn-restart")) {
+            else if (target.classList.contains("btn-restart")) {
                 await kh.setUpKernel(true)
                 document.querySelectorAll(".node.code .return-box").forEach(elem => {
                     elem.innerHTML = ""
