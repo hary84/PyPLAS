@@ -133,7 +133,7 @@ function addFillInBlankProblem(btn) {
     var tag = [
         '<p class="mb-0 q-text">',
         '   <label class="form-label">?????</label>',
-        '   <input type="text" class="form-control q-form" placeholder="answer" ans=?????>',
+        '   <input type="text" class="form-control" placeholder="answer" ans=?????>',
         '</p>'
     ].join("\n")
     editor.insert(tag)

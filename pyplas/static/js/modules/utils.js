@@ -181,22 +181,25 @@ async function cancelScoring(p_id, kernel_id) {
 }
 /**
  * Question Nodeから各パラメータを抽出する
- * @param {DOM} elem 
- * @param {int} mode 0: learner, 1: creator
+ * @param {Element} elem .node.question要素
+ * @param {Number} mode 0: learner, 1: creator
  * @returns {object}
  */
 function extractQuestionNode(elem, mode) {
-    var q_id = elem.getAttribute("q-id")
-    var ptype = Number(elem.getAttribute("ptype"))
-    var conponent = []
-    var question = ""
-    var editable = false 
-    var answers = []
+    if (!elem.classList.contains("question")) {
+        throw new Error("'elem' has no class 'question'.")
+    }
+    const q_id = elem.getAttribute("q-id")
+    const ptype = Number(elem.getAttribute("ptype"))
+    let conponent = []
+    let question = ""
+    let editable = false 
+    let answers = []
     const parser = new DOMParser()
     // learner mode 
     if (mode == 0) {
         if (ptype == 0) {
-            elem.querySelectorAll(".card-body > .explain > .q-text").forEach(elem => {
+            elem.querySelectorAll(".q-text .q-text").forEach(elem => {
                 answers.push(elem.querySelector("select, input").value) // answers
             }) 
         }
@@ -270,12 +273,12 @@ async function saveUserData(p_id) {
 }
 /**
  * ipynbをparseして, locの末尾にnodeとして挿入する
- * @param {Element} input       form type="file"の要素 
+ * @param {File} file           fileオブジェクト
  * @param {Element} loc         nodeを追加する要素
  * @param {boolean} markdown    markdownを追加するか
  */
-async function loadIpynb(input, loc, markdown=true, {user=1, inQ=false}={}) {
-    const ipynb = input.files[0]
+async function loadIpynb(file, loc, markdown=true, {user=1, inQ=false}={}) {
+    const ipynb = file
     console.log(`[FileReader] Load '${ipynb.name}' and embed in page.`)
     const reader = new FileReader()
     reader.readAsText(ipynb)
@@ -325,4 +328,21 @@ async function downloadLog() {
     const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/).groups.cat_name
     window.location.href = 
         `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
+}
+/**
+ * showFilePickerでファイルピッカーを表示し, Fileオブジェクトを返す. 
+ * @param {object} acceptMIME MINE typeがキー, ファイル拡張子のarrayが値のオブジェクト
+ * @returns {File} 選択されたファイルオブジェクト
+ */
+async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
+    const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [
+            {
+                accept: acceptMIME
+            }
+        ]
+    })
+    const file = await handle.getFile()
+    return file
 }

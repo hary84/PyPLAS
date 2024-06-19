@@ -43,11 +43,11 @@
     </div>
     <div id="sourceCode">
         <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
-        <div class="p-content position-relative ms-3 px-3" id="nodesContainer">
-            <div class="mb-3 border border-start-0 border-end-0 border-success border-3 pb-2 bg-success-subtle" id="loadIpynb">
+        <div class="dynamic-nodes-container position-relative ms-3 p-3" id="nodesContainer">
+            <div id="loadIpynb" class="mb-3 border border-start-0 border-end-0 border-success border-3 pb-2 bg-success-subtle">
                 <label for="ipynbForm" class="form-label">Create from Jupyter Notebook</label>
                 <input class="form-control form-control-sm w-50 mx-auto border border-dark" id="ipynbForm" type="file" accept=".ipynb" name="mynote" 
-                    onchange="loadIpynb(this, this.closest('.p-content'))">
+                    onchange="loadIpynb(this.files[0], this.closest('.p-content'))">
             </div>
             {% module NodeControl() %}
             {% if not is_new %}
