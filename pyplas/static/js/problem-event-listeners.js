@@ -85,7 +85,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const kernel_id = manageScoring[q_id]
                 await cancelScoring(p_id, kernel_id)
                 delete manageScoring[q_id]
-            } // add MD ボタン
+            }
+            else if (target.classList.contains("btn-exec-all")) {
+                await kh.executeAll(target.closest(".card-body").querySelector(".q-content"))
+            }  // add MD ボタン
             else if (target.classList.contains("btn-addMD")) {
                 const inQ = !!target.closest(".question")
                 await addMD(target.closest(".node-control"), "afterend", {

@@ -10,7 +10,7 @@
 @media (min-width: 993px) { 
   .sidebar {
     position: sticky;
-    top: 0px;
+    top: 10%;
     overflow-y: auto;
     max-height: calc(100vh);
   }
@@ -190,6 +190,7 @@
 /* card-body */
   .card-body {
     .mde  .toolbar  .only-inq { display: block; } 
+    .question-options > .dropdown-toggle::after {content: none;}
   }
 }
 .question[progress="1"] {

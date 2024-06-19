@@ -25,7 +25,19 @@
 			</div>
 		{% end %}
 	</div>
-	<div class="card-body py-2">
+	<div class="card-body py-2 position-relative">
+
+		<div class="dropdown position-absolute question-options" style="right: 1%;">
+			<button class="btn btn-sm btn-light dropdown-toggle border" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+				<i class="bi bi-justify"></i> 
+			</button>
+			<ul class="dropdown-menu">
+			  {% if ptype == 1 %}
+			    <li><a class="dropdown-item btn-exec-all">Execute All</a></li>
+			  {% end %}
+			  <li><a class="dropdown-item" href="#">Reset Input</a></li>
+			</ul>
+		</div>
 
 		<!-- HTML Problem -->
 		{% if ptype == 0 %}
