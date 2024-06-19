@@ -85,17 +85,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const kernel_id = manageScoring[q_id]
                 await cancelScoring(p_id, kernel_id)
                 delete manageScoring[q_id]
-            } // 
+            } // load-ipynb ボタン
             else if (target.classList.contains("btn-load-ipynb")) {
                 const file = await filePicker()
-                const loc = target.closest(".card-body").querySelector(".q-content")
+                const loc = target.closest(".card-body").querySelector(".answer-content")
                 await loadIpynb(file, loc, false, {
                     user: Number(parent=="create"),
                     inQ: true}
                 )
             }
             else if (target.classList.contains("btn-exec-all")) {
-                await kh.executeAll(target.closest(".card-body").querySelector(".q-content"))
+                await kh.executeAll(target.closest(".card-body").querySelector(".answer-content"))
             }  // add MD ボタン
             else if (target.classList.contains("btn-addMD")) {
                 const inQ = !!target.closest(".question")
@@ -206,7 +206,7 @@ function renderResult(res, form, type="text") {
             form.insertAdjacentHTML("beforeend", `<p class="exec-res">${res}</p>`)
             break;
         case "img":
-            form.insertAdjacentHTML("beforeend",`<img class="exec-res" src="data:image/png;base64,${res}"/>`)
+            form.insertAdjacentHTML("beforeend",`<img class="exec-res ms-2" src="data:image/png;base64,${res}" style="max-width: 95%;"/>`)
             break;
         case "error":
             var res = escapeHTML(res, true).replace(/\n/g, "<br>")

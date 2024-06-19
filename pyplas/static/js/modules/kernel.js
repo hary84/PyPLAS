@@ -146,12 +146,14 @@ class KernelHandler {
      * このメソッドはインスタンスから直接呼び出さない
      */
     _executeCode = () => {
+        if (this.execute_task_q.length == 0) {
+            return
+        }
         const node_id = this.execute_task_q[0]
         const node = getNodeElement(node_id)
         node.querySelector(".return-box").innerHTML = ""
-        const node_code = node.querySelector(".node-code")
         const msg = JSON.stringify({
-            "code": ace.edit(node_code).getValue(),
+            "code": ace.edit(node.querySelector(".node-code")).getValue(),
             "node_id": node_id
         })
         this.ws.send(msg)

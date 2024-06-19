@@ -58,9 +58,9 @@
 				{% if user == 1 %}
 					{% module NodeControl(question=False) %}
 					{% for d in conponent %}
-						{% if d["type"] == "explain" %}
+						{% if d.get("type", None) == "explain" %}
 							{% module Explain(**d, editor=True, allow_del=True) %}
-						{% elif d["type"] == "code" %}
+						{% elif d.get("type", None) == "code" %}
 							{% module Code(**d, user=user, allow_del=True) %}
 						{% end %}
 						{% module NodeControl(question=False) %}

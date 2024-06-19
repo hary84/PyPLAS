@@ -1,10 +1,98 @@
 /**
- * node-id属性を持ち、classにnodeを持つelementを返す
+ * node-id属性を持つNodeを返す
  * @param {string} node_id 
  * @returns {Element}
  */
 function getNodeElement(node_id) {
     return document.querySelector(`div[node-id='${node_id}'].node`)
+}
+/**
+ * q-id属性を持つQuestion Nodeを返す
+ * @param {*} q_id 
+ * @returns {Element}
+ */
+function getQuestionElement(q_id) {
+    return document.querySelector(`.node.question[q-id="${q_id}"]`)
+}
+/**
+ * Question Nodeから各パラメータを抽出する
+ * @param {Element | String} elem .node.question要素もしくは, q-id
+ * @param {Number} mode 0: learner, 1: creator
+ * @returns {Object}
+ */
+function extractQuestionNode(elem, mode) {
+    if (typeof elem === "string") {
+        var questionNode = document.querySelector(`.node.question[q-id="${elem}"]`)
+    } else {
+        var questionNode = elem
+    }
+
+    const q_id = questionNode.getAttribute("q-id")
+    const ptype = Number(questionNode.getAttribute("ptype"))
+    const conponent = []
+    const answers = []
+    let question = ""
+    let editable = false 
+
+    const parser = new DOMParser()
+    const answerContent = questionNode.querySelector(".answer-content")
+
+    // learner mode 
+    if (mode == 0) {
+        if (ptype == 0) {
+            answerContent.querySelectorAll(".q-text > input, .q-text > select").forEach(e => {
+                answers.push(e.value) // user answers
+            }) 
+        }
+        else if (ptype == 1) {
+            answerContent.querySelectorAll(".node.code").forEach(e => {
+                answers.push(ace.edit(e.querySelector(".node-code")).getValue()) // user answers
+            })
+        }
+        return {
+            "q_id": q_id,      // str
+            "ptype": ptype,    // int 
+            "answers": answers // list
+        }
+    }
+
+    // creator mode 
+    if (mode == 1) {
+        if (ptype == 0) {
+            const md_string = ace.edit(answerContent.querySelector(".node-mde")).getValue()
+            const md_dom = parser.parseFromString(md_string, "text/html").querySelector("body")
+            md_dom.querySelectorAll(".q-text > input[ans], .q-text > select[ans]").forEach(e => { // currect answers
+                answers.push(e.getAttribute("ans"))
+            })
+            question = md_dom.innerHTML // question
+        }
+        else if (ptype == 1) {
+            answers.push(ace.edit(questionNode.querySelector(".test-code .node-code")).getValue()) // answers
+            question = ace.edit(questionNode.querySelector(".question-info .node-mde")).getValue() // question
+            editable = questionNode.querySelector(".editable-flag").checked // editable
+            if (!editable) { // conponent
+                answerContent.querySelectorAll(".node").forEach(e => {
+                    if (e.classList.contains("explain")) {
+                        var type = "explain"
+                        var content = ace.edit(e.querySelector(".node-mde")).getValue()
+                    }
+                    else if (e.classList.contains("code")) {
+                        var type = "code"
+                        var content = ace.edit(e.querySelector(".node-code")).getValue()
+                    }
+                    conponent.push({"type": type, "content": content})
+                })
+            }
+        }
+        return {
+            "q_id": q_id,           // str
+            "ptype": ptype,         // int 
+            "conponent": conponent, // list
+            "question": question,   // str
+            "editable": editable,   // bool
+            "answers": answers      // list
+        }
+    }
 }
 /**
  * objのpropertyが変化した際にfuncを実行する
@@ -130,7 +218,7 @@ async function addQ(loc, pos, ptype) {
  * @param {Element} btn 
  */
 function delme(btn) {
-    var node = btn.closest(".node")
+    const node = btn.closest(".node")
     node.nextElementSibling.remove()
     node.remove()
 }
@@ -142,10 +230,10 @@ function delme(btn) {
  * @returns {none}
  */
 async function scoring(p_id, q_id, kernel_id) {
-    var question_node = document.querySelector(`.node.question[q-id="${q_id}"]`)
-    var params = extractQuestionNode(question_node, mode=0)
-    // POST /problems/<p_id>/scoring
-    var res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
+    const questionNode = getQuestionElement(q_id)
+    const params = extractQuestionNode(questionNode, mode=0)
+    console.log(params)
+    const res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -154,11 +242,11 @@ async function scoring(p_id, q_id, kernel_id) {
             "answers": params.answers, // list:  ['ans', 'ans', ...]
             "kernel_id": kernel_id     // str:   uuid
         })})
-    var json = await res.json()
+    const json = await res.json()
     if (res.ok) {
         console.log(`[scoring] ${json.DESCR}`)
-        question_node.setAttribute("progress", json.progress)
-        var toast = question_node.querySelector(".for-toast > .toast")
+        questionNode.setAttribute("progress", json.progress)
+        const toast = questionNode.querySelector(".for-toast > .toast")
         toast.querySelector(".toast-body").innerHTML = json.content
         toast.classList.add("show")
         document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
@@ -173,102 +261,29 @@ async function scoring(p_id, q_id, kernel_id) {
  * @param {string} kernel_id  実行カーネルのid
  */
 async function cancelScoring(p_id, kernel_id) {
-    var res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${kernel_id}`, {
+    const res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${kernel_id}`, {
         method: "POST",
     })
-    var json = await res.json()
+    const json = await res.json()
     console.log(json.DESCR)
-}
-/**
- * Question Nodeから各パラメータを抽出する
- * @param {Element} elem .node.question要素
- * @param {Number} mode 0: learner, 1: creator
- * @returns {object}
- */
-function extractQuestionNode(elem, mode) {
-    if (!elem.classList.contains("question")) {
-        throw new Error("'elem' has no class 'question'.")
-    }
-    const q_id = elem.getAttribute("q-id")
-    const ptype = Number(elem.getAttribute("ptype"))
-    let conponent = []
-    let question = ""
-    let editable = false 
-    let answers = []
-    const parser = new DOMParser()
-    // learner mode 
-    if (mode == 0) {
-        if (ptype == 0) {
-            elem.querySelectorAll(".q-text .q-text").forEach(elem => {
-                answers.push(elem.querySelector("select, input").value) // answers
-            }) 
-        }
-        else if (ptype == 1) {
-            elem.querySelectorAll(".q-content  .node-code").forEach(elem => {
-                answers.push(ace.edit(elem).getValue()) // answers
-            })
-        }
-        return {
-            "q_id": q_id,      // str
-            "ptype": ptype,    // int 
-            "answers": answers // list
-        }
-    }
-    // creator mode 
-    if (mode == 1) {
-        if (ptype == 0) {
-            var md_string = ace.edit(elem.querySelector(".node-mde")).getValue()
-            var md_dom = parser.parseFromString(md_string, "text/html").querySelector("body")
-            md_dom.querySelectorAll(".q-text > *[ans]").forEach(elem => { // answers
-                answers.push(elem.getAttribute("ans"))
-            })
-            question = md_dom.innerHTML // question
-        }
-        else if (ptype == 1) {
-            answers.push(ace.edit(elem.querySelector(".test-code .node-code")).getValue()) // answers
-            question = ace.edit(elem.querySelector(".q-text .node-mde")).getValue() // question
-            editable = elem.querySelector(".editable-flag").checked // editable
-            if (!editable) { // conponent
-                elem.querySelectorAll(".q-content > .node").forEach(elem => {
-                    if (elem.classList.contains("explain")) {
-                        var type = "explain"
-                        var content = ace.edit(elem.querySelector(".node-mde")).getValue()
-                    }
-                    else if (elem.classList.contains("code")) {
-                        var type = "code"
-                        var content = ace.edit(elem.querySelector(".node-code")).getValue()
-                    }
-                    conponent.push({"type": type, content: content})
-                })
-            }
-        }
-        return {
-            "q_id": q_id,           // str
-            "ptype": ptype,         // int 
-            "conponent": conponent, // list
-            "question": question,   // str
-            "editable": editable,   // bool
-            "answers": answers      // list
-        }
-    }
 }
 /**
  * ユーザーの入力を保存する
  * @param {string} p_id 
  */
 async function saveUserData(p_id) {
-    var q_content = {}
+    const userInput = {}
     document.querySelectorAll(".question").forEach(elem => {
-        var params = extractQuestionNode(elem, mode=0)
-        q_content[params.q_id] = params.answers
+        const params = extractQuestionNode(elem, mode=0)
+        userInput[params.q_id] = params.answers
     })
-    var res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
+    const res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            "q_content": q_content
+            "q_content": userInput
         })})
-    var json = await res.json()
+    const json = await res.json()
     console.log(`[save] ${json.DESCR}`)
 }
 /**
@@ -326,6 +341,10 @@ async function downloadLog() {
     }
 
     const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/).groups.cat_name
+    if (!cat) {
+        throw new Error("Can not get current category.")
+    }
+
     window.location.href = 
         `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
 }

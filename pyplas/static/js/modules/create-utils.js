@@ -15,39 +15,37 @@ async function registerProblem(p_id) {
     }
     // 概要欄のSummary, Data Source, Environmentを取得
     const headers = []
-    document.querySelectorAll("#summary .node-mde").forEach(function(elem) {
-        const editor = ace.edit(elem)
+    document.querySelectorAll("#summary .node-mde").forEach(e => {
+        const editor = ace.edit(e)
         headers.push(editor.getValue())
     })
     // The Source CodeからNodeを取得
     const body = []
     const answers = {}
     let q_id = 1
-    document.querySelectorAll("#sourceCode > .p-content > .node").forEach(function(elem) {
+    document.querySelectorAll("#nodesContainer > .node").forEach(e => {
         // Explain Node
-        if (elem.classList.contains("explain")) {
-            const editor = ace.edit(elem.querySelector(".node-mde"))
-            const content = editor.getValue()
+        if (e.classList.contains("explain")) {
+            const editor = ace.edit(e.querySelector(".node-mde"))
             body.push({
                 "type": "explain",
-                "content": content
+                "content": editor.getValue()
             })
         }
         // Code Node
-        else if (elem.classList.contains("code")) {
-            const editor = ace.edit(elem.querySelector(".node-code"))
-            const content = editor.getValue()
-            const readonly = elem.querySelector(".readonly-flag").checked
+        else if (e.classList.contains("code")) {
+            const editor = ace.edit(e.querySelector(".node-code"))
+            const readonly = e.querySelector(".readonly-flag").checked
             body.push({
                 "type": "code",
-                "content": content,
+                "content": editor.getValue(),
                 "readonly": readonly
             })
         }
         // Question Node
-        else if (elem.classList.contains("question")) {
-            elem.setAttribute("q-id", q_id)
-            const params = extractQuestionNode(elem, mode=1)
+        else if (e.classList.contains("question")) {
+            e.setAttribute("q-id", q_id)
+            const params = extractQuestionNode(e, mode=1)
             answers[`${q_id}`] = params.answers 
             body.push({
                 "type": "question",             // str
