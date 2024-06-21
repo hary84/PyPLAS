@@ -148,3 +148,114 @@ function addSelectionProblem(btn) {
     ].join("\n")
     editor.insert(tag)
 }
+/**
+ * Explain Nodeを追加する
+ * @param {Element} loc 
+ * @param {string} pos
+ * @returns {Promise<Element>} .node.explain要素
+ */
+async function addMD(loc, pos, {
+        content=String(), 
+        allow_del=true, 
+        code=true,
+        explain=true,
+        question=true} = {}) 
+    {
+    if (loc === undefined || pos === undefined) {
+        throw new Error("argument Error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addMD`, {
+        method: "POST",
+        headers: {
+            "Content-type": "application/json"},
+        body: JSON.stringify({
+            "content": content,
+            "allow_del": allow_del,
+            "editor": true,
+            "code": code,
+            "explain": explain,
+            "question": question
+        })
+    })
+    const json = await res.json()
+    const htmlString = json.html 
+    loc.insertAdjacentHTML(pos, htmlString)
+    const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
+    registerAceMDE(mde)
+    return mde.closest(".node.explain")
+}
+/**
+ * Code Nodeを追加する.
+ * @param {Element} loc 
+ * @param {string} pos 
+ * @returns {Promise<Element>} .node.code要素
+ */
+async function addCode(loc, pos, {
+        content=String(), 
+        user=0, 
+        allow_del=true, 
+        code=true, 
+        explain=true, 
+        question=true} = {}) 
+    {
+    if (loc === undefined || pos === undefined) {
+        throw new Error("argument error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addCode`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "content": content, 
+            "user": user, 
+            "allow_del": allow_del, 
+            "code": code, 
+            "explain": explain, 
+            "question": question
+        })
+    })
+    const json = await res.json()
+    const htmlString = json.html 
+    loc.insertAdjacentHTML(pos, htmlString)
+    const codeEditor = document.querySelector("#sourceCode .code:not([node-id]) .node-code")
+    registerAceEditor(codeEditor)
+    return codeEditor.closest(".node.code")
+}
+/**
+ * Question Nodeをappend_tailの後ろに追加する
+ * @param {Element} loc 
+ * @param {string} pos 
+ * @param {Number} ptype
+ * @param {Promise<Element>} .question要素
+ */
+async function addQ(loc, pos, ptype) {
+    if (loc === undefined || pos == undefined || ptype === undefined) {
+        new Error("argument error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addQ`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "ptype": ptype,
+            "code": true, 
+            "explain": true,
+            "question": true
+        })
+    })
+    const json = await res.json()
+    loc.insertAdjacentHTML(pos, json.html)
+    if (ptype == 1) {
+        registerAceEditor(document.querySelector("#sourceCode .code:not([node-id]) .node-code"))
+    }
+    const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
+    registerAceMDE(mde)
+    return mde.closest(".question")
+}
+/**
+ * btnの親要素のNodeを削除する
+ * @param {Element} btn 
+ */
+function delme(btn) {
+    const node = btn.closest(".node")
+    node.nextElementSibling.remove()
+    node.remove()
+}

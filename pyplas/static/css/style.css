@@ -6,6 +6,11 @@
   display: block;
 }
 
+.active-node {
+    border-left: solid 0.5rem var(--bs-primary);
+    border-radius: 2%;
+}
+
 /* when offcanvas show (larger than lg) */
 @media (min-width: 993px) { 
   .sidebar {
@@ -138,7 +143,6 @@
       .code-config {
         height: 1.7rem;
         border-radius: 5px;
-        z-index: 1;
         .btn {
           height: 1.5rem;
           padding: 0.2rem 0.3rem;

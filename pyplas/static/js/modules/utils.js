@@ -12,7 +12,7 @@ function getNodeElement(node_id) {
  * @returns {Element}
  */
 function getQuestionElement(q_id) {
-    return document.querySelector(`.node.question[q-id="${q_id}"]`)
+    return document.querySelector(`#sourceCode .node.question[q-id="${q_id}"]`)
 }
 /**
  * Question Nodeから各パラメータを抽出する
@@ -21,11 +21,8 @@ function getQuestionElement(q_id) {
  * @returns {Object}
  */
 function extractQuestionNode(elem, mode) {
-    if (typeof elem === "string") {
-        var questionNode = document.querySelector(`.node.question[q-id="${elem}"]`)
-    } else {
-        var questionNode = elem
-    }
+    const questionNode = (typeof elem === "string")
+            ? getQuestionElement(elem) : elem
 
     const q_id = questionNode.getAttribute("q-id")
     const ptype = Number(questionNode.getAttribute("ptype"))
@@ -107,120 +104,10 @@ function watchValue(obj, propName, func) {
         set: newValue => {
             const oldValue = value;
             value = newValue;
-            func(obj, newValue);
+            func(obj, oldValue, newValue);
         },
         configurable: true
     });
-}
-/**
- * Explain Nodeを追加する
- * @param {Element} loc 
- * @param {string} pos
- * @returns {Promise<Element>} .node-mde要素
- */
-async function addMD(loc, pos, {
-        content=String(), 
-        allow_del=true, 
-        code=true,
-        explain=true,
-        question=true} = {}) 
-    {
-    if (loc === undefined || pos === undefined) {
-        throw new Error("argument Error")
-    }
-    const res = await fetch(`${window.location.origin}/api/render?action=addMD`, {
-        method: "POST",
-        headers: {
-            "Content-type": "application/json"},
-        body: JSON.stringify({
-            "content": content,
-            "allow_del": allow_del,
-            "editor": true,
-            "code": code,
-            "explain": explain,
-            "question": question
-        })
-    })
-    const json = await res.json()
-    const htmlString = json.html 
-    loc.insertAdjacentHTML(pos, htmlString)
-    const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
-    registerAceMDE(mde)
-    return mde
-}
-/**
- * Code Nodeを追加する.
- * @param {Element} loc 
- * @param {string} pos 
- * @returns {Promise<Element>} .node-code要素
- */
-async function addCode(loc, pos, {
-        content=String(), 
-        user=0, 
-        allow_del=true, 
-        code=true, 
-        explain=true, 
-        question=true} = {}) 
-    {
-    if (loc === undefined || pos === undefined) {
-        throw new Error("argument error")
-    }
-    const res = await fetch(`${window.location.origin}/api/render?action=addCode`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            "content": content, 
-            "user": user, 
-            "allow_del": allow_del, 
-            "code": code, 
-            "explain": explain, 
-            "question": question
-        })
-    })
-    const json = await res.json()
-    const htmlString = json.html 
-    loc.insertAdjacentHTML(pos, htmlString)
-    const codeEditor = document.querySelector("#sourceCode .code:not([node-id]) .node-code")
-    registerAceEditor(codeEditor)
-    return codeEditor
-}
-/**
- * Question Nodeをappend_tailの後ろに追加する
- * @param {Element} loc 
- * @param {string} pos 
- * @param {Number} ptype
- */
-async function addQ(loc, pos, ptype) {
-    if (loc === undefined || pos == undefined || ptype === undefined) {
-        new Error("argument error")
-    }
-    const res = await fetch(`${window.location.origin}/api/render?action=addQ`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            "ptype": ptype,
-            "code": true, 
-            "explain": true,
-            "question": true
-        })
-    })
-    const json = await res.json()
-    loc.insertAdjacentHTML(pos, json.html)
-    if (ptype == 1) {
-        registerAceEditor(document.querySelector("#sourceCode .code:not([node-id]) .node-code"))
-    }
-    const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
-    registerAceMDE(mde)
-    return mde.closest(".question")
-}
-/**
- * btnの親要素のNodeを削除する
- * @param {Element} btn 
- */
-function delme(btn) {
-    const node = btn.closest(".node")
-    node.nextElementSibling.remove()
-    node.remove()
 }
 /**
  * 質問の採点を行う
@@ -312,13 +199,13 @@ async function loadIpynb(file, loc, markdown=true, {user=1, inQ=false}={}) {
                 })
             }
             else if (markdown && cell.cell_type == "markdown") {
-                const mde = await addMD(loc, "beforeend", {
+                const node = await addMD(loc, "beforeend", {
                     content:cell.source.join(""), 
                     allow_del:true,
                     explain: !inQ, 
                     question: !inQ
                 })
-                showPreview(mde)
+                showPreview(node.querySelector(".mde"))
             }
         }
     }
@@ -341,9 +228,7 @@ async function downloadLog() {
     }
 
     const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/).groups.cat_name
-    if (!cat) {
-        throw new Error("Can not get current category.")
-    }
+    if (!cat) {throw new Error("Can not get current category.")}
 
     window.location.href = 
         `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
@@ -364,4 +249,75 @@ async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
     })
     const file = await handle.getFile()
     return file
+}
+/**
+ * elementの兄弟要素でelementより下にあり, 特定の属性を持つ要素を返す
+ * @param {Element} element 
+ * @param {String} attributeName
+ * @param {null | string} attributeValue
+ * @returns {null | Element}
+ */
+function getNextElement(element, attributeName, attributeValue) {
+    if (!attributeName) {throw new Error("argument 'attributeName' is undefined")}
+
+    let sibling = element.nextElementSibling 
+    while (sibling) {
+        if (attributeName=="class" && sibling.classList.contains(targetClass)) {
+            return sibling 
+        } 
+        else if ( attributeValue && sibling.getAttribute(attributeName) == attributeValue) {
+            return sibling
+        }
+        else if (!attributeValue && sibling.getAttribute(attributeName)) {
+            return sibling
+        }
+        sibling = sibling.nextElementSibling 
+    }
+    return null
+}
+/**
+ * elementの兄弟要素でelementより上にあり, 特定の属性を持つ要素を返す
+ * @param {Element} element 
+ * @param {String} attributeName
+ * @param {null | string} attributeValue
+ * @returns {null | Element}
+ */
+function getPrevElement(element, attributeName, attributeValue) {
+    if (!attributeName) {throw new Error("argument 'attributeName' is undefined")}
+
+    let sibling = element.previousElementSibling
+    while (sibling) {
+        if (attributeName=="class" && sibling.classList.contains(targetClass)) {
+            return sibling 
+        } 
+        else if ( attributeValue && sibling.getAttribute(attributeName) == attributeValue) {
+            return sibling
+        }
+        else if (!attributeValue && sibling.getAttribute(attributeName)) {
+            return sibling
+        }
+        sibling = sibling.previousElementSibling
+    }
+    return null
+}
+/**
+ * 文字列をhtmlとansiエスケープする
+ * @param {String} str 
+ * @param {boolean} ansi 
+ * @returns {String}
+ */
+function escapeHTML(str, ansi=false) {
+    if (ansi) {
+        var str =  str.replace(/\x1B[[;\d]+m/g, "")
+    }
+    return str.replace(/[&'`"<>]/g, function(match) {
+        return {
+            '&': '&amp;',
+            "'": '&#x27;',
+            '`': '&#x60;',
+            '"': '&quot;',
+            '<': '&lt;',
+            '>': '&gt;',
+        }[match]
+    });
 }
