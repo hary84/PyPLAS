@@ -318,6 +318,8 @@ class ProblemHandler(util.ApplicationHandler):
             result = [False]
             content = f"[Cancel]: The code execution process has been destroyed."
         except Exception as e:
+            for process in executor._processes.values():
+                process.kill()
             result = [False]
             content = f"[{e.__class__.__name__}] {e}"
         else:
@@ -422,8 +424,10 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
                 else:
                     output.update({"node_id": self.node_id})
                     self.write_message(json.dumps(output, default=util.datetime_encoda))
-            except Exception as e:
-                print(e)
+            except tornado.websocket.WebSocketClosedError:
+                break
+            except Exception:
+                util.print_traceback()
                 break
         print("=========================")
 

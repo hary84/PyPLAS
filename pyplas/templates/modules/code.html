@@ -5,8 +5,8 @@
     user: int (0 or 1)
     allow_del: bool 
 -->
-<div class="code node px-2 my-2" run-state="idle">
-    <div class="node-side bg-body-secondary rounded-start-2 border border-dark-subtle border-1">
+<div class="code node mx-2 my-2" run-state="idle">
+    <div class="node-side bg-light rounded-start-2 border border-dark-subtle border-1">
         <button class="btn-exec btn btn-sm btn-outline-dark">
             <i class="bi bi-caret-right-fill blocked-bi text-dark"></i>
         </button>
@@ -19,17 +19,30 @@
         </button>
     </div>
     <div class="node-prime position-relative w-100">
-        <div class="code-config bg-secondary-subtle m-1 d-flex position-absolute end-0 top-0">
-            <!-- creator mode -->
-            {% if user == 1 %}
-                <input class="form-check-input readonly-flag my-auto mx-1" type="checkbox" {{ 'checked' if readonly else "" }}>
-                <label class="form-check-label my-auto" for="readonly-flag">readonly</label>
-            {% end %}
-            <!-- normal & creator mode -->
+        <div class="code-config bg-secondary-subtle m-1 d-flex position-absolute end-0 top-0" style="z-index: 1000;">
             {% if allow_del %}
+                <button class="btn btn-danger btn-delme" onclick="delme(this)"><i class="bi bi-trash blocked-bi"></i></button>
                 <div class="vr m-1"></div>
-                <button class="btn btn-danger" onclick="delme(this)"><i class="bi bi-trash blocked-bi"></i></button>
             {% end %}
+            <div class="dropdown code-options">
+                <button class="btn btn-sm btn-secondary-subtle dropdown-toggle border" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                    <i class="bi bi-justify"></i> 
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item btn-execute-below">Execute Below</a></li>
+                  {% if user == 1 %}
+                    <li>
+                        <span class="dropdown-item d-flex">
+                            <input class="form-check-input readonly-flag me-2" type="checkbox" {{ 'checked' if readonly else "" }}>
+                            <label class="form-check-label my-auto" for="readonly-flag">readonly</label>
+                        </span>
+                    </li>
+                  {% end %}
+                  {% if user == 0 %} 
+                    <li><a class="dropdown-item btn-reset-input">Reset Input</a></li>
+                  {% end %}
+                </ul>
+            </div>
         </div>
         <div class="node-code editor border rounded-end-2 {{ 'readonly' if readonly else '' }} w-100">{%raw content %}</div>
         <div class="return-box border border-dark-subtle rounded-end-1"></div>            

@@ -10,26 +10,12 @@
 {% end %}
 
 {% block side-content %}
-<div class="mb-3" id="kernel-ops">
-    <div class="list-group list-group-flush">
-        <a class="list-group-item list-group-item-action text-decoration-none text-dark btn-restart">
-            <i class="bi bi-arrow-counterclockwise"></i>
-            Restart
-        </a>
-        <a class="list-group-item list-group-item-action text-decoration-none text-danger btn-interrupt">
-            <i class="bi bi-stop-circle"></i>
-            Interrupt
-        </a>
-        <a class="list-group-item list-group-item-action text-decoration-none text-success btn-save">
-            <i class="bi bi-save"></i>
-            Save
-        </a>
-    </div>
-</div>
+<p class="fs-5 fw-bold border-bottom px-2">SideMenu</p>
+{% module Template('modules/side_kernel_ops.html') %}
 {% end %}
 
 {% block main %}
-<main class="col-lg-10 col-xl-8 px-3">
+<main class="col px-3" style="min-height: 100vh;">
     <div class="my-3" id="summary">
         <p class="fs-3 border-bottom border-dark ps-1">
             <input class="form-control mb-1" id="titleForm" type="text" placeholder="Title" aria-label="problem title input" value="{{ title }}">
@@ -57,11 +43,11 @@
     </div>
     <div id="sourceCode">
         <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
-        <div class="p-content position-relative ms-3 px-3">
-            <div class="mb-3 border border-start-0 border-end-0 border-success border-3 pb-2 bg-success-subtle" id="loadIpynb">
+        <div class="dynamic-nodes-container position-relative ms-3 p-3" id="nodesContainer">
+            <div id="loadIpynb" class="mb-3 border border-start-0 border-end-0 border-success border-3 pb-2 bg-success-subtle">
                 <label for="ipynbForm" class="form-label">Create from Jupyter Notebook</label>
                 <input class="form-control form-control-sm w-50 mx-auto border border-dark" id="ipynbForm" type="file" accept=".ipynb" name="mynote" 
-                    onchange="loadIpynb(this, this.closest('.p-content'))">
+                    onchange="loadIpynb(this.files[0], this.closest('#nodesContainer'))">
             </div>
             {% module NodeControl() %}
             {% if not is_new %}

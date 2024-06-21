@@ -106,6 +106,7 @@ class KernelHandler {
     }
     /**
      * REST API を用いてカーネルに中断指示を出す
+     * 
      * @param {string} kernel_id カーネルid
      */
     kernelInterrupt = async (kernel_id) => {
@@ -145,17 +146,56 @@ class KernelHandler {
      * このメソッドはインスタンスから直接呼び出さない
      */
     _executeCode = () => {
+        if (this.execute_task_q.length == 0) {
+            return
+        }
         const node_id = this.execute_task_q[0]
         const node = getNodeElement(node_id)
         node.querySelector(".return-box").innerHTML = ""
-        const node_code = node.querySelector(".node-code")
         const msg = JSON.stringify({
-            "code": ace.edit(node_code).getValue(),
+            "code": ace.edit(node.querySelector(".node-code")).getValue(),
             "node_id": node_id
         })
         this.ws.send(msg)
         this.execute_counter += 1
         console.log(`[KernelHandler] Executing code (node-id='${node_id}')`)
+    }
+    /**
+     * locの直下に存在する.node.codeをすべて実行する
+     * @param {Element} loc 
+     */
+    executeAll = async (loc) => {
+        await this.kernelInterrupt()
+
+        let count = 0
+        try {
+            await new Promise((resolve, reject) => {
+                const intervalId = setInterval(()=> {
+                    if (this.execute_task_q.length == 0 && this.running == false) {
+                        clearInterval(intervalId)
+                        console.log("[KernelHandler] Ready for execute all!")
+                        resolve()
+                    } else {
+                        console.log("[KernelHandler] Wait for execute all.")
+                        count ++
+                        if (count > 5) {
+                            clearInterval(intervalId)
+                            reject()
+                        }
+                    }
+                }, 500)
+            })
+        } catch (err) {
+            alert("Execute Timeout")
+            return 
+        }
+
+        loc.querySelectorAll(":scope > .node.code").forEach(elem => {
+            const node_id = elem.getAttribute("node-id")
+            this.execute_task_q.push(node_id)
+        })
+
+        this._executeCode()
     }
 }
 

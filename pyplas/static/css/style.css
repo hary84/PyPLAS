@@ -6,11 +6,16 @@
   display: block;
 }
 
+.active-node {
+    border-left: solid 0.5rem var(--bs-primary);
+    border-radius: 2%;
+}
+
 /* when offcanvas show (larger than lg) */
 @media (min-width: 993px) { 
   .sidebar {
     position: sticky;
-    top: 0px;
+    top: 10%;
     overflow-y: auto;
     max-height: calc(100vh);
   }
@@ -29,40 +34,40 @@
 }
 
 
-/* ===================
-  p-content, q-content
-====================== */
+/* =======================
+  dynamic-nodes-container
+========================== */
 /* 共通 */
-:is(.p-content, .q-content) {
+.dynamic-nodes-container {
   border: dotted;
   background-color: rgb(247 247 247);
-  padding: 1rem 0rem;
+} 
+/* 共通 内部にNodeオブジェクトが存在する場合 */
+.dynamic-nodes-container:has(.node) {
   .node-control {
-      margin-left: 1rem;
-      height: 1.5rem;
-  }
-} /* 共通 内部にNodeオブジェクトが存在する場合 */
-:is(.p-content, .q-content):has(:is(.explain, .code, .question)) {
-  .node-control .btn-group .btn {
+    .btn-group {
+      height: auto;
+    }
+    .btn {
       display: none;
+    }
   }
   .node-control:hover {
-      .btn-group {
-          .btn {
-              display: inline;
-              padding: 0.2rem 0.5rem;
-              line-height: 1rem;
-              border: none;
-              border-radius: 0;
-          }
-      }
+    .btn {
+        display: inline;
+        border-radius: 0;
+        padding: 0 4px;
+        border: none;
+    }
   }
   .bi-file-earmark-code, #loadIpynb, .ipynb-loader {
       display: none;
   }
-
-} /* .p-content 内部にNodeオブジェクトが存在しない場合 */
-.p-content:not(:has(:is(.explain, .code, .question))) {
+}
+/* .dynamic-nodes-container内部にNodeオブジェクトが存在しない場合
+     (#nodeContainerをもつ場合)
+ */
+.dynamic-nodes-container#nodesContainer:not(:has(.node)) {
   text-align: center;
   height: auto;
   .bi-file-earmark-code {
@@ -71,14 +76,18 @@
       margin-top: auto;
       opacity: 0.6;
   }
-} /* .q-content 内部にNodeオブジェクトが存在しない場合 */
-.q-content:not(:has(:is(.explain, .code, .question))) {
-  .node-control .btn-group .btn {
+} 
+/* .dynamic-nodes-container内部にNodeオブジェクトが存在しない場合
+     (answer-contentをもつ場合)
+ */
+.dynamic-nodes-container.answer-content:not(:has(.node)) {
+  .node-control {
+    .btn {
       display: inline;
-      padding: 0.2rem 0.5rem;
-      line-height: 1rem;
-      border: none;
       border-radius: 0;
+      padding: 0 4px;
+      border: none;
+    }
   }
 }
 
@@ -134,7 +143,6 @@
       .code-config {
         height: 1.7rem;
         border-radius: 5px;
-        z-index: 1;
         .btn {
           height: 1.5rem;
           padding: 0.2rem 0.3rem;
@@ -190,6 +198,7 @@
 /* card-body */
   .card-body {
     .mde  .toolbar  .only-inq { display: block; } 
+    .question-options > .dropdown-toggle::after {content: none;}
   }
 }
 .question[progress="1"] {

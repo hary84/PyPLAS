@@ -18,22 +18,7 @@
 
 {% block side-content %}
 <p class="fs-5 fw-bold border-bottom px-2">SideMenu</p>
-<div class="mb-3" id="kernel-ops">
-    <div class="list-group list-group-flush">
-        <a class="list-group-item list-group-item-action text-decoration-none text-dark btn-restart">
-            <i class="bi bi-arrow-counterclockwise"></i>
-            Restart
-        </a>
-        <a class="list-group-item list-group-item-action text-decoration-none text-danger btn-interrupt">
-            <i class="bi bi-stop-circle"></i>
-            Interrupt
-        </a>
-        <a class="list-group-item list-group-item-action text-decoration-none text-success btn-save">
-            <i class="bi bi-save"></i>
-            Save
-        </a>
-    </div>
-</div>
+{% module Template('modules/side_kernel_ops.html') %}
 <div class="accordion" id="accordionExample">
     <div class="accordion-item">
         <h2 class="accordion-header">
@@ -64,7 +49,7 @@
 {% end %}
 
 {% block main %}
-<main class="col px-3">
+<main class="col px-3" style="min-height: 100vh;">
     <div class="my-3" id="summary">
         <p class="fs-3 border-bottom border-dark ps-1">{{ title }}</p>
         <div class="ps-3">
@@ -90,7 +75,7 @@
     </div>
     <div id="sourceCode">
         <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
-        <div class="question-scrollspy" id="" data-bs-spy="scroll" data-bs-target="#question-nav" data-bs-smooth-scroll="true">
+        <div class="question-scrollspy" id="nodesContainer" data-bs-spy="scroll" data-bs-target="#question-nav" data-bs-smooth-scroll="true">
             {% for d in page["body"]%}
                 {% if d["type"] == "code" %}
                     {% module Code(**d) %}
@@ -104,7 +89,7 @@
     </div>
 </main>
 <div class="col-xxl-2 d-none d-xxl-block bg-white border-start">
-    <div class="mt-5 position-sticky" style="top: 3rem;">
+    <div class="mt-5 position-sticky" style="top: 10%;">
         <nav id="question-nav" class="h-100 flex-column align-items-stretch pe-4">
             <nav class="nav nav-pills flex-column">
                 {% set i = 1%}

@@ -4,6 +4,9 @@
  * @returns {none}
  */
 function registerAceEditor(elem) {
+    if (!elem.classList.contains("node-code")) {
+        throw new Error("'elem' has no class 'node-code'.")
+    }
     const defaultLineNumbers = 5
     const maxLines = 25
     const id = crypto.randomUUID()
@@ -24,6 +27,9 @@ function registerAceEditor(elem) {
  * @return {none}
  */
 function registerAceMDE(elem) {
+    if (!elem.classList.contains("node-mde")) {
+        throw new Error("'elem' has no class 'node-mde'.")
+    }
     const defaultLineNumbers = 5
     const maxLines = 40
     const id = crypto.randomUUID()
@@ -51,13 +57,12 @@ function highlighting(elem) {
  * previewを表示
  * 
  * キーボードショートカットから実行
- * @param {DOM} elem .node-mde要素 
+ * @param {DOM} elem .mde内の任意の要素
  */
 function showPreview(elem) {
-    var mde = elem.closest(".mde")
-    var editor = ace.edit(elem)
-    var html = marked.parse(editor.getValue())
-    var preview = mde.querySelector(".for-preview")
+    const mde = elem.closest(".mde")
+    const html = marked.parse(ace.edit(mde.querySelector(".node-mde")).getValue())
+    const preview = mde.querySelector(".for-preview")
     preview.innerHTML = html
     highlighting(preview)
     mde.classList.add("preview-active")
@@ -69,23 +74,8 @@ function showPreview(elem) {
  * @param {DOM} elem .mde内の任意の要素 
  */
 function showEditor(elem) {
-    var mde = elem.closest(".mde")
+    const mde = elem.closest(".mde")
     mde.classList.remove("preview-active")
-}
-/**
- * editorとpreviewの切り替え(トグル)
- * 
- * toolbarのpreviewボタンから実行
- * @param {DOM} e .mde内の任意の要素
- */
-function togglePreview(e) {
-    var mde = e.closest(".mde")
-    var editor = ace.edit(mde.querySelector(".node-mde"))
-    var html = marked.parse(editor.getValue())
-    var preview = mde.querySelector(".for-preview")
-    preview.innerHTML = html
-    highlighting(preview)
-    mde.classList.toggle("preview-active")
 }
 /**
  * MDE内の選択された要素を**で囲む
@@ -93,7 +83,7 @@ function togglePreview(e) {
  * @param {DOM} btn 
  */
 function embedBold(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
+    const editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
     editor.insert(`**${editor.getCopyText()}**`)
 }
 /**
@@ -102,7 +92,7 @@ function embedBold(btn) {
  * @param {DOM} btn 
  */
 function embedItalic(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
+    const editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
     editor.insert(`*${editor.getCopyText()}*`)
 }
 /**
@@ -111,7 +101,7 @@ function embedItalic(btn) {
  * @param {DOM} btn 
  */
 function embedLink(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
+    const editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
     editor.insert("[](http:~)")
 }
 /**
@@ -120,7 +110,7 @@ function embedLink(btn) {
  * @param {DOM} btn 
  */
 function embedImg(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
+    const editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
     editor.insert("![](./~)")
 }
 /**
@@ -129,11 +119,11 @@ function embedImg(btn) {
  * @param {DOM} btn 
  */
 function addFillInBlankProblem(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
-    var tag = [
+    const editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
+    const tag = [
         '<p class="mb-0 q-text">',
         '   <label class="form-label">?????</label>',
-        '   <input type="text" class="form-control q-form" placeholder="answer" ans=?????>',
+        '   <input type="text" class="form-control" placeholder="answer" ans=?????>',
         '</p>'
     ].join("\n")
     editor.insert(tag)
@@ -144,8 +134,8 @@ function addFillInBlankProblem(btn) {
  * @param {DOM} btn 
  */
 function addSelectionProblem(btn) {
-    var editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
-    var tag = [
+    const editor = ace.edit(btn.closest(".mde").querySelector(".node-mde"))
+    const tag = [
         '<!--  question  -->',
         '<p class="mb-0 q-text">',
         '   <label class="form-label">?????</label>',
@@ -157,4 +147,115 @@ function addSelectionProblem(btn) {
         '</p>',
     ].join("\n")
     editor.insert(tag)
+}
+/**
+ * Explain Nodeを追加する
+ * @param {Element} loc 
+ * @param {string} pos
+ * @returns {Promise<Element>} .node.explain要素
+ */
+async function addMD(loc, pos, {
+        content=String(), 
+        allow_del=true, 
+        code=true,
+        explain=true,
+        question=true} = {}) 
+    {
+    if (loc === undefined || pos === undefined) {
+        throw new Error("argument Error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addMD`, {
+        method: "POST",
+        headers: {
+            "Content-type": "application/json"},
+        body: JSON.stringify({
+            "content": content,
+            "allow_del": allow_del,
+            "editor": true,
+            "code": code,
+            "explain": explain,
+            "question": question
+        })
+    })
+    const json = await res.json()
+    const htmlString = json.html 
+    loc.insertAdjacentHTML(pos, htmlString)
+    const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
+    registerAceMDE(mde)
+    return mde.closest(".node.explain")
+}
+/**
+ * Code Nodeを追加する.
+ * @param {Element} loc 
+ * @param {string} pos 
+ * @returns {Promise<Element>} .node.code要素
+ */
+async function addCode(loc, pos, {
+        content=String(), 
+        user=0, 
+        allow_del=true, 
+        code=true, 
+        explain=true, 
+        question=true} = {}) 
+    {
+    if (loc === undefined || pos === undefined) {
+        throw new Error("argument error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addCode`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "content": content, 
+            "user": user, 
+            "allow_del": allow_del, 
+            "code": code, 
+            "explain": explain, 
+            "question": question
+        })
+    })
+    const json = await res.json()
+    const htmlString = json.html 
+    loc.insertAdjacentHTML(pos, htmlString)
+    const codeEditor = document.querySelector("#sourceCode .code:not([node-id]) .node-code")
+    registerAceEditor(codeEditor)
+    return codeEditor.closest(".node.code")
+}
+/**
+ * Question Nodeをappend_tailの後ろに追加する
+ * @param {Element} loc 
+ * @param {string} pos 
+ * @param {Number} ptype
+ * @param {Promise<Element>} .question要素
+ */
+async function addQ(loc, pos, ptype) {
+    if (loc === undefined || pos == undefined || ptype === undefined) {
+        new Error("argument error")
+    }
+    const res = await fetch(`${window.location.origin}/api/render?action=addQ`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "ptype": ptype,
+            "code": true, 
+            "explain": true,
+            "question": true
+        })
+    })
+    const json = await res.json()
+    loc.insertAdjacentHTML(pos, json.html)
+    if (ptype == 1) {
+        registerAceEditor(document.querySelector("#sourceCode .code:not([node-id]) .node-code"))
+    }
+    const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
+    registerAceMDE(mde)
+    return mde.closest(".question")
+}
+/**
+ * btnの親要素のNodeを削除する
+ * @param {Element} btn 
+ */
+function delme(btn) {
+    const node = btn.closest(".node")
+    node.nextElementSibling.remove()
+    node.remove()
 }

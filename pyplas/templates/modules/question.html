@@ -1,4 +1,4 @@
-<div class="node question card my-2 ms-3 me-2 position-relative" id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
+<div class="node question card my-2 mx-2 position-relative" id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
 	<div class="for-toast">
 		{% module Template("modules/toast.html") %}
 	</div>
@@ -21,42 +21,46 @@
 					</div>
 				{% end %}
 				<div class="vr mx-2 my-1"></div>
-				<button type="button" class="btn btn-danger" onclick="delme(this)"><i class="bi bi-trash"></i></button>
+				<button type="button" class="btn btn-danger btn-delme" onclick="delme(this)"><i class="bi bi-trash"></i></button>
 			</div>
 		{% end %}
 	</div>
-	<div class="card-body py-2">
+	<div class="card-body py-2 position-relative pt-2">
 
-		<!-- HTML Problem -->
-		{% if ptype == 0 %}
-			{% module Explain(editor=user, content=question, allow_del=False) %}
-		{% end %}
-
-		<!-- Code Writing Problem -->
-		{% if ptype == 1 %}
-			<div class="q-text mb-2">
-				<p class="mb-0"><span class="badge bg-success">Question</span></p>
-				{% module Explain(editor=user, content=question, allow_del=False) %}
+		<div class="question-info">
+			<div class="mb-0 d-flex">
+				<span class="badge bg-success me-auto" style="align-self: center;">Question</span>
+				<div class="dropdown question-options">
+					<button class="btn btn-sm btn-light dropdown-toggle border" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+						<i class="bi bi-justify"></i> 
+					</button>
+					<ul class="dropdown-menu">
+					  {% if ptype == 1 %}
+						<li><a class="dropdown-item btn-exec-all">Execute All</a></li>
+					  {% end %}
+					  <li><a class="dropdown-item btn-reset-input" href="#">Reset Input</a></li>
+					  {% if ptype == 1 and editable == True %}
+						<li><a class="dropdown-item btn-load-ipynb">load Jupyter Notebook</a></li>
+					  {% end %}
+					</ul>
+				</div>
 			</div>
+			{% if ptype == 1 %}
+				{% module Explain(editor=user, content=question, allow_del=False) %}
+			{% end %}
+		</div>
 
-			<div class="q-content ms-4 px-2">
-				{% if ptype == 1 and editable == True and user == 0%}
-					<div class="ipynb-loader mb-3 border border-start-0 border-end-0 border-dark border-3 pb-2 bg-dark-subtle text-center">
-						<label for="ipynbForm" class="form-label mb-1">Answer from Jupyter Notebook</label>
-						<input class="form-control form-control-sm w-50 mx-auto border border-dark" id="ipynbForm" type="file" 
-							accept=".ipynb" name="mynote" 
-							onchange="loadIpynb(this, this.closest('.q-content'), markdown=false, {
-								user: 0, 
-								inQ: true
-							})">
-					</div>
-				{% end %}
+		<div class="answer-content mx-1 p-2 {{ 'dynamic-nodes-container' if ptype==1 else '' }}">
+			{% if ptype == 0 %} 
+				{% module Explain(editor=user, content=question, allow_del=False) %}
+
+			{% elif ptype == 1 %}
 				{% if user == 1 %}
 					{% module NodeControl(question=False) %}
 					{% for d in conponent %}
-						{% if d["type"] == "explain" %}
+						{% if d.get("type", None) == "explain" %}
 							{% module Explain(**d, editor=True, allow_del=True) %}
-						{% elif d["type"] == "code" %}
+						{% elif d.get("type", None) == "code" %}
 							{% module Code(**d, user=user, allow_del=True) %}
 						{% end %}
 						{% module NodeControl(question=False) %}
@@ -81,20 +85,21 @@
 							{% else %}
 								{% module Code(**d) %}
 							{% end %}
-
 						{% end %}
 					{% end %}
 				{% end %}
-			</div>
-
-			{% if user == 1 %}
-				<div class="test-code mt-2">
-					<p class="mb-0"><span class="badge bg-danger">Test Code</span></p>
-					{% module Code(content=answers, allow_del=False, user=0) %}
-				</div>
 			{% end %}
+		</div>
+
+		{% if (user == 1) and (ptype == 1) %}
+			<div class="test-code mt-2">
+				<p class="mb-0"><span class="badge bg-danger">Test Code</span></p>
+				{% module Code(content=answers, allow_del=False, user=0) %}
+			</div>
 		{% end %}
+
 	</div>
+
 	<div class="card-footer position-relative d-flex justify-content-end">
 		<button type="button" class="btn btn-success btn-sm btn-testing me-2">Answer</button>
 		<button type="button" class="btn btn-danger btn-sm btn-cancel">Cancel</button>
