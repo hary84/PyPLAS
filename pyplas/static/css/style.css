@@ -11,6 +11,20 @@
     border-radius: 2%;
 }
 
+@keyframes animation-sample{
+  0%{
+      left: 0%;
+  }
+  100%{
+      left: 100%;
+  }
+}
+.progress-bar{
+  animation-name: animation-sample;
+  animation-duration: 2s;
+  animation-iteration-count: infinite;
+}
+
 /* when offcanvas show (larger than lg) */
 @media (min-width: 993px) { 
   .sidebar {
@@ -199,6 +213,7 @@
   .card-body {
     .mde  .toolbar  .only-inq { display: block; } 
     .question-options > .dropdown-toggle::after {content: none;}
+    .node-control .toggle-addQ {display: none !important;}
   }
 }
 .question[progress="1"] {

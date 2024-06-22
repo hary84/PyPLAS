@@ -168,6 +168,9 @@ class ProblemHandler(util.ApplicationHandler):
                     self.saving(p_id)
                 elif action == "scoring":
                     self.load_json(validate=True, keys=["q_id", "ptype", "answers", "kernel_id"])
+                    if self.json["kernel_id"] in ProblemHandler.execute_pool.keys():
+                        self.set_status(400)
+                        self.finish({"DESCR": "This question is currently being scored."})
                     await self.scoring(p_id)
                 elif action == "cancel":
                     self.load_url_queries(["kernel_id"])

@@ -16,14 +16,17 @@ function getQuestionElement(q_id) {
 }
 /**
  * Question Nodeから各パラメータを抽出する
- * @param {Element | String} elem .node.question要素もしくは, q-id
+ * @param {Element | String} elem .node.question内の要素もしくは, q-id
  * @param {Number} mode 0: learner, 1: creator
- * @returns {Object}
+ * @returns {Object | null}
  */
 function extractQuestionNode(elem, mode) {
     const questionNode = (typeof elem === "string")
-            ? getQuestionElement(elem) : elem
+            ? getQuestionElement(elem) : elem.closest(".node.question")
+        
+    if (!questionNode) {return null}
 
+    const node_id = questionNode.getAttribute("node-id")
     const q_id = questionNode.getAttribute("q-id")
     const ptype = Number(questionNode.getAttribute("ptype"))
     const conponent = []
@@ -47,9 +50,10 @@ function extractQuestionNode(elem, mode) {
             })
         }
         return {
-            "q_id": q_id,      // str
-            "ptype": ptype,    // int 
-            "answers": answers // list
+            "node_id": node_id, // str
+            "q_id": q_id,       // str
+            "ptype": ptype,     // int 
+            "answers": answers  // list
         }
     }
 
@@ -82,6 +86,7 @@ function extractQuestionNode(elem, mode) {
             }
         }
         return {
+            "node_id": node_id,     // str
             "q_id": q_id,           // str
             "ptype": ptype,         // int 
             "conponent": conponent, // list
@@ -119,7 +124,8 @@ function watchValue(obj, propName, func) {
 async function scoring(p_id, q_id, kernel_id) {
     const questionNode = getQuestionElement(q_id)
     const params = extractQuestionNode(questionNode, mode=0)
-    console.log(params)
+    questionNode.querySelector(".progress").classList.remove("d-none")
+
     const res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -129,6 +135,9 @@ async function scoring(p_id, q_id, kernel_id) {
             "answers": params.answers, // list:  ['ans', 'ans', ...]
             "kernel_id": kernel_id     // str:   uuid
         })})
+
+    questionNode.querySelector(".progress").classList.add("d-none")
+    
     const json = await res.json()
     if (res.ok) {
         console.log(`[scoring] ${json.DESCR}`)
@@ -194,16 +203,12 @@ async function loadIpynb(file, loc, markdown=true, {user=1, inQ=false}={}) {
                     content: cell.source.join(""), 
                     user:user, 
                     allow_del:true,
-                    explain: !inQ, 
-                    question: !inQ
                 })
             }
             else if (markdown && cell.cell_type == "markdown") {
                 const node = await addMD(loc, "beforeend", {
                     content:cell.source.join(""), 
                     allow_del:true,
-                    explain: !inQ, 
-                    question: !inQ
                 })
                 showPreview(node.querySelector(".mde"))
             }
@@ -236,7 +241,7 @@ async function downloadLog() {
 /**
  * showFilePickerでファイルピッカーを表示し, Fileオブジェクトを返す. 
  * @param {object} acceptMIME MINE typeがキー, ファイル拡張子のarrayが値のオブジェクト
- * @returns {File} 選択されたファイルオブジェクト
+ * @returns {Promise<File>} 選択されたファイルオブジェクト
  */
 async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
     const [handle] = await window.showOpenFilePicker({
@@ -320,4 +325,11 @@ function escapeHTML(str, ansi=false) {
             '>': '&gt;',
         }[match]
     });
+}
+/**
+ * エラーハンドリング用関数
+ * @param {Error} e 
+ */
+function errorHandling(e) {
+    alert(`[${e.name}] ${e.message}`)
 }

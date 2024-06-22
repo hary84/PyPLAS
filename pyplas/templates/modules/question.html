@@ -1,4 +1,4 @@
-<div class="node question card my-2 mx-2 position-relative" id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
+<div class="node question card my-2 mx-2 position-relative {{'editable' if editable else ''}}" id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
 	<div class="for-toast">
 		{% module Template("modules/toast.html") %}
 	</div>
@@ -31,7 +31,7 @@
 			<div class="mb-0 d-flex">
 				<span class="badge bg-success me-auto" style="align-self: center;">Question</span>
 				<div class="dropdown question-options">
-					<button class="btn btn-sm btn-light dropdown-toggle border" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+					<button class="btn btn-sm btn-light dropdown-toggle border" type="button" data-bs-toggle="dropdown" aria-expanded="false" tabindex="-1">
 						<i class="bi bi-justify"></i> 
 					</button>
 					<ul class="dropdown-menu">
@@ -97,11 +97,14 @@
 				{% module Code(content=answers, allow_del=False, user=0) %}
 			</div>
 		{% end %}
+	</div>
 
+	<div class="progress position-relative d-none" role="progressbar" aria-label="scoring progress bar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style="height: 0.5rem">
+		<div class="progress-bar position-absolute h-100" style="width: 20%"></div>
 	</div>
 
 	<div class="card-footer position-relative d-flex justify-content-end">
-		<button type="button" class="btn btn-success btn-sm btn-testing me-2">Answer</button>
-		<button type="button" class="btn btn-danger btn-sm btn-cancel">Cancel</button>
+		<button type="button" class="btn btn-success btn-sm btn-testing me-2" tabindex="-1">Answer</button>
+		<button type="button" class="btn btn-danger btn-sm btn-cancel" tabindex="-1">Cancel</button>
 	</div>
 </div>

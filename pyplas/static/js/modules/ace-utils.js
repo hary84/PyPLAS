@@ -20,6 +20,7 @@ function registerAceEditor(elem) {
         minLines: defaultLineNumbers,
         readOnly: elem.classList.contains("readonly")
     });
+    editor.container.childNodes[0].tabIndex = -1
 }
 /**
  * elemをmarkdown ace editorとして登録する 
@@ -43,6 +44,7 @@ function registerAceMDE(elem) {
         maxLines: maxLines,
         minLines: defaultLineNumbers
     })
+    editor.container.childNodes[0].tabIndex = -1
 }
 /**
  * elemに含まれるコードブロックをhighlight.jsでハイライトする
@@ -248,7 +250,9 @@ async function addQ(loc, pos, ptype) {
     }
     const mde = document.querySelector("#sourceCode .explain:not([node-id]) .node-mde")
     registerAceMDE(mde)
-    return mde.closest(".question")
+    const questionNode = mde.closest(".question")
+    questionNode.setAttribute("node-id", crypto.randomUUID())
+    return questionNode
 }
 /**
  * btnの親要素のNodeを削除する
