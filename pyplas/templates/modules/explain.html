@@ -1,4 +1,4 @@
-<div class="explain node mx-2 my-2">
+<div class="explain {{'node' if editor else 'static'}} mx-2 my-2" {% if editor %} node-id="{{node_id}}" {% end %}>
     {% if editor %}
         {% module Template("modules/MDE.html",
                            content=content, 

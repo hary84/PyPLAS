@@ -150,10 +150,10 @@ class KernelHandler {
             return
         }
         const node_id = this.execute_task_q[0]
-        const node = getNodeElement(node_id)
-        node.querySelector(".return-box").innerHTML = ""
+        const node = getNodeObjectByNodeId(node_id)
+        node.element.querySelector(".return-box").innerHTML = ""
         const msg = JSON.stringify({
-            "code": ace.edit(node.querySelector(".node-code")).getValue(),
+            "code": node.editor.getValue(),
             "node_id": node_id
         })
         this.ws.send(msg)

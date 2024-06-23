@@ -1,100 +1,105 @@
 /**
- * node-id属性を持つNodeを返す
- * @param {string} node_id 
- * @returns {Element}
+ * Explain Nodeを追加する
+ * @param {Element} loc 
+ * @param {string} pos
+ * @returns {Promise<ExplainNode>} 
  */
-function getNodeElement(node_id) {
-    return document.querySelector(`div[node-id='${node_id}'].node`)
+async function addMD(loc, pos, {
+    content=String(), 
+    allow_del=true, 
+    code=true,
+    explain=true,
+    question=true} = {}) 
+{
+    if (loc === undefined || pos === undefined) {
+        throw new Error("argument Error")
+    }
+    const node_id = crypto.randomUUID()
+    const res = await fetch(`${window.location.origin}/api/render?action=addMD`, {
+        method: "POST",
+        headers: {
+            "Content-type": "application/json"},
+        body: JSON.stringify({
+            "content": content,
+            "allow_del": allow_del,
+            "editor": true,
+            "code": code,
+            "explain": explain,
+            "question": question,
+            "node_id": node_id
+        })
+    })
+    const json = await res.json()
+    const htmlString = json.html 
+    loc.insertAdjacentHTML(pos, htmlString)
+    const explainNode = new ExplainNode(node_id)
+    return explainNode
 }
 /**
- * q-id属性を持つQuestion Nodeを返す
- * @param {*} q_id 
- * @returns {Element}
- */
-function getQuestionElement(q_id) {
-    return document.querySelector(`#sourceCode .node.question[q-id="${q_id}"]`)
+* Code Nodeを追加する.
+* @param {Element} loc 
+* @param {string} pos 
+* @returns {Promise<CodeNode>} 
+*/
+async function addCode(loc, pos, {
+    content=String(), 
+    user=0, 
+    allow_del=true, 
+    code=true, 
+    explain=true, 
+    question=true} = {}) 
+{
+    if (loc === undefined || pos === undefined) {
+        throw new Error("argument error")
+    }
+    const node_id = crypto.randomUUID()
+    const res = await fetch(`${window.location.origin}/api/render?action=addCode`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "content": content, 
+            "user": user, 
+            "allow_del": allow_del, 
+            "code": code, 
+            "explain": explain, 
+            "question": question,
+            "node_id": node_id
+        })
+    })
+    const json = await res.json()
+    const htmlString = json.html 
+    loc.insertAdjacentHTML(pos, htmlString)
+    const codeNode = new CodeNode(node_id)
+    return codeNode
 }
 /**
- * Question Nodeから各パラメータを抽出する
- * @param {Element | String} elem .node.question内の要素もしくは, q-id
- * @param {Number} mode 0: learner, 1: creator
- * @returns {Object | null}
- */
-function extractQuestionNode(elem, mode) {
-    const questionNode = (typeof elem === "string")
-            ? getQuestionElement(elem) : elem.closest(".node.question")
-        
-    if (!questionNode) {return null}
-
-    const node_id = questionNode.getAttribute("node-id")
-    const q_id = questionNode.getAttribute("q-id")
-    const ptype = Number(questionNode.getAttribute("ptype"))
-    const conponent = []
-    const answers = []
-    let question = ""
-    let editable = false 
-
-    const parser = new DOMParser()
-    const answerContent = questionNode.querySelector(".answer-content")
-
-    // learner mode 
-    if (mode == 0) {
-        if (ptype == 0) {
-            answerContent.querySelectorAll(".q-text > input, .q-text > select").forEach(e => {
-                answers.push(e.value) // user answers
-            }) 
-        }
-        else if (ptype == 1) {
-            answerContent.querySelectorAll(".node.code").forEach(e => {
-                answers.push(ace.edit(e.querySelector(".node-code")).getValue()) // user answers
-            })
-        }
-        return {
-            "node_id": node_id, // str
-            "q_id": q_id,       // str
-            "ptype": ptype,     // int 
-            "answers": answers  // list
-        }
+* Question Nodeをappend_tailの後ろに追加する
+* @param {Element} loc 
+* @param {string} pos 
+* @param {Number} ptype
+* @param {Promise<QuestionNode>} 
+*/
+async function addQ(loc, pos, ptype) {
+    if (loc === undefined || pos == undefined || ptype === undefined) {
+        new Error("argument error")
     }
-
-    // creator mode 
-    if (mode == 1) {
-        if (ptype == 0) {
-            const md_string = ace.edit(answerContent.querySelector(".node-mde")).getValue()
-            const md_dom = parser.parseFromString(md_string, "text/html").querySelector("body")
-            md_dom.querySelectorAll(".q-text > input[ans], .q-text > select[ans]").forEach(e => { // currect answers
-                answers.push(e.getAttribute("ans"))
-            })
-            question = md_dom.innerHTML // question
-        }
-        else if (ptype == 1) {
-            answers.push(ace.edit(questionNode.querySelector(".test-code .node-code")).getValue()) // answers
-            question = ace.edit(questionNode.querySelector(".question-info .node-mde")).getValue() // question
-            editable = questionNode.querySelector(".editable-flag").checked // editable
-            if (!editable) { // conponent
-                answerContent.querySelectorAll(".node").forEach(e => {
-                    if (e.classList.contains("explain")) {
-                        var type = "explain"
-                        var content = ace.edit(e.querySelector(".node-mde")).getValue()
-                    }
-                    else if (e.classList.contains("code")) {
-                        var type = "code"
-                        var content = ace.edit(e.querySelector(".node-code")).getValue()
-                    }
-                    conponent.push({"type": type, "content": content})
-                })
-            }
-        }
-        return {
-            "node_id": node_id,     // str
-            "q_id": q_id,           // str
-            "ptype": ptype,         // int 
-            "conponent": conponent, // list
-            "question": question,   // str
-            "editable": editable,   // bool
-            "answers": answers      // list
-        }
-    }
+    const node_id = crypto.randomUUID()
+    console.log(node_id)
+    const res = await fetch(`${window.location.origin}/api/render?action=addQ`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            "ptype": ptype,
+            "code": true, 
+            "explain": true,
+            "question": true,
+            "node_id": node_id,
+        })
+    })
+    const json = await res.json()
+    loc.insertAdjacentHTML(pos, json.html)
+    const questionNode = new QuestionNode(node_id)
+    return questionNode
 }
 /**
  * objのpropertyが変化した際にfuncを実行する
@@ -115,62 +120,14 @@ function watchValue(obj, propName, func) {
     });
 }
 /**
- * 質問の採点を行う
- * @param {string} p_id      問題id
- * @param {string} q_id      質問id
- * @param {string} kernel_id 実行カーネルid
- * @returns {none}
- */
-async function scoring(p_id, q_id, kernel_id) {
-    const questionNode = getQuestionElement(q_id)
-    const params = extractQuestionNode(questionNode, mode=0)
-    questionNode.querySelector(".progress").classList.remove("d-none")
-
-    const res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            "ptype": params.ptype,     // int:   0 or 1
-            "q_id": params.q_id,       // str:   e.g. "1"
-            "answers": params.answers, // list:  ['ans', 'ans', ...]
-            "kernel_id": kernel_id     // str:   uuid
-        })})
-
-    questionNode.querySelector(".progress").classList.add("d-none")
-    
-    const json = await res.json()
-    if (res.ok) {
-        console.log(`[scoring] ${json.DESCR}`)
-        questionNode.setAttribute("progress", json.progress)
-        const toast = questionNode.querySelector(".for-toast > .toast")
-        toast.querySelector(".toast-body").innerHTML = json.content
-        toast.classList.add("show")
-        document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
-    }
-    else {
-        console.log(`[scoring] ${json.DESCR}`)
-    }
-}
-/**
- * Code Testingをキャンセルする
- * @param {string} p_id       問題id
- * @param {string} kernel_id  実行カーネルのid
- */
-async function cancelScoring(p_id, kernel_id) {
-    const res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${kernel_id}`, {
-        method: "POST",
-    })
-    const json = await res.json()
-    console.log(json.DESCR)
-}
-/**
  * ユーザーの入力を保存する
  * @param {string} p_id 
  */
 async function saveUserData(p_id) {
     const userInput = {}
     document.querySelectorAll(".question").forEach(elem => {
-        const params = extractQuestionNode(elem, mode=0)
+        const questionNode = new QuestionNode(elem)
+        const params = questionNode.extractQuestionParams(0)
         userInput[params.q_id] = params.answers
     })
     const res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
@@ -188,7 +145,7 @@ async function saveUserData(p_id) {
  * @param {Element} loc         nodeを追加する要素
  * @param {boolean} markdown    markdownを追加するか
  */
-async function loadIpynb(file, loc, markdown=true, {user=1, inQ=false}={}) {
+async function loadIpynb(file, loc, markdown=true, {user=1}={}) {
     const ipynb = file
     console.log(`[FileReader] Load '${ipynb.name}' and embed in page.`)
     const reader = new FileReader()
@@ -210,7 +167,7 @@ async function loadIpynb(file, loc, markdown=true, {user=1, inQ=false}={}) {
                     content:cell.source.join(""), 
                     allow_del:true,
                 })
-                showPreview(node.querySelector(".mde"))
+                node.showPreview()
             }
         }
     }
@@ -254,56 +211,6 @@ async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
     })
     const file = await handle.getFile()
     return file
-}
-/**
- * elementの兄弟要素でelementより下にあり, 特定の属性を持つ要素を返す
- * @param {Element} element 
- * @param {String} attributeName
- * @param {null | string} attributeValue
- * @returns {null | Element}
- */
-function getNextElement(element, attributeName, attributeValue) {
-    if (!attributeName) {throw new Error("argument 'attributeName' is undefined")}
-
-    let sibling = element.nextElementSibling 
-    while (sibling) {
-        if (attributeName=="class" && sibling.classList.contains(targetClass)) {
-            return sibling 
-        } 
-        else if ( attributeValue && sibling.getAttribute(attributeName) == attributeValue) {
-            return sibling
-        }
-        else if (!attributeValue && sibling.getAttribute(attributeName)) {
-            return sibling
-        }
-        sibling = sibling.nextElementSibling 
-    }
-    return null
-}
-/**
- * elementの兄弟要素でelementより上にあり, 特定の属性を持つ要素を返す
- * @param {Element} element 
- * @param {String} attributeName
- * @param {null | string} attributeValue
- * @returns {null | Element}
- */
-function getPrevElement(element, attributeName, attributeValue) {
-    if (!attributeName) {throw new Error("argument 'attributeName' is undefined")}
-
-    let sibling = element.previousElementSibling
-    while (sibling) {
-        if (attributeName=="class" && sibling.classList.contains(targetClass)) {
-            return sibling 
-        } 
-        else if ( attributeValue && sibling.getAttribute(attributeName) == attributeValue) {
-            return sibling
-        }
-        else if (!attributeValue && sibling.getAttribute(attributeName)) {
-            return sibling
-        }
-        sibling = sibling.previousElementSibling
-    }
-    return null
 }
 /**
  * 文字列をhtmlとansiエスケープする
