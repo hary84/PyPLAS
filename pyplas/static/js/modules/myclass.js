@@ -158,13 +158,15 @@ class BaseNode {
             this.nodeId = specifier
             this.element = e
         }
-        else {
+        else if (specifier instanceof Element) {
             const nodeId = specifier.getAttribute("node-id")
             if (!specifier.classList.contains("node") || !nodeId) {
                 throw new NodeStructureError(this.type)
             }
             this.nodeId = nodeId
             this.element = specifier
+        } else {
+            throw new TypeError("invalid argument 'specifier'")
         }
     }
     /**
@@ -295,7 +297,7 @@ class QuestionNode extends BaseNode {
             }
             else if (ptype == 1) {
                 answers.push(new CodeNode(this.element.querySelector(".test-code > .node.code")).editor.getValue()) // answers
-                question = new CodeNode(this.element.querySelector(".question-info .code.node")).editor.getValue() // question
+                question = new ExplainNode(this.element.querySelector(".question-info .node.explain")).editor.getValue() // question
                 
                 editable = this.element.querySelector(".editable-flag").checked // editable
                 if (!editable) { // conponent
@@ -328,6 +330,8 @@ class QuestionNode extends BaseNode {
      * @param {string} p_id 
      */
     scoring = async (p_id) => {
+        const toast = this.element.querySelector(".for-toast > .toast")
+        toast.classList.remove("show")
         const params = this.extractQuestionParams(0)
         this.element.querySelector(".progress").classList.remove("d-none")
         const res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
@@ -346,7 +350,6 @@ class QuestionNode extends BaseNode {
         if (res.ok) {
             console.log(`[scoring] ${json.DESCR}`)
             this.element.setAttribute("progress", json.progress)
-            const toast = this.element.querySelector(".for-toast > .toast")
             toast.querySelector(".toast-body").innerHTML = json.content
             toast.classList.add("show")
             document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
@@ -375,13 +378,13 @@ class QuestionNode extends BaseNode {
         const nodeList = []
         try {
             this.element.querySelectorAll(".answer-content > .node").forEach(e => {
-                if (e.classList.contains(".code")) {
+                if (e.classList.contains("code")) {
                     nodeList.push(new CodeNode(e))
-                }else if (e.classList.contains(".explain")) {
+                }else if (e.classList.contains("explain")) {
                     nodeList.push(new ExplainNode(e))
                 }
             }) 
-            return this.element.querySelectorAll(".answer-content > .node")
+            return nodeList
         }
         catch (e) {
             throw new NodeStructureError(this.type)
