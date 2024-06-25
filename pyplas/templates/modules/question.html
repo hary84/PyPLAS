@@ -1,4 +1,5 @@
-<div class="node question card my-2 mx-2 position-relative {{'editable' if editable else ''}}" id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
+<div class="node question card my-2 mx-2 position-relative {{'editable' if editable else ''}}" node-id="{{ node_id }}"
+			id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
 	<div class="for-toast">
 		{% module Template("modules/toast.html") %}
 	</div>
@@ -21,7 +22,7 @@
 					</div>
 				{% end %}
 				<div class="vr mx-2 my-1"></div>
-				<button type="button" class="btn btn-danger btn-delme" onclick="delme(this)"><i class="bi bi-trash"></i></button>
+				<button type="button" class="btn btn-danger btn-delme" ><i class="bi bi-trash"></i></button>
 			</div>
 		{% end %}
 	</div>
@@ -105,6 +106,8 @@
 
 	<div class="card-footer position-relative d-flex justify-content-end">
 		<button type="button" class="btn btn-success btn-sm btn-testing me-2" tabindex="-1">Answer</button>
-		<button type="button" class="btn btn-danger btn-sm btn-cancel" tabindex="-1">Cancel</button>
+		{% if ptype == 1 %}
+			<button type="button" class="btn btn-danger btn-sm btn-cancel" tabindex="-1">Cancel</button>
+		{% end %}
 	</div>
 </div>

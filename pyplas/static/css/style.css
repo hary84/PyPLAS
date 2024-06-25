@@ -11,6 +11,29 @@
     border-radius: 2%;
 }
 
+/* when offcanvas show (larger than lg) */
+@media (min-width: 993px) { 
+  .sidebar {
+    position: sticky;
+    top: 10%;
+    overflow-y: auto;
+    max-height: calc(100vh);
+  }
+}
+
+/* =============
+  node container 
+================ */
+#nodesContainer > .explain {
+  margin-left: 1rem !important;
+}
+#nodesContainer > :is(.explain, .code, .question) {
+  margin-bottom: 1.5rem !important;
+}
+
+/* =============
+  progress-bar 
+================ */
 @keyframes animation-sample{
   0%{
       left: 0%;
@@ -25,15 +48,6 @@
   animation-iteration-count: infinite;
 }
 
-/* when offcanvas show (larger than lg) */
-@media (min-width: 993px) { 
-  .sidebar {
-    position: sticky;
-    top: 10%;
-    overflow-y: auto;
-    max-height: calc(100vh);
-  }
-}
 
 /* ========
   accordion 

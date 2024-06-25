@@ -15,41 +15,39 @@ async function registerProblem(p_id) {
     }
     // 概要欄のSummary, Data Source, Environmentを取得
     const headers = []
-    document.querySelectorAll("#summary .node-mde").forEach(e => {
-        const editor = ace.edit(e)
-        headers.push(editor.getValue())
+    document.querySelectorAll("#summary .node.explain").forEach(e => {
+        const explainNode = myNode.explain(e)
+        headers.push(explainNode.editor.getValue())
     })
     // The Source CodeからNodeを取得
     const body = []
     const answers = {}
     let q_id = 1
     document.querySelectorAll("#nodesContainer > .node").forEach(e => {
+        const node = myNode.get(e)
         // Explain Node
-        if (e.classList.contains("explain")) {
-            const editor = ace.edit(e.querySelector(".node-mde"))
+        if (node instanceof ExplainNode) {
             body.push({
                 "type": "explain",
-                "content": editor.getValue()
+                "content": node.editor.getValue()
             })
         }
         // Code Node
-        else if (e.classList.contains("code")) {
-            const editor = ace.edit(e.querySelector(".node-code"))
-            const readonly = e.querySelector(".readonly-flag").checked
+        else if (node instanceof CodeNode) {
+            const params = node.extractCodeParams()
             body.push({
                 "type": "code",
-                "content": editor.getValue(),
-                "readonly": readonly
+                "content": params.content,
+                "readonly": params.readonly
             })
         }
         // Question Node
-        else if (e.classList.contains("question")) {
-            e.setAttribute("q-id", q_id)
-            const params = extractQuestionNode(e, mode=1)
+        else if (node instanceof QuestionNode) {
+            const params = node.extractQuestionParams(1)
             answers[`${q_id}`] = params.answers 
             body.push({
                 "type": "question",             // str
-                "q_id": String(params.q_id),    // str
+                "q_id": String(q_id),    // str
                 "ptype": params.ptype,          // int
                 "conponent": params.conponent,  // dict
                 "question": params.question,    // str

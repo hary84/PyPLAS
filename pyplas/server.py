@@ -171,6 +171,7 @@ class ProblemHandler(util.ApplicationHandler):
                     if self.json["kernel_id"] in ProblemHandler.execute_pool.keys():
                         self.set_status(400)
                         self.finish({"DESCR": "This question is currently being scored."})
+                        return
                     await self.scoring(p_id)
                 elif action == "cancel":
                     self.load_url_queries(["kernel_id"])
