@@ -64,7 +64,7 @@ class KernelHandler {
     }
     /**
      * 有効なすべてのカーネルidを取得する
-     * @returns {Array}
+     * @returns {Array<string>}
      */
     getKernelIds = async () => {
         const res = await fetch(`${window.location.origin}/kernel`, {method: "GET"})
@@ -86,7 +86,7 @@ class KernelHandler {
         console.log(`[Kernelhandler] ${json.DESCR}`)   
         if (!res.ok) {
             alert("Failed to start kernel.\nPlease restart the server.")
-            throw new Error("Failed to start new kernel.")
+            throw new KernelError("Failed to start new kernel.")
         }
     }
     /**
@@ -101,7 +101,7 @@ class KernelHandler {
         console.log(`[KernelHandler] ${json.DESCR}`)
         if (!res.ok) {
             alert("Failed to restart kernel.\nPlease restart the server.")
-            throw new Error("Failed to restart kernel.")
+            throw new KernelError("Failed to restart kernel.")
         }
     }
     /**
@@ -150,7 +150,7 @@ class KernelHandler {
             return
         }
         const node_id = this.execute_task_q[0]
-        const node = getNodeObjectByNodeId(node_id)
+        const node = myNode.code(node_id)
         node.element.querySelector(".return-box").innerHTML = ""
         const msg = JSON.stringify({
             "code": node.editor.getValue(),
@@ -190,9 +190,9 @@ class KernelHandler {
             return 
         }
 
-        loc.querySelectorAll(":scope > .node.code").forEach(elem => {
-            const node_id = elem.getAttribute("node-id")
-            this.execute_task_q.push(node_id)
+        loc.querySelectorAll(":scope > .node.code").forEach(e => {
+            const node = myNode.code(e)
+            this.execute_task_q.push(node.nodeId)
         })
 
         this._executeCode()

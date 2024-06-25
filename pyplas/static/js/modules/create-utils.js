@@ -16,7 +16,7 @@ async function registerProblem(p_id) {
     // 概要欄のSummary, Data Source, Environmentを取得
     const headers = []
     document.querySelectorAll("#summary .node.explain").forEach(e => {
-        const explainNode = new ExplainNode(e)
+        const explainNode = myNode.explain(e)
         headers.push(explainNode.editor.getValue())
     })
     // The Source CodeからNodeを取得
@@ -24,7 +24,7 @@ async function registerProblem(p_id) {
     const answers = {}
     let q_id = 1
     document.querySelectorAll("#nodesContainer > .node").forEach(e => {
-        const node = getNodeObjectByElem(e)
+        const node = myNode.get(e)
         // Explain Node
         if (node instanceof ExplainNode) {
             body.push({

@@ -1,33 +1,154 @@
-function getNodeObjectByNodeId(nodeId) {
-    const e = BaseNode.getNodeElementByNodeId(nodeId)
-    return getNodeObjectByElem(e)
-    
-}
-function getNodeObjectByElem(e) {
-    try {
-        if (e.classList.contains("code")) {
-            return new CodeNode(e)
+const myNode = {
+    activeNode: {
+        node_id: undefined,
+        get() {
+            return myNode.get(this.node_id)
         }
-        else if (e.classList.contains("explain")) {
-            return new ExplainNode(e)
+    },
+    /**
+     * node-idもしくはelementをうけとり、対応するNodeオブジェクトを返す. 
+     * 
+     * 対応するNodeオブジェクトが見つからない場合, nullを返す
+     * @param {string | Element | BaseNode} specifier 
+     * @returns {BaseNode | null}
+     */
+    get(specifier) {
+        if (typeof specifier == "string") {
+            return this._getNodeObjectByNodeId(specifier)
         }
-        else if (e.classList.contains("question")) {
-            return new QuestionNode(e)
+        else if (specifier instanceof Element) {
+            return this._getNodeObjectByElem(specifier)
+        }
+        else if (specifier instanceof BaseNode) {
+            return this._getNodeObjectByElem(specifier.element)
         }
         else {
             return null
         }
-    } catch {
-        return null
+    },
+    /**
+     * specifierからcode nodeを明示して取得する. 
+     * 
+     * 対応していない場合NodeErrorを投げる
+     * @param {string | Element} specifier 
+     * @returns {CodeNode}
+     */
+    code(specifier) {
+        const n = this.get(specifier)
+        if (n instanceof CodeNode) {
+            return n
+        }
+        else {
+            throw new NodeError("can not get Code Node from specifier.")
+        }
+    },
+    /**
+     * specifierからexplain nodeを明示して取得する. 
+     * 
+     * 対応していない場合NodeErrorを投げる
+     * @param {string | Element} specifier 
+     * @returns {ExplainNode}
+     */
+    explain(specifier) {
+        const n = this.get(specifier)
+        if (n instanceof ExplainNode) {
+            return n 
+        } 
+        else {
+            throw new NodeError("can not get Explain Node from specifier.")
+        }
+    },
+    /**
+     * specifierからquestion nodeを明示して取得する. 
+     * 
+     * 対応していない場合NodeErrorを投げる
+     * @param {string | Element} specifier 
+     * @returns {QuestionNode}
+     */
+    question(specifier) {
+        const n = this.get(specifier)
+        if (n instanceof QuestionNode) {
+            return n
+        }
+        else {
+            throw new NodeError("can not get Question Node from specifier.")
+        }
+    },
+    /**
+     * elementからNodeオブジェクトを取得する
+     * 
+     * 対応するNodeがない場合, nullを返す
+     * @param {Element} e
+     * @returns {BaseNode | null}
+     */
+    _getNodeObjectByElem(e) {
+        try {
+            if (e.classList.contains("code")) {
+                return new CodeNode(e)
+            }
+            else if (e.classList.contains("explain")) {
+                return new ExplainNode(e)
+            }
+            else if (e.classList.contains("question")) {
+                return new QuestionNode(e)
+            }
+            else {
+                return null
+            }
+        } catch {
+            return null
+        }
+    },
+    /**
+     * node-idからNodeオブジェクトを取得する
+     * 
+     * 対応するNodeがない場合, nullを返す
+     * @param {string} nodeId
+     * @returns {BaseNode | null}
+     */
+    _getNodeObjectByNodeId(nodeId) {
+        const e = BaseNode.getNodeElementByNodeId(nodeId)
+        return this._getNodeObjectByElem(e)
+    },
+    /**
+     * 前のNodeオブジェクトを取得する.
+     * 
+     * 存在しない場合nullを返す
+     * @param {BaseNode}
+     * @returns {BaseNode | null}
+     */
+    prevNode(nodeObj) {
+        if (!(nodeObj instanceof BaseNode)) {
+            throw new TypeError("invalid argument 'nodeObj'.")
+        }
+        const e = nodeObj.prevNodeElement()
+        return this.get(e)
+    },
+    /**
+     * 次のNodeオブジェクトを取得する. 
+     * 
+     * 存在しない場合nullを返す.
+     * @param {BaseNode}
+     * @returns {BaseNode | null}
+     */
+    nextNode(nodeObj) {
+        if (!(nodeObj instanceof BaseNode)) {
+            throw new TypeError("invalid argument 'nodeObj'.")
+        }
+        const e = nodeObj.nextNodeElement()
+        return this.get(e)
     }
-}
 
+}
+/**
+ * Nodeオブジェクトの基底クラス
+ */
 class BaseNode {
     /**
      * node-idとそれに対応するelementをメンバ変数に格納する. 
      * 
      * node-idがないもしくは, .nodeクラスが無い場合NodeStructureErrorを発生させる.
-     * @param {Element} e .node element
+     * @param {string | Element} specifier
      */
     constructor(specifier) {
         this.type = this.constructor.name 
@@ -47,22 +168,22 @@ class BaseNode {
         }
     }
     /**
-     * node-idから対応する.node elementを返す
-     * @param {String} nodeId 
+     * node-idから対応する.nodeをもつ要素を返す
+     * @param {string} nodeId 
      * @returns {Element | null}
      */
     static getNodeElementByNodeId(nodeId) {
         return document.querySelector(`div.node[node-id="${nodeId}"]`)
     }
     /**
-     * 次のNodeオブジェクトを返す
-     * @returns {BaseNode | null}
+     * 次の.node[node-id]を持つ要素を返す
+     * @returns {Element | null}
      */
-    nextNode = () => {
+    nextNodeElement = () => {
         let sibling = this.element.nextElementSibling
         while (sibling) {
             if (sibling.getAttribute("node-id") && sibling.classList.contains("node")) {
-                return new BaseNode(sibling)
+                return sibling
             }
             sibling = sibling.nextElementSibling 
         }
@@ -70,36 +191,29 @@ class BaseNode {
     }
     /**
      * 前のNodeオブジェクトを返す
-     * @returns {BaseNode | null}
+     * @returns {Element | null}
      */
-    prevNode = () => {
+    prevNodeElement = () => {
         let sibling = this.element.previousElementSibling
         while (sibling) {
             if (sibling.getAttribute("node-id") && sibling.classList.contains("node")) {
-                return new BaseNode(sibling)
+                return sibling
             }
             sibling = sibling.previousElementSibling
         }
         return null
     }
     /**
-     * 親のNodeを得る
-     * @returns {BaseNode | null}
+     * nodeが削除可能かを調べる
+     * @returns {boolean}
      */
-    parentNode = () => {
-        const e = this.element.closest(".question.node")
-        if (e) {
-            return new BaseNode(e)
-        }
-        else {
-            return null
-        }
-    }
-
     allowDelete = () => {
         return !!this.element.querySelector(".btn-delme")
     }
-
+    /**
+     * BaseNode.elementを削除する
+     * @returns {null}
+     */
     delme = () => {
         if (!this.allowDelete()) { return }
         const nodeControl = this.element.nextElementSibling
@@ -113,7 +227,9 @@ class BaseNode {
 class QuestionNode extends BaseNode {
     /**
      * 内部のEditorNodeのace editorを有効化したQuestionNodeオブジェクトを返す
-     * @param {String | Element} specifier 
+     * 
+     * class属性にquestionがないとき, NodeStructureErrorを発生させる.
+     * @param {string | Element} specifier 
      */
     constructor(specifier) {
         super(specifier)
@@ -207,7 +323,10 @@ class QuestionNode extends BaseNode {
             }
         }
     }
-
+    /**
+     * 解答の採点を行う
+     * @param {string} p_id 
+     */
     scoring = async (p_id) => {
         const params = this.extractQuestionParams(0)
         this.element.querySelector(".progress").classList.remove("d-none")
@@ -236,7 +355,10 @@ class QuestionNode extends BaseNode {
             console.log(`[scoring] ${json.DESCR}`)
         }
     }
-
+    /**
+     * 採点のキャンセル
+     * @param {string} p_id 
+     */
     canceling = async (p_id) => {
         const res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${this.nodeId}`, {
             method: "POST",
@@ -246,30 +368,40 @@ class QuestionNode extends BaseNode {
     }
 
     /**
-     * @returns {Array<BaseNode>}
+     * 内部に存在するEditorNodeのリストを返す
+     * @returns {Array<EditorNode>}
      */
-    get answerNodes () {
-        const nodesList = []
-        this.element.querySelectorAll(".answer-content > .node").forEach(e => {
-            nodesList.push(getNodeObjectByElem(e))
-        }) 
-        return nodesList
+    get childNodes () {
+        const nodeList = []
+        try {
+            this.element.querySelectorAll(".answer-content > .node").forEach(e => {
+                if (e.classList.contains(".code")) {
+                    nodeList.push(new CodeNode(e))
+                }else if (e.classList.contains(".explain")) {
+                    nodeList.push(new ExplainNode(e))
+                }
+            }) 
+            return this.element.querySelectorAll(".answer-content > .node")
+        }
+        catch (e) {
+            throw new NodeStructureError(this.type)
+        }
     }
 }
 
 class EditorNode extends BaseNode {
     /**
-     * Ace editorを有効化したEditorNodeオブジェクトを作成する. 
-     * @param {String | Element} specifier 
+     * Ace editorを有効化したEditorNodeオブジェクトを返す. 
+     * @param {string | Element} specifier 
      */
     constructor(specifier) {
         super(specifier) 
         const hasAce = !!this.element.querySelector(".ace_text-input")
         if (this.element.classList.contains("code")) {
-            if (!hasAce) {this.registerAcePythonEditor()}
+            if (!hasAce) {this._registerAcePythonEditor()}
         }
         else if (this.element.classList.contains("explain")) {
-            if (!hasAce) {this.registerAceMDE()}
+            if (!hasAce) {this._registerAceMDE()}
         }
         else {
             throw new NodeStructureError(this.type)
@@ -284,7 +416,7 @@ class EditorNode extends BaseNode {
     /**
      * Python ace editorを有効化する
      */
-    registerAcePythonEditor = () => {
+    _registerAcePythonEditor = () => {
         const defaultLineNumbers = 5
         const maxLines = 25
         
@@ -308,7 +440,7 @@ class EditorNode extends BaseNode {
     /**
      * Markdown ace editorを有効化する
      */
-    registerAceMDE = () => {
+    _registerAceMDE = () => {
         const defaultLineNumbers = 5
         const maxLines = 40
     
@@ -330,11 +462,25 @@ class EditorNode extends BaseNode {
             }
         }
     }
+
+    /**
+     * EditorNodeがQuestionNodeの内部にある場合, そのQuestionNodeのオブジェクトを返す.
+     * 
+     * 存在しない場合はnullを返す
+     * @returns {QuestionNode | null}
+     */
+    get parentQuestionNode() {
+        try {
+            return new QuestionNode(this.element.closest(".question"))
+        } catch {
+            return null
+        }
+    } 
 }
 class CodeNode extends EditorNode {
     /**
      * ace editorを持ったCodeNodeオブジェクトを作成する
-     * @param {String | Element} specifier 
+     * @param {string | Element} specifier 
      */
     constructor(specifier) {
         super(specifier)
@@ -364,7 +510,7 @@ class CodeNode extends EditorNode {
 class ExplainNode extends EditorNode {
     /**
      * ace editorを持ったExplainNodeオブジェクトを作成する
-     * @param {String | Element} specifier 
+     * @param {string | Element} specifier 
      */
     constructor(specifier) {
         super(specifier)
@@ -424,5 +570,31 @@ class ExplainNode extends EditorNode {
             '</p>',
         ].join("\n")
         this.editor.insert(tag)
+    }
+}
+
+class ApplicationError extends Error {
+    constructor(msg) {
+        super(msg)
+        this.name = this.constructor.name
+    }
+}
+
+class KernelError extends ApplicationError {
+    constructor(msg) {
+        super(msg)
+    }
+}
+
+class NodeError extends ApplicationError {
+    constructor(msg) {
+        super(msg)
+    }
+}
+
+class NodeStructureError extends NodeError {
+    constructor(nodeType) {
+        super(`Invalid node structure in ${nodeType} node`)
+        this.nodeType = nodeType
     }
 }

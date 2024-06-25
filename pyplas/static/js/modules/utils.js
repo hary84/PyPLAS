@@ -32,7 +32,7 @@ async function addMD(loc, pos, {
     const json = await res.json()
     const htmlString = json.html 
     loc.insertAdjacentHTML(pos, htmlString)
-    const explainNode = new ExplainNode(node_id)
+    const explainNode = myNode.explain(node_id)
     return explainNode
 }
 /**
@@ -69,7 +69,7 @@ async function addCode(loc, pos, {
     const json = await res.json()
     const htmlString = json.html 
     loc.insertAdjacentHTML(pos, htmlString)
-    const codeNode = new CodeNode(node_id)
+    const codeNode = myNode.code(node_id)
     return codeNode
 }
 /**
@@ -84,7 +84,6 @@ async function addQ(loc, pos, ptype) {
         new Error("argument error")
     }
     const node_id = crypto.randomUUID()
-    console.log(node_id)
     const res = await fetch(`${window.location.origin}/api/render?action=addQ`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -98,7 +97,7 @@ async function addQ(loc, pos, ptype) {
     })
     const json = await res.json()
     loc.insertAdjacentHTML(pos, json.html)
-    const questionNode = new QuestionNode(node_id)
+    const questionNode = myNode.question(node_id)
     return questionNode
 }
 /**
@@ -125,8 +124,8 @@ function watchValue(obj, propName, func) {
  */
 async function saveUserData(p_id) {
     const userInput = {}
-    document.querySelectorAll(".question").forEach(elem => {
-        const questionNode = new QuestionNode(elem)
+    document.querySelectorAll(".question").forEach(e => {
+        const questionNode = myNode.question(e)
         const params = questionNode.extractQuestionParams(0)
         userInput[params.q_id] = params.answers
     })
@@ -190,7 +189,7 @@ async function downloadLog() {
     }
 
     const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/).groups.cat_name
-    if (!cat) {throw new Error("Can not get current category.")}
+    if (!cat) {throw new ApplicationError("Can not get current category.")}
 
     window.location.href = 
         `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
@@ -232,11 +231,4 @@ function escapeHTML(str, ansi=false) {
             '>': '&gt;',
         }[match]
     });
-}
-/**
- * エラーハンドリング用関数
- * @param {Error} e 
- */
-function errorHandling(e) {
-    alert(`[${e.name}] ${e.message}`)
 }
