@@ -1,5 +1,7 @@
-// import {p_id} from "./utils"
-// import {myNode} from "./myclass."
+//@ts-check
+
+import {p_id} from "./utils.js"
+import * as myclass  from "./myclass.js"
 
 /** node reset manager */
 const reseter = {
@@ -8,7 +10,7 @@ const reseter = {
 
     /** 指定されたnodeの元データを取得する 
      * @param {string} nodeId 
-     * @returns {Promise<object> | Promise<undefined>}
+     * @returns {Promise<any>}
     */
     async getOriginParams(nodeId) {
         if (this.origin === undefined) {
@@ -20,16 +22,15 @@ const reseter = {
     }, 
     /**
      * CodeNodeのcontent, QuestionNodeのconponentを初期化する
-     * @param {BaseNode} node 
-     * @returns {null}
+     * @param {myclass.BaseNode} node 
      */
     async resetNode(node) {
         const nodeParams = await this.getOriginParams(node.nodeId)
-        if (!nodeParams) {throw new ApplicationError("Nodeの取得に失敗しました")}
-        if (node instanceof CodeNode && nodeParams.type == "code") {
+        if (!nodeParams) {throw new myclass.ApplicationError("Nodeの取得に失敗しました")}
+        if (node instanceof myclass.CodeNode && nodeParams.type == "code") {
             node.editor.setValue(nodeParams.content, -1)
         }
-        else if (node instanceof QuestionNode && nodeParams.type == "question") {
+        else if (node instanceof myclass.QuestionNode && nodeParams.type == "question") {
             if (node.ptype == "0") {
                 node.answerField.querySelectorAll("input, select").forEach(e => {
                     if (e.tagName == "SELECT") {e.selectedIndex=-1}
@@ -42,7 +43,7 @@ const reseter = {
             } else if (node.ptype == "1" && !node.editable) {
                 const children = node.childNodes
                 if (children.length > nodeParams.conponent.length) {
-                    throw new NodeStructureError(node.type)
+                    throw new myclass.NodeStructureError(node.type)
                 }
                 let idx = 0
                 nodeParams.conponent.forEach(n => {
@@ -55,7 +56,7 @@ const reseter = {
             }
         }
         else {
-            throw new NodeStructureError(node.type)
+            throw new myclass.NodeStructureError(node.type)
         }
     },
 
@@ -74,7 +75,7 @@ const reseter = {
             }
             else {
                 alert(`データの取得に失敗しました\n ${res.url}`)
-                throw new ApplicationError(json.DESCR)
+                throw new myclass.ApplicationError(json.DESCR)
             }
         }
         catch (e) {
@@ -102,3 +103,5 @@ const reseter = {
         return -1
     }
 }
+
+export default reseter

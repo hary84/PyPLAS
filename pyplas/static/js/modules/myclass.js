@@ -1,8 +1,11 @@
-const myNode = {
+import {p_id} from "./utils.js"
+
+
+export const myNode = {
     /**manage active node */
     activeNode: {
         /** current active node id */ 
-        node_id: undefined,
+        node_id: "",
         /** get current active node object */
         get() {
             return myNode.get(this.node_id)
@@ -12,7 +15,7 @@ const myNode = {
      * node-idもしくはelementをうけとり、対応するNodeオブジェクトを返す. 
      * 
      * 対応するNodeオブジェクトが見つからない場合, nullを返す
-     * @param {string | Element | BaseNode} specifier 
+     * @param {string | Element | BaseNode | any} specifier 
      * @returns {BaseNode | null}
      */
     get(specifier) {
@@ -42,7 +45,7 @@ const myNode = {
             return n
         }
         else {
-            throw new NodeError("can not get Code Node from specifier.")
+            throw new NodeError("can not get CodeNode from specifier.")
         }
     },
     /**
@@ -111,13 +114,14 @@ const myNode = {
      */
     _getNodeObjectByNodeId(nodeId) {
         const e = BaseNode.getNodeElementByNodeId(nodeId)
+        if (!e) {return null}
         return this._getNodeObjectByElem(e)
     },
     /**
      * 前のNodeオブジェクトを取得する.
      * 
      * 存在しない場合nullを返す
-     * @param {BaseNode}
+     * @param {BaseNode} nodeObj
      * @returns {BaseNode | null}
      */
     prevNode(nodeObj) {
@@ -131,7 +135,7 @@ const myNode = {
      * 次のNodeオブジェクトを取得する. 
      * 
      * 存在しない場合nullを返す.
-     * @param {BaseNode}
+     * @param {BaseNode} nodeObj
      * @returns {BaseNode | null}
      */
     nextNode(nodeObj) {
@@ -141,12 +145,12 @@ const myNode = {
         const e = nodeObj.nextNodeElement()
         return this.get(e)
     }
-
 }
+
 /**
  * Nodeオブジェクトの基底クラス
  */
-class BaseNode {
+export class BaseNode {
     /**
      * node-idとそれに対応するelementをメンバ変数に格納する. 
      * 
@@ -217,7 +221,6 @@ class BaseNode {
     }
     /**
      * BaseNode.elementを削除する
-     * @returns {null}
      */
     delme = () => {
         if (!this.allowDelete()) { return }
@@ -229,7 +232,7 @@ class BaseNode {
     }
 }
 
-class QuestionNode extends BaseNode {
+export class QuestionNode extends BaseNode {
     /**
      * 内部のEditorNodeのace editorを有効化したQuestionNodeオブジェクトを返す
      * 
@@ -278,70 +281,77 @@ class QuestionNode extends BaseNode {
     
         // learner mode 
         if (mode == 0) {
-            if (ptype == 0) {
-                answerContent.querySelectorAll(".q-text > input, .q-text > select").forEach(e => {
-                    answers.push(e.value) // user answers
-                }) 
-            }
-            else if (ptype == 1) {
-                answerContent.querySelectorAll(".node.code").forEach(e => {
-                    const codeNode = new CodeNode(e)
-                    answers.push(codeNode.editor.getValue()) // user answers
-                })
-            }
-            return {
-                "node_id": node_id, // str
-                "q_id": q_id,       // str
-                "ptype": ptype,     // int 
-                "answers": answers  // list
+            try {
+                if (ptype == 0) {
+                    answerContent.querySelectorAll(".q-text > input, .q-text > select").forEach(e => {
+                        answers.push(e.value) // user answers
+                    }) 
+                }
+                else if (ptype == 1) {
+                    answerContent.querySelectorAll(".node.code").forEach(e => {
+                        const codeNode = new CodeNode(e)
+                        answers.push(codeNode.editor.getValue()) // user answers
+                    })
+                }
+                return {
+                    "node_id": node_id, // str
+                    "q_id": q_id,       // str
+                    "ptype": ptype,     // int 
+                    "answers": answers  // list
+                }
+            } catch (e) {
+                throw new NodeStructureError(this.type)
             }
         }
     
         // creator mode 
         if (mode == 1) {
-            if (ptype == 0) {
-                const md_string = new ExplainNode(answerContent.querySelector(".node.explain")).editor.getValue()
-                const md_dom = parser.parseFromString(md_string, "text/html").querySelector("body")
-                md_dom.querySelectorAll(".q-text > input[ans], .q-text > select[ans]").forEach(e => { // currect answers
-                    answers.push(e.getAttribute("ans"))
-                })
-                question = md_dom.innerHTML // question
-            }
-            else if (ptype == 1) {
-                answers.push(new CodeNode(this.element.querySelector(".test-code > .node.code")).editor.getValue()) // answers
-                question = new ExplainNode(this.element.querySelector(".question-info .node.explain")).editor.getValue() // question
-                
-                editable = this.element.querySelector(".editable-flag").checked // editable
-                if (!editable) { // conponent
-                    answerContent.querySelectorAll(".node").forEach(e => {
-                        if (e.classList.contains("explain")) {
-                            var type = "explain"
-                            var content = new ExplainNode(e).editor.getValue()
-                        }
-                        else if (e.classList.contains("code")) {
-                            var type = "code"
-                            var content = new CodeNode(e).editor.getValue()
-                        }
-                        conponent.push({"type": type, "content": content})
+            try {
+                if (ptype == 0) {
+                    const md_string = new ExplainNode(answerContent.querySelector(".node.explain")).editor.getValue()
+                    const md_dom = parser.parseFromString(md_string, "text/html").querySelector("body")
+                    md_dom.querySelectorAll(".q-text > input[ans], .q-text > select[ans]").forEach(e => { // currect answers
+                        answers.push(e.getAttribute("ans"))
                     })
+                    question = md_dom.innerHTML // question
                 }
-            }
-            return {
-                "node_id": node_id,     // str
-                "q_id": q_id,           // str
-                "ptype": ptype,         // int 
-                "conponent": conponent, // list
-                "question": question,   // str
-                "editable": editable,   // bool
-                "answers": answers      // list
+                else if (ptype == 1) {
+                    answers.push(new CodeNode(this.element.querySelector(".test-code > .node.code")).editor.getValue()) // answers
+                    question = new ExplainNode(this.element.querySelector(".question-info .node.explain")).editor.getValue() // question
+                    
+                    editable = this.element.querySelector(".editable-flag").checked // editable
+                    if (!editable) { // conponent
+                        answerContent.querySelectorAll(".node").forEach(e => {
+                            if (e.classList.contains("explain")) {
+                                var type = "explain"
+                                var content = new ExplainNode(e).editor.getValue()
+                            }
+                            else if (e.classList.contains("code")) {
+                                var type = "code"
+                                var content = new CodeNode(e).editor.getValue()
+                            }
+                            conponent.push({"type": type, "content": content})
+                        })
+                    }
+                }
+                return {
+                    "node_id": node_id,     // str
+                    "q_id": q_id,           // str
+                    "ptype": ptype,         // int 
+                    "conponent": conponent, // list
+                    "question": question,   // str
+                    "editable": editable,   // bool
+                    "answers": answers      // list
+                }
+            } catch (e) {
+                throw new NodeStructureError(this.type)
             }
         }
     }
     /**
      * 解答の採点を行う
-     * @param {string} p_id 
      */
-    scoring = async (p_id) => {
+    scoring = async () => {
         const toast = this.element.querySelector(".for-toast > .toast")
         toast.classList.remove("show")
         const params = this.extractQuestionParams(0)
@@ -356,7 +366,7 @@ class QuestionNode extends BaseNode {
                 "kernel_id": this.nodeId
             })
         })
-        this.element.querySelector(".progress").classList.add("d-none")
+        this.element.querySelector(".progress")?.classList.add("d-none")
 
         const json = await res.json()
         if (res.ok) {
@@ -372,9 +382,8 @@ class QuestionNode extends BaseNode {
     }
     /**
      * 採点のキャンセル
-     * @param {string} p_id 
      */
-    canceling = async (p_id) => {
+    canceling = async () => {
         const res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${this.nodeId}`, {
             method: "POST",
         })
@@ -404,7 +413,7 @@ class QuestionNode extends BaseNode {
     }
 }
 
-class EditorNode extends BaseNode {
+export class EditorNode extends BaseNode {
     /**
      * Ace editorを有効化したEditorNodeオブジェクトを返す. 
      * @param {string | Element} specifier 
@@ -492,7 +501,7 @@ class EditorNode extends BaseNode {
         }
     } 
 }
-class CodeNode extends EditorNode {
+export class CodeNode extends EditorNode {
     /**
      * ace editorを持ったCodeNodeオブジェクトを作成する
      * @param {string | Element} specifier 
@@ -516,13 +525,14 @@ class CodeNode extends EditorNode {
      * Codeインスタンスの実行状態を初期化する
      */
     resetState = () => {
+        // @ts-ignore
         this.element.querySelector(".return-box").innerHTML = ""
         this.element.querySelector(".node-side").classList.remove("bg-success-subtle")
     }
 
 }
 
-class ExplainNode extends EditorNode {
+export class ExplainNode extends EditorNode {
     /**
      * ace editorを持ったExplainNodeオブジェクトを作成する
      * @param {string | Element} specifier 
@@ -545,7 +555,7 @@ class ExplainNode extends EditorNode {
         const html = marked.parse(this.editor.getValue())
         const preview = this.element.querySelector(".for-preview")
         preview.innerHTML = html 
-        this.highlighlting(preview)
+        this.highlighlting()
         this.element.querySelector(".mde").classList.add("preview-active")
     }
     showEditor = () => {
@@ -588,26 +598,26 @@ class ExplainNode extends EditorNode {
     }
 }
 
-class ApplicationError extends Error {
+export class ApplicationError extends Error {
     constructor(msg) {
         super(msg)
         this.name = this.constructor.name
     }
 }
 
-class KernelError extends ApplicationError {
+export class KernelError extends ApplicationError {
     constructor(msg) {
         super(msg)
     }
 }
 
-class NodeError extends ApplicationError {
+export class NodeError extends ApplicationError {
     constructor(msg) {
         super(msg)
     }
 }
 
-class NodeStructureError extends NodeError {
+export class NodeStructureError extends NodeError {
     constructor(nodeType) {
         super(`Invalid node structure in ${nodeType} node`)
         this.nodeType = nodeType

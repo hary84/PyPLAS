@@ -1,11 +1,15 @@
+//@ts-check
 // for /create/<p_id> or /problems/<p_id>
-///<reference path="./modules/myclass.js"/>
-///<reference path="./modules/kernel.js"/>
-///<reference path="./modules/utils.js"/>
 ///<reference path="./modules/create-utils.js"/>
 
+import { myNode } from "./modules/myclass.js"
+import * as myclass from "./modules/myclass.js"
+import {p_id, parentRoute} from "./modules/utils.js"
+import * as utils from "./modules/utils.js"
+import kh from "./modules/kernel.js"
+import reseter from "./modules/reset-manager.js"
 
-document.addEventListener("DOMContentLoaded", async () => {
+// document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
     document.querySelector("#headTitle").href = `/${parentRoute}`
     // markdown.js, highlight.jsの準備
@@ -22,16 +26,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // カーネルの起動, wsの接続
     await kh.setUpKernel()
-    watchValue(kh, "running", setExecuteAnimation)
-    watchValue(kh, "msg", renderMessage)
+    utils.watchValue(kh, "running", setExecuteAnimation)
+    utils.watchValue(kh, "msg", renderMessage)
 
     // active node の監視
-    watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
+    utils.watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
     
     // ボタンイベントリスナー (左サイドバー)
     document.querySelector("#kernel-ops").addEventListener("click", async e => {
         const target = e.target.closest("a, button")
-        if (!target) {return}
+        if (target === null) {return}
         target.classList.add("disabled")
         try {
             // execute all ボタン ----- すべてのCode Nodeを実行する
@@ -52,9 +56,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             // problem save ボタン ----- 解答の保存もしくは問題の登録をおこなう
             else if (target.classList.contains("btn-save")) {
                 if (parentRoute == "problems") {         // problemページの場合
-                    await saveUserData(p_id)
+                    await utils.saveUserData()
                 } else if (parentRoute == "create") {    // createページの場合
-                    await registerProblem(p_id)
+                    await registerProblem()
                 }
             }
         } catch(e) {
@@ -82,25 +86,25 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
             else if (target.classList.contains("btn-addMD")) {
                 e.stopPropagation()
-                const explainNode = await addMD(target.closest(".node-control"), "afterend")
+                const explainNode = await utils.addMD(target.closest(".node-control"), "afterend")
                 myNode.activeNode.node_id = explainNode.nodeId
             } 
             else if (target.classList.contains("btn-addCode")) {
                 e.stopPropagation()
-                const codeNode = await addCode(target.closest(".node-control"), "afterend", {
+                const codeNode = await utils.addCode(target.closest(".node-control"), "afterend", {
                     user: Number(parentRoute == "create")
                 })
                 myNode.activeNode.node_id = codeNode.nodeId
             } 
             else if (target.classList.contains("btn-addQ")) {
-                const questionNode = await addQ(target.closest(".node-control"), "afterend", 
+                const questionNode = await utils.addQ(target.closest(".node-control"), "afterend", 
                             Number(target.dataset.ptype))
                 myNode.activeNode.node_id = questionNode.nodeId
             }
             // ============================== 
             //    Code Node
             // ============================== 
-            else if  (node instanceof CodeNode) {
+            else if  (node instanceof myclass.CodeNode) {
                 if (target.classList.contains("btn-exec")) { 
                     await kh.execute(node.nodeId)
                 } 
@@ -111,18 +115,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             // ============================== 
             //    Question Node
             // ============================== 
-            else if (node instanceof QuestionNode) {
+            else if (node instanceof myclass.QuestionNode) {
                 if (target.classList.contains("btn-testing")) { 
-                    await node.scoring(p_id)
+                    await node.scoring()
                 } 
                 else if (target.classList.contains("btn-cancel")) {
-                    await node.canceling(p_id)
+                    await node.canceling()
                 } 
                 else if (target.classList.contains("btn-load-ipynb")) {
-                    const file = await filePicker()
+                    const file = await utils.filePicker()
                     const loc = node.element.querySelector(".answer-content")
                     if (!loc) {return}
-                    await loadIpynb(file, loc, false, {
+                    await utils.loadIpynb(file, loc, false, {
                         user: Number(parentRoute=="create")}
                     )
                 }
@@ -133,7 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // ============================== 
             //    Explain Node
             // ============================== 
-            else if (node instanceof ExplainNode) {
+            else if (node instanceof myclass.ExplainNode) {
                 if (target.classList.contains("btn-bold")) {
                     node.embedBold()
                 }
@@ -178,16 +182,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         //    Ctrl + Enter
         // ============================== 
         if (e.ctrlKey && e.key == "Enter") {
-            if (currentActiveNode instanceof ExplainNode) {
+            if (currentActiveNode instanceof myclass.ExplainNode) {
                 currentActiveNode.showPreview()
             } 
-            else if (currentActiveNode instanceof CodeNode) {
+            else if (currentActiveNode instanceof myclass.CodeNode) {
                 currentActiveNode.editor.blur()
                 kh.execute(currentActiveNode.nodeId)
             }
-            else if (currentActiveNode instanceof QuestionNode) {
+            else if (currentActiveNode instanceof myclass.QuestionNode) {
                 if (parentRoute == "problems") {
-                    await currentActiveNode.scoring(p_id)
+                    await currentActiveNode.scoring()
                 }
             }
         }
@@ -196,20 +200,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         // ============================== 
         else if (e.key == "Enter" && e.target.tagName == "BODY") {
             e.preventDefault()
-            if (currentActiveNode instanceof ExplainNode) {
+            if (currentActiveNode instanceof myclass.ExplainNode) {
                 currentActiveNode.showEditor()
                 currentActiveNode.editor.focus()
             }
-            else if (currentActiveNode instanceof CodeNode) {
+            else if (currentActiveNode instanceof myclass.CodeNode) {
                 currentActiveNode.editor.focus()
             }
-            else if (currentActiveNode instanceof QuestionNode) {
+            else if (currentActiveNode instanceof myclass.QuestionNode) {
                 const answerNodes = currentActiveNode.childNodes
                 if (answerNodes.length == 0) {
                     const nodeControl = currentActiveNode.element.querySelector(".answer-content .node-control")
                     if (nodeControl) {
-                        const nextActiveNode = await addCode(nodeControl, "afterend", {
-                            user: parentRoute == "create"
+                        const nextActiveNode = await utils.addCode(nodeControl, "afterend", {
+                            user: Number(parentRoute == "create")
                         })
                         myNode.activeNode.node_id = nextActiveNode.nodeId
                     }
@@ -224,8 +228,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         // ============================== 
         else if (e.key == "Escape" && e.target.tagName == "BODY") {
             try {
-                const e = currentActiveNode.parentQuestionNode
-                myNode.activeNode.node_id = e.nodeId
+                if (currentActiveNode instanceof myclass.EditorNode) {
+                    const e = currentActiveNode.parentQuestionNode
+                    myNode.activeNode.node_id = e.nodeId
+                }
             } catch {}
         }
         // [TEXTAREA] Escape ----- エディターのフォーカスを解除
@@ -241,9 +247,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         else if (e.ctrlKey && e.key == "s" && e.target.tagName == "BODY") {
             e.preventDefault()
             if (parentRoute == "problems") {
-                saveUserData(p_id)
+                utils.saveUserData()
             } else if (parentRoute == "create") {
-                registerProblem(p_id)
+                registerProblem()
             }
         }
         // [BODY] j or k ----- active node の移動
@@ -260,7 +266,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         }
         // [BODY] Ctrl-l ----- active nodeを画面中央に寄せる
-        else if (e.ctrlKey && e.key == "l" & e.target.tagName == "BODY") {
+        else if (e.ctrlKey && e.key == "l" && e.target.tagName == "BODY") {
             e.preventDefault()
             if (currentActiveNode) {
                 currentActiveNode.element.scrollIntoView({"behavior": "instant", "block": "center"})
@@ -303,12 +309,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.log(target)
         target.showEditor()
     })
-})
+// })
 
 
 /**
  * KernelHandler classのrunningパラメータが変化した際に起動する関数
- * @param {KernelHandler} kh 
  * @param {boolean} oldValue
  * @param {boolean} newValue 
  */
@@ -323,7 +328,7 @@ function setExecuteAnimation(kh, oldValue, newValue) {
                 myNode.code(id).element.setAttribute("run-state", "suspending")
             })
         } catch(e) {
-            if (e instanceof NodeError) {}
+            if (e instanceof myclass.NodeError) {}
             else {console.error(e)}
         }
     // 非コード実行中(kh.running == false)の時
@@ -335,7 +340,6 @@ function setExecuteAnimation(kh, oldValue, newValue) {
 }
 /**
  * KernelHandlerがwsでメッセージを受信した際の処理を行う関数
- * @param {KernelHandler} kh 
  * @param {Object} oldValue 
  * @param {Object} newValue 
  */
@@ -361,7 +365,7 @@ function renderMessage(kh, oldValue, newValue) {
                     break;
             }
         } catch (e) {
-            if (e instanceof NodeError) {}
+            if (e instanceof myclass.NodeError) {}
             else (console.error(e))
         }
     }
@@ -369,15 +373,15 @@ function renderMessage(kh, oldValue, newValue) {
 function renderResult(res, form, type="text") {
     switch (type) {
         case "text":
-            var res = escapeHTML(res)
-            form.insertAdjacentHTML("beforeend", `<p class="exec-res">${res}</p>`)
+            const escapedt = utils.escapeHTML(res)
+            form.insertAdjacentHTML("beforeend", `<p class="exec-res">${escapedt}</p>`)
             break;
         case "img":
             form.insertAdjacentHTML("beforeend",`<img class="exec-res ms-2" src="data:image/png;base64,${res}" style="max-width: 95%;"/>`)
             break;
         case "error":
-            var res = escapeHTML(res, true).replace(/\n/g, "<br>")
-            form.insertAdjacentHTML("beforeend", `<p class="text-danger exec-res">${res}</p>`)
+            const escapede = utils.escapeHTML(res, true).replace(/\n/g, "<br>")
+            form.insertAdjacentHTML("beforeend", `<p class="text-danger exec-res">${escapede}</p>`)
             break;
         default:
             throw new Error('"type" argument can be one of "text", "img", or "error".')

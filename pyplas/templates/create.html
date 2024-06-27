@@ -3,7 +3,8 @@
 {% block head %}
 <title>PyPLAS - edit</title>
 <link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
-<script src="{{ static_url('js/modules/create-utils.js') }}"></script>
+<script src="{{ static_url('js/modules/create-utils.js') }}" type="module"></script>
+<script src="{{ static_url('js/problem-event-listeners.js') }}" type="module"></script>
 {% end %}
 
 {% block head-nav-li %}
@@ -70,5 +71,5 @@
 <div class="col-xxl-2 d-none d-xxl-block bg-white border-start">
 </div>
 
-<script src="{{ static_url('js/problem-event-listeners.js') }}" type="module"></script>
+<!-- <script src="{{ static_url('js/problem-event-listeners.js') }}" type="module"></script> -->
 {% end %}

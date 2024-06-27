@@ -1,12 +1,10 @@
+import { p_id } from "./utils.js" 
+import { myNode, ExplainNode, CodeNode, QuestionNode} from "./myclass.js"
 
 /**
  * ページ全体をパースしてサーバーに登録を要請する
- * 
- * p_id == 'new'の場合、新規登録, それ以外の値の場合は既存の問題の更新
- * @param {str} p_id 問題id
- * @returns {none}
  */
-async function registerProblem(p_id) {
+async function registerProblem() {
 
     const title = document.querySelector("#titleForm").value
     if (title.length == 0) {
@@ -84,9 +82,8 @@ async function registerProblem(p_id) {
 }
 /**
  * 問題の削除を要請する
- * @param {string} p_id 対象となる問題のp_id
  */
-async function deleteProblem(p_id) {
+async function deleteProblem() {
     const agree = confirm("本当に削除しますか？")
     if (agree) {
         const res = await fetch(`${window.location.origin}/create/${p_id}`, {
@@ -156,7 +153,6 @@ function observeForm() {
                 delete changedParams[p_id]
                 tr.classList.remove("table-danger")
             }
-            console.log(changedParams)
         })
     })
 }
