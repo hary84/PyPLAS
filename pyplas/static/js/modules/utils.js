@@ -1,3 +1,11 @@
+const groups = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/).groups
+/** current problem id (uuid) */
+const  p_id = groups.p_id
+/** current user mode (problems or create)  */
+const parentRoute = groups.parent_path
+console.log(`problem_id(p_id) is '${p_id}'`)
+console.log(`parent path is '${parent}'`)
+
 /**
  * Explain Nodeを追加する
  * @param {Element} loc 

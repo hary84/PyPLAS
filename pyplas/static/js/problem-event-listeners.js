@@ -1,28 +1,19 @@
+// for /create/<p_id> or /problems/<p_id>
 ///<reference path="./modules/myclass.js"/>
 ///<reference path="./modules/kernel.js"/>
 ///<reference path="./modules/utils.js"/>
 ///<reference path="./modules/create-utils.js"/>
 
-// for /create/<p_id> or /problems/<p_id>
-// global variable
-//  kh          : from kernel.js
-//  markdown    : from marked.js
-//  hljs        : from highlight.js
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const groups = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/).groups
-    const  p_id = groups.p_id
-    const parent = groups.parent_path
-    console.log(`problem_id(p_id) is '${p_id}'`)
-    console.log(`parent path is '${parent}'`)
     document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
-    document.querySelector("#headTitle").href = `/${parent}`
+    document.querySelector("#headTitle").href = `/${parentRoute}`
     // markdown.js, highlight.jsの準備
-    if (parent == "problems") {
+    if (parentRoute == "problems") {
         document.querySelectorAll(".explain").forEach(elem => {
             elem.innerHTML = marked.parse(elem.innerHTML)
         })
-    }else if (parent == "create") {
+    }else if (parentRoute == "create") {
         document.querySelectorAll(".node.explain").forEach(e => 
             myNode.explain(e).showPreview()
         )
@@ -60,9 +51,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             } 
             // problem save ボタン ----- 解答の保存もしくは問題の登録をおこなう
             else if (target.classList.contains("btn-save")) {
-                if (parent == "problems") {         // problemページの場合
+                if (parentRoute == "problems") {         // problemページの場合
                     await saveUserData(p_id)
-                } else if (parent == "create") {    // createページの場合
+                } else if (parentRoute == "create") {    // createページの場合
                     await registerProblem(p_id)
                 }
             }
@@ -86,6 +77,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (node && target.classList.contains("btn-delme")) {
                 node.delme()
             }
+            else if (node && target.classList.contains("btn-reset-input")) {
+                reseter.resetNode(node)
+            }
             else if (target.classList.contains("btn-addMD")) {
                 e.stopPropagation()
                 const explainNode = await addMD(target.closest(".node-control"), "afterend")
@@ -94,7 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             else if (target.classList.contains("btn-addCode")) {
                 e.stopPropagation()
                 const codeNode = await addCode(target.closest(".node-control"), "afterend", {
-                    user: Number(parent == "create")
+                    user: Number(parentRoute == "create")
                 })
                 myNode.activeNode.node_id = codeNode.nodeId
             } 
@@ -129,7 +123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     const loc = node.element.querySelector(".answer-content")
                     if (!loc) {return}
                     await loadIpynb(file, loc, false, {
-                        user: Number(parent=="create")}
+                        user: Number(parentRoute=="create")}
                     )
                 }
                 else if (target.classList.contains("btn-exec-all")) {
@@ -192,7 +186,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 kh.execute(currentActiveNode.nodeId)
             }
             else if (currentActiveNode instanceof QuestionNode) {
-                if (parent == "problems") {
+                if (parentRoute == "problems") {
                     await currentActiveNode.scoring(p_id)
                 }
             }
@@ -215,7 +209,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     const nodeControl = currentActiveNode.element.querySelector(".answer-content .node-control")
                     if (nodeControl) {
                         const nextActiveNode = await addCode(nodeControl, "afterend", {
-                            user: parent == "create"
+                            user: parentRoute == "create"
                         })
                         myNode.activeNode.node_id = nextActiveNode.nodeId
                     }
@@ -246,9 +240,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         // [BODY] Ctrl-S ----- 解答の保存もしくは問題の登録
         else if (e.ctrlKey && e.key == "s" && e.target.tagName == "BODY") {
             e.preventDefault()
-            if (parent == "problems") {
+            if (parentRoute == "problems") {
                 saveUserData(p_id)
-            } else if (parent == "create") {
+            } else if (parentRoute == "create") {
                 registerProblem(p_id)
             }
         }
@@ -279,7 +273,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     currentActiveNode.element.nextElementSibling : currentActiveNode.element.previousElementSibling
             if (nodeCotnrol.classList.contains("node-control")) {
                 await addCode(nodeCotnrol, "afterend", {
-                    user: Number(parent == "create")
+                    user: Number(parentRoute == "create")
                 })
             }
         }

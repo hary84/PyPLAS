@@ -89,10 +89,10 @@ class Question(UIModule):
         *question: str
             question text
         answers: list
-            correct answer list
+            correct answer list (used if user = 1)
             :e.g. [answer, answer, ...]
         saved_answers: list
-            answers saved in DB -> progress
+            answers saved in DB (used if user =0)
             :e.g. [answer, answer, ...]
         *editable: bool
             False: CAN NOT add/remove Markdown, Code

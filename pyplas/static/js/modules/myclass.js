@@ -1,6 +1,9 @@
 const myNode = {
+    /**manage active node */
     activeNode: {
+        /** current active node id */ 
         node_id: undefined,
+        /** get current active node object */
         get() {
             return myNode.get(this.node_id)
         }
@@ -219,7 +222,7 @@ class BaseNode {
     delme = () => {
         if (!this.allowDelete()) { return }
         const nodeControl = this.element.nextElementSibling
-        if (nodeControl.classList.contains("node-control")) {
+        if (nodeControl && nodeControl.classList.contains("node-control")) {
             nodeControl.remove()
         }
         this.element.remove()
@@ -247,6 +250,15 @@ class QuestionNode extends BaseNode {
         catch (e) {
             throw new NodeStructureError(this.type)
         }
+    }
+    get ptype() {
+        return this.element.getAttribute("ptype")
+    }
+    get editable() {
+        return this.element.classList.contains("editable")
+    }
+    get answerField() {
+        return this.element.querySelector(".answer-content")
     }
     /**
      * Questionインスタンスのパラメータを返す
@@ -377,7 +389,7 @@ class QuestionNode extends BaseNode {
     get childNodes () {
         const nodeList = []
         try {
-            this.element.querySelectorAll(".answer-content > .node").forEach(e => {
+            this.element.querySelectorAll(".answer-content > .node[node-id]").forEach(e => {
                 if (e.classList.contains("code")) {
                     nodeList.push(new CodeNode(e))
                 }else if (e.classList.contains("explain")) {
