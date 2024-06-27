@@ -75,6 +75,7 @@ class ProblemHandler(util.ApplicationHandler):
         PATH
             * /problems                 : / へリダイレクト
             * /problems/<p_id>          : 問題を表示
+            * /problems/<p_id>/ifno     : 問題の基礎情報を取得
             * /problems/log/download    : logをcsvファイルとしてダウンロードする
         """
         # GET /problems
@@ -91,6 +92,8 @@ class ProblemHandler(util.ApplicationHandler):
             if p_id == "log" and action == "download":
                 self.load_url_queries(["cat", "name", "num"])
                 self.log_downdload(**self.query)
+            elif action == "info":
+                self.get_problem_info(p_id=p_id)
             else:    
                 self.write_error(404)
 
@@ -142,6 +145,22 @@ class ProblemHandler(util.ApplicationHandler):
                         f'attachment; filename="{num}_{name}_{cat}.csv"')
         self.set_header("Content-Length", len(csv_bin))
         self.write(csv_bin)
+
+    def get_problem_info(self, p_id: str) -> dict[str, str]:
+        """
+        pyplas.dbから問題の基礎情報(p_id, title, category, page)を取得し, dictとして返す. 
+        """
+        sql = r"""SELECT p_id, title, category, page FROM pages
+            WHERE p_id = :p_id"""
+        try: 
+            info = db_handler.get_from_db(sql, p_id=p_id)
+            assert len(info) == 1, "p_id is not exist in db"
+            self.write(info[0] | 
+                       {"DESCR": "get problem info"})
+        except AssertionError:
+            self.set_status(404)
+            self.finish({"DESCR": f"problem({p_id}) is not found."})
+
 
     async def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """

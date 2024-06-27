@@ -1,10 +1,3 @@
-<!-- 
-@params
-    content: str 
-    readonly: bool
-    user: int (0 or 1)
-    allow_del: bool 
--->
 <div class="code node mx-2 my-2" node-id="{{node_id}}" run-state="idle">
     <div class="node-side bg-light rounded-start-2 border border-dark-subtle border-1">
         <button class="btn-exec btn btn-sm btn-outline-dark" tabindex="-1">
@@ -29,7 +22,7 @@
                     <i class="bi bi-justify"></i> 
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item btn-execute-below">Execute Below</a></li>
+                    <!-- <li><a class="dropdown-item btn-execute-below">Execute Below</a></li> -->
                   {% if user == 1 %}
                     <li>
                         <span class="dropdown-item d-flex">
@@ -38,7 +31,7 @@
                         </span>
                     </li>
                   {% end %}
-                  {% if user == 0 %} 
+                  {% if (user == 0) and (allow_del == False) %} 
                     <li><a class="dropdown-item btn-reset-input">Reset Input</a></li>
                   {% end %}
                 </ul>
