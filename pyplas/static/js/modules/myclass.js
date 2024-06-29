@@ -1,8 +1,9 @@
+//@ts-check
+
 import {p_id} from "./utils.js"
 
-
 export const myNode = {
-    /**manage active node */
+    /** active node */
     activeNode: {
         /** current active node id */ 
         node_id: "",
@@ -16,7 +17,7 @@ export const myNode = {
      * 
      * 対応するNodeオブジェクトが見つからない場合, nullを返す
      * @param {string | Element | BaseNode | any} specifier 
-     * @returns {BaseNode | null}
+     * @returns {CodeNode | ExplainNode | QuestionNode | null}
      */
     get(specifier) {
         if (typeof specifier == "string") {
@@ -85,7 +86,7 @@ export const myNode = {
      * 
      * 対応するNodeがない場合, nullを返す
      * @param {Element} e
-     * @returns {BaseNode | null}
+     * @returns {CodeNode | ExplainNode | QuestionNode | null}
      */
     _getNodeObjectByElem(e) {
         try {
@@ -110,7 +111,7 @@ export const myNode = {
      * 
      * 対応するNodeがない場合, nullを返す
      * @param {string} nodeId
-     * @returns {BaseNode | null}
+     * @returns {CodeNode | ExplainNode | QuestionNode | null}
      */
     _getNodeObjectByNodeId(nodeId) {
         const e = BaseNode.getNodeElementByNodeId(nodeId)
@@ -125,9 +126,6 @@ export const myNode = {
      * @returns {BaseNode | null}
      */
     prevNode(nodeObj) {
-        if (!(nodeObj instanceof BaseNode)) {
-            throw new TypeError("invalid argument 'nodeObj'.")
-        }
         const e = nodeObj.prevNodeElement()
         return this.get(e)
     },
@@ -139,9 +137,6 @@ export const myNode = {
      * @returns {BaseNode | null}
      */
     nextNode(nodeObj) {
-        if (!(nodeObj instanceof BaseNode)) {
-            throw new TypeError("invalid argument 'nodeObj'.")
-        }
         const e = nodeObj.nextNodeElement()
         return this.get(e)
     }
@@ -161,7 +156,7 @@ export class BaseNode {
         this.type = this.constructor.name 
         if (typeof specifier == "string") {
             const e = BaseNode.getNodeElementByNodeId(specifier)
-            if (!e) {throw new NodeStructureError(this.type)}
+            if (e === null) {throw new NodeStructureError(this.type)}
             this.nodeId = specifier
             this.element = e
         }
@@ -178,6 +173,8 @@ export class BaseNode {
     }
     /**
      * node-idから対応する.nodeをもつ要素を返す
+     * 
+     * 対応する要素がない場合nullを返す
      * @param {string} nodeId 
      * @returns {Element | null}
      */
@@ -244,15 +241,10 @@ export class QuestionNode extends BaseNode {
         if (!this.element.classList.contains("question")) {
             throw new NodeStructureError(this.type)
         }
-        try {
-            this.element.querySelectorAll(".node.code, .node.explain").forEach(e => {
-                new EditorNode(e)
-            })
-            this.qId = this.element.getAttribute("q-id")
-        }
-        catch (e) {
-            throw new NodeStructureError(this.type)
-        }
+        this.element.querySelectorAll(".node.code, .node.explain").forEach(e => {
+            new EditorNode(e)
+        })
+        this.qId = this.element.getAttribute("q-id")
     }
     get ptype() {
         return this.element.getAttribute("ptype")
@@ -261,11 +253,14 @@ export class QuestionNode extends BaseNode {
         return this.element.classList.contains("editable")
     }
     get answerField() {
-        return this.element.querySelector(".answer-content")
+        const c = this.element.querySelector(".answer-content")
+        if (c === null) {throw new NodeStructureError(this.type)}
+        return c
     }
     /**
      * Questionインスタンスのパラメータを返す
-     * @param {Number} mode 
+     * @param {number} mode 
+     * @returns {object}
      */
     extractQuestionParams = (mode) => {
         const node_id = this.nodeId
@@ -277,74 +272,66 @@ export class QuestionNode extends BaseNode {
         let editable = false 
     
         const parser = new DOMParser()
-        const answerContent = this.element.querySelector(".answer-content")
+        const answerContent = this.answerField
     
         // learner mode 
         if (mode == 0) {
-            try {
-                if (ptype == 0) {
-                    answerContent.querySelectorAll(".q-text > input, .q-text > select").forEach(e => {
-                        answers.push(e.value) // user answers
-                    }) 
-                }
-                else if (ptype == 1) {
-                    answerContent.querySelectorAll(".node.code").forEach(e => {
-                        const codeNode = new CodeNode(e)
-                        answers.push(codeNode.editor.getValue()) // user answers
-                    })
-                }
-                return {
-                    "node_id": node_id, // str
-                    "q_id": q_id,       // str
-                    "ptype": ptype,     // int 
-                    "answers": answers  // list
-                }
-            } catch (e) {
-                throw new NodeStructureError(this.type)
+            if (ptype == 0) {
+                answerContent.querySelectorAll(".q-text > input, .q-text > select").forEach(e => {
+                    answers.push(e.value) // user answers
+                }) 
+            }
+            else if (ptype == 1) {
+                answerContent.querySelectorAll(".node.code").forEach(e => {
+                    const codeNode = new CodeNode(e)
+                    answers.push(codeNode.editor.getValue()) // user answers
+                })
+            }
+            return {
+                "node_id": node_id, // str
+                "q_id": q_id,       // str
+                "ptype": ptype,     // int 
+                "answers": answers  // list
             }
         }
     
         // creator mode 
         if (mode == 1) {
-            try {
-                if (ptype == 0) {
-                    const md_string = new ExplainNode(answerContent.querySelector(".node.explain")).editor.getValue()
-                    const md_dom = parser.parseFromString(md_string, "text/html").querySelector("body")
-                    md_dom.querySelectorAll(".q-text > input[ans], .q-text > select[ans]").forEach(e => { // currect answers
-                        answers.push(e.getAttribute("ans"))
+            if (ptype == 0) {
+                const md_string = new ExplainNode(answerContent.querySelector(".node.explain")).editor.getValue()
+                const md_dom = parser.parseFromString(md_string, "text/html").querySelector("body")
+                md_dom.querySelectorAll(".q-text > input[ans], .q-text > select[ans]").forEach(e => { // currect answers
+                    answers.push(e.getAttribute("ans"))
+                })
+                question = md_dom.innerHTML // question
+            }
+            else if (ptype == 1) {
+                answers.push(new CodeNode(this.element.querySelector(".test-code > .node.code")).editor.getValue()) // answers
+                question = new ExplainNode(this.element.querySelector(".question-info .node.explain")).editor.getValue() // question
+                
+                editable = this.element.querySelector(".editable-flag").checked // editable
+                if (!editable) { // conponent
+                    answerContent.querySelectorAll(".node").forEach(e => {
+                        if (e.classList.contains("explain")) {
+                            var type = "explain"
+                            var content = new ExplainNode(e).editor.getValue()
+                        }
+                        else if (e.classList.contains("code")) {
+                            var type = "code"
+                            var content = new CodeNode(e).editor.getValue()
+                        }
+                        conponent.push({"type": type, "content": content})
                     })
-                    question = md_dom.innerHTML // question
                 }
-                else if (ptype == 1) {
-                    answers.push(new CodeNode(this.element.querySelector(".test-code > .node.code")).editor.getValue()) // answers
-                    question = new ExplainNode(this.element.querySelector(".question-info .node.explain")).editor.getValue() // question
-                    
-                    editable = this.element.querySelector(".editable-flag").checked // editable
-                    if (!editable) { // conponent
-                        answerContent.querySelectorAll(".node").forEach(e => {
-                            if (e.classList.contains("explain")) {
-                                var type = "explain"
-                                var content = new ExplainNode(e).editor.getValue()
-                            }
-                            else if (e.classList.contains("code")) {
-                                var type = "code"
-                                var content = new CodeNode(e).editor.getValue()
-                            }
-                            conponent.push({"type": type, "content": content})
-                        })
-                    }
-                }
-                return {
-                    "node_id": node_id,     // str
-                    "q_id": q_id,           // str
-                    "ptype": ptype,         // int 
-                    "conponent": conponent, // list
-                    "question": question,   // str
-                    "editable": editable,   // bool
-                    "answers": answers      // list
-                }
-            } catch (e) {
-                throw new NodeStructureError(this.type)
+            }
+            return {
+                "node_id": node_id,     // str
+                "q_id": q_id,           // str
+                "ptype": ptype,         // int 
+                "conponent": conponent, // list
+                "question": question,   // str
+                "editable": editable,   // bool
+                "answers": answers      // list
             }
         }
     }
@@ -353,9 +340,12 @@ export class QuestionNode extends BaseNode {
      */
     scoring = async () => {
         const toast = this.element.querySelector(".for-toast > .toast")
-        toast.classList.remove("show")
+        const progress = this.element.querySelector(".progress")
         const params = this.extractQuestionParams(0)
-        this.element.querySelector(".progress").classList.remove("d-none")
+        if (toast === null || progress === null) {throw new NodeStructureError(this.type)}
+
+        toast.classList.remove("show")
+        progress.classList.remove("d-none")
         const res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
@@ -366,18 +356,22 @@ export class QuestionNode extends BaseNode {
                 "kernel_id": this.nodeId
             })
         })
-        this.element.querySelector(".progress")?.classList.add("d-none")
+        progress.classList.add("d-none")
 
-        const json = await res.json()
         if (res.ok) {
+            const json = await res.json()
             console.log(`[scoring] ${json.DESCR}`)
             this.element.setAttribute("progress", json.progress)
-            toast.querySelector(".toast-body").innerHTML = json.content
+            try {
+                toast.querySelector(".toast-body").innerHTML = json.content
+                document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
+            } catch(e) {
+                if (e instanceof TypeError) {throw new NodeStructureError(this.type)}
+            }
             toast.classList.add("show")
-            document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`).setAttribute("progress", json.progress)
         }
         else {
-            console.log(`[scoring] ${json.DESCR}`)
+            throw new FetchError(res.status, res.statusText)
         }
     }
     /**
@@ -387,8 +381,13 @@ export class QuestionNode extends BaseNode {
         const res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${this.nodeId}`, {
             method: "POST",
         })
-        const json = await res.json()
-        console.log(json.DESCR)
+        if (res.ok) {
+            const json = await res.json()
+            console.log(json.DESCR)
+        }
+        else {
+            throw new FetchError(res.status, res.statusText)
+        }
     }
 
     /**
@@ -397,19 +396,14 @@ export class QuestionNode extends BaseNode {
      */
     get childNodes () {
         const nodeList = []
-        try {
-            this.element.querySelectorAll(".answer-content > .node[node-id]").forEach(e => {
-                if (e.classList.contains("code")) {
-                    nodeList.push(new CodeNode(e))
-                }else if (e.classList.contains("explain")) {
-                    nodeList.push(new ExplainNode(e))
-                }
-            }) 
-            return nodeList
-        }
-        catch (e) {
-            throw new NodeStructureError(this.type)
-        }
+        this.element.querySelectorAll(".answer-content > .node[node-id]").forEach(e => {
+            if (e.classList.contains("code")) {
+                nodeList.push(new CodeNode(e))
+            }else if (e.classList.contains("explain")) {
+                nodeList.push(new ExplainNode(e))
+            }
+        }) 
+        return nodeList
     }
 }
 
@@ -444,22 +438,18 @@ export class EditorNode extends BaseNode {
         const defaultLineNumbers = 5
         const maxLines = 25
         
-        try {
-            const editableElem = this.element.querySelector(".node-code")
-            const editor = ace.edit(editableElem, {
-                mode: "ace/mode/python",
-                theme: "ace/theme/one_dark",
-                showPrintMargin: false,
-                maxLines: maxLines,
-                minLines: defaultLineNumbers,
-                readOnly: editableElem.classList.contains("readonly")
-            });
-            editor.container.childNodes[0].tabIndex = -1
-        } catch (e) {
-            if ( e instanceof TypeError) {
-                throw new NodeStructureError("CodeNode")
-            }
-        }
+        const editableElem = this.element.querySelector(".node-code")
+        if (editableElem === null) {throw new NodeStructureError("CodeNode")}
+
+        const editor = ace.edit(editableElem, {
+            mode: "ace/mode/python",
+            theme: "ace/theme/one_dark",
+            showPrintMargin: false,
+            maxLines: maxLines,
+            minLines: defaultLineNumbers,
+            readOnly: editableElem.classList.contains("readonly")
+        });
+        editor.container.childNodes[0].tabIndex = -1
     }
     /**
      * Markdown ace editorを有効化する
@@ -468,23 +458,18 @@ export class EditorNode extends BaseNode {
         const defaultLineNumbers = 5
         const maxLines = 40
     
-        try {
-            const editableElem = this.element.querySelector(".node-mde")
-        
-            const editor = ace.edit(editableElem, {
-                mode: "ace/mode/markdown",
-                theme: "ace/theme/sql_server",
-                showGutter: false,
-                highlightActiveLine: false,
-                maxLines: maxLines,
-                minLines: defaultLineNumbers
-            })
-            editor.container.childNodes[0].tabIndex = -1
-        } catch (e) {
-            if (e instanceof TypeError) {
-                throw new NodeStructureError("explain")
-            }
-        }
+        const editableElem = this.element.querySelector(".node-mde")
+        if (editableElem === null) {throw new NodeStructureError("ExplainNode")}
+    
+        const editor = ace.edit(editableElem, {
+            mode: "ace/mode/markdown",
+            theme: "ace/theme/sql_server",
+            showGutter: false,
+            highlightActiveLine: false,
+            maxLines: maxLines,
+            minLines: defaultLineNumbers
+        })
+        editor.container.childNodes[0].tabIndex = -1
     }
 
     /**
@@ -494,11 +479,9 @@ export class EditorNode extends BaseNode {
      * @returns {QuestionNode | null}
      */
     get parentQuestionNode() {
-        try {
-            return new QuestionNode(this.element.closest(".question"))
-        } catch {
-            return null
-        }
+        const parent = this.element.closest(".question")
+        if (parent) {return new QuestionNode(parent)}
+        return null
     } 
 }
 export class CodeNode extends EditorNode {
@@ -525,9 +508,12 @@ export class CodeNode extends EditorNode {
      * Codeインスタンスの実行状態を初期化する
      */
     resetState = () => {
-        // @ts-ignore
-        this.element.querySelector(".return-box").innerHTML = ""
-        this.element.querySelector(".node-side").classList.remove("bg-success-subtle")
+        try {
+            this.element.querySelector(".return-box").innerHTML = ""
+            this.element.querySelector(".node-side").classList.remove("bg-success-subtle")
+        } catch (e) {
+            throw new NodeStructureError(this.type)
+        }
     }
 
 }
@@ -554,12 +540,21 @@ export class ExplainNode extends EditorNode {
     showPreview = () => {
         const html = marked.parse(this.editor.getValue())
         const preview = this.element.querySelector(".for-preview")
-        preview.innerHTML = html 
-        this.highlighlting()
-        this.element.querySelector(".mde").classList.add("preview-active")
+        try {
+            preview.innerHTML = html 
+            this.highlighlting()
+            this.element.querySelector(".mde").classList.add("preview-active")
+
+        } catch (e) {
+            if (e instanceof TypeError) {throw new NodeStructureError(this.type)}
+        }
     }
     showEditor = () => {
-        this.element.querySelector(".mde").classList.remove("preview-active")
+        try {
+            this.element.querySelector(".mde").classList.remove("preview-active")
+        } catch {
+            throw new NodeStructureError(this.type)
+        }
     }
     embedBold = () => {
         this.editor.insert(`**${this.editor.getCopyText()}**`)
@@ -597,29 +592,45 @@ export class ExplainNode extends EditorNode {
         this.editor.insert(tag)
     }
 }
-
+/** 基底エラー */
 export class ApplicationError extends Error {
+    /** @param {string} msg */
     constructor(msg) {
         super(msg)
         this.name = this.constructor.name
     }
 }
-
+/** fetch api に関するエラー*/
+export class FetchError extends ApplicationError {
+    /** 
+     * @param {number} statusCode 
+     * @param {string} statusText
+    */
+    constructor(statusCode, statusText) {
+        super(`${statusCode} - ${statusText}`)
+        this.statusCode = statusCode
+        this.statusText = statusText
+    }
+}
+/** KernelHandlerに関する基底エラー */
 export class KernelError extends ApplicationError {
+    /** @param {string} msg */
     constructor(msg) {
         super(msg)
     }
 }
-
+/** Nodeに関する基底エラー */
 export class NodeError extends ApplicationError {
+    /**@param {string} msg */
     constructor(msg) {
         super(msg)
     }
 }
-
+/** Node内の要素が存在しない際のエラー */
 export class NodeStructureError extends NodeError {
+    /**@param {string} nodeType */
     constructor(nodeType) {
-        super(`Invalid node structure in ${nodeType} node`)
+        super(`Invalid node structure in ${nodeType} node.\n Reload page.`)
         this.nodeType = nodeType
     }
 }

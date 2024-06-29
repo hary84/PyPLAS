@@ -1,5 +1,33 @@
-import { p_id } from "./utils.js" 
-import { myNode, ExplainNode, CodeNode, QuestionNode} from "./myclass.js"
+//@ts-check
+import { p_id, parentRoute } from "./utils.js" 
+import { myNode, ExplainNode, CodeNode, QuestionNode, FetchError } from "./myclass.js"
+
+const changedParams = {}
+document.querySelector("#kernel-ops .btn-save")?.addEventListener("click", async e => {
+    if (parentRoute == "create") {
+        await registerProblem()
+    }
+})
+document.addEventListener("click", async e => {
+    const btn = e.target.closest(".btn") 
+    if (btn == null) {return} 
+    if (btn.classList.contains("btn-delp")) {
+        const target = e.target.closest("tr").getAttribute("target")
+        await deleteProblem(target)
+        e.stopPropagation()
+    }
+    else if (btn.classList.contains("btn-updatep")) {
+        await updateProfiles(changedParams)
+        e.stopPropagation()
+    }
+})
+window.addEventListener("keydown", async e=> {
+    if (e.ctrlKey && e.key == "s") {
+        await registerProblem()
+        e.stopPropagation()
+    }
+})
+observeForm()
 
 /**
  * ページ全体をパースしてサーバーに登録を要請する
@@ -11,6 +39,7 @@ async function registerProblem() {
         alert("input problem title")
         return 
     }
+
     // 概要欄のSummary, Data Source, Environmentを取得
     const headers = []
     document.querySelectorAll("#summary .node.explain").forEach(e => {
@@ -45,7 +74,7 @@ async function registerProblem() {
             answers[`${q_id}`] = params.answers 
             body.push({
                 "type": "question",             // str
-                "q_id": String(q_id),    // str
+                "q_id": String(q_id),           // str
                 "ptype": params.ptype,          // int
                 "conponent": params.conponent,  // dict
                 "question": params.question,    // str
@@ -71,37 +100,38 @@ async function registerProblem() {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(send_msg)
     })
-    const json = await res.json()
     if (res.ok) {
+        const json = await res.json()
         console.log(`[register] ${json.DESCR}`)
+        alert("the problem is saved in DB.")
         window.location.href = `/create/${json.p_id}`
     }
     else {
-        alert(json.DESCR)
+        throw new FetchError(res.status, res.statusText)
     }
+
 }
 /**
  * 問題の削除を要請する
  */
-async function deleteProblem() {
+async function deleteProblem(p_id) {
     const agree = confirm("本当に削除しますか？")
-    if (agree) {
-        const res = await fetch(`${window.location.origin}/create/${p_id}`, {
-            method: "DELETE",
-        })
+    if (!agree) {return}
+ 
+    const res = await fetch(`${window.location.origin}/create/${p_id}`, {
+        method: "DELETE",
+    })
+    if (res.ok) {
         const json = await res.json()
         console.log(`[deleteProblem] ${json.DESCR}`)
-        if(!res.ok) {
-            alert(json.DESCR)
-        }
-        else {
-            window.location.reload()
-        }
+        window.location.reload()
+    } else {
+        throw new FetchError(res.status, res.statusText)
     }
 }
 /**
  * pageのstatus, category, titleを変更する
- * @param {array} changedParams {p_id: [title, category, status]}
+ * @param {object} changedParams {p_id: [title, category, status]}
  */
 async function updateProfiles(changedParams) {
     const res = await fetch(`${window.location.origin}/create/profile`, {
@@ -109,12 +139,11 @@ async function updateProfiles(changedParams) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({"profiles": changedParams})
     })
-    const json = await res.json()
     if (res.ok) {
         window.location.reload()
     }
     else {
-        alert(json.DESCR)
+        throw new FetchError(res.status, res.statusText)
     }
 }
 /**

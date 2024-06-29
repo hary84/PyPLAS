@@ -9,7 +9,7 @@ export const p_id = groups?.p_id
 /** current user mode (problems or create)  */
 export const parentRoute = groups?.parent_path
 console.log(`problem_id(p_id) is '${p_id}'`)
-console.log(`parent path is '${parent}'`)
+console.log(`parent path is '${parentRoute}'`)
 
 /**
  * Explain Nodeを追加する
@@ -42,12 +42,18 @@ export async function addMD(loc, pos, {
             "node_id": node_id
         })
     })
-    const json = await res.json()
-    const htmlString = json.html 
-    loc.insertAdjacentHTML(pos, htmlString)
-    const explainNode = myNode.explain(node_id)
-    return explainNode
-}
+    if (res.ok) {
+        const json = await res.json()
+        const htmlString = json.html 
+        loc.insertAdjacentHTML(pos, htmlString)
+        const explainNode = myNode.explain(node_id)
+        return explainNode
+    }
+    else {
+        throw new myclass.FetchError(res.status, res.statusText)
+    }
+
+    }
 /**
 * Code Nodeを追加する.
 * @param {Element} loc 
@@ -79,11 +85,16 @@ export async function addCode(loc, pos, {
             "node_id": node_id
         })
     })
-    const json = await res.json()
-    const htmlString = json.html 
-    loc.insertAdjacentHTML(pos, htmlString)
-    const codeNode = myNode.code(node_id)
-    return codeNode
+    if (res.ok) {
+        const json = await res.json()
+        const htmlString = json.html 
+        loc.insertAdjacentHTML(pos, htmlString)
+        const codeNode = myNode.code(node_id)
+        return codeNode
+    }
+    else {
+        throw new myclass.FetchError(res.status, res.statusText)
+    }
 }
 /**
 * Question Nodeをappend_tailの後ろに追加する
@@ -108,10 +119,15 @@ export async function addQ(loc, pos, ptype) {
             "node_id": node_id,
         })
     })
-    const json = await res.json()
-    loc.insertAdjacentHTML(pos, json.html)
-    const questionNode = myNode.question(node_id)
-    return questionNode
+    if (res.ok) {
+        const json = await res.json()
+        loc.insertAdjacentHTML(pos, json.html)
+        const questionNode = myNode.question(node_id)
+        return questionNode
+    }
+    else {
+        throw new myclass.FetchError(res.status, res.statusText)
+    }
 }
 /**
  * objのpropertyが変化した際にfuncを実行する
@@ -139,7 +155,6 @@ export async function saveUserData() {
     document.querySelectorAll(".question.node").forEach(e => {
         const questionNode = myNode.question(e)
         const params = questionNode.extractQuestionParams(0)
-        if (params === undefined) {alert("questionのパラメータを読み込めませんでした.");return}
         userInput[params.q_id] = params.answers
     })
     const res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
@@ -148,8 +163,13 @@ export async function saveUserData() {
         body: JSON.stringify({
             "q_content": userInput
         })})
-    const json = await res.json()
-    console.log(`[save] ${json.DESCR}`)
+    if (res.ok) {
+        const json = await res.json()
+        console.log(`[save] ${json.DESCR}`)
+        alert("Your answers are saved in the DB.")
+    } else {
+        throw new myclass.FetchError(res.status, res.statusText)
+    }
 }
 /**
  * ipynbをparseして, locの末尾にnodeとして挿入する
@@ -205,7 +225,7 @@ export async function downloadLog() {
     }
 
     const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/)?.groups?.cat_name
-    if (!cat) {throw new myclass.ApplicationError("Can not get current category.")}
+    if (cat === undefined) {throw new myclass.ApplicationError("Can not get current category.")}
 
     window.location.href = 
         `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`

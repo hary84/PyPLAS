@@ -6,15 +6,17 @@ import * as myclass  from "./myclass.js"
 /** node reset manager */
 const reseter = {
     /** problem info*/
-    origin: undefined, 
+    origin: {}, 
 
     /** 指定されたnodeの元データを取得する 
+     * 
+     * 見つからない場合, undefinedを返す
      * @param {string} nodeId 
      * @returns {Promise<any>}
     */
     async getOriginParams(nodeId) {
-        if (this.origin === undefined) {
-            this.origin = await this._getOriginNodes()
+        if (Object.keys(this.origin).length == 0) {
+            this.origin = await this._fetchOriginNodes()
         }
         const o = JSON.parse(this.origin.page).body
         const index = this._getNodeIndex(nodeId)
@@ -22,11 +24,11 @@ const reseter = {
     }, 
     /**
      * CodeNodeのcontent, QuestionNodeのconponentを初期化する
-     * @param {myclass.BaseNode} node 
+     * @param {myclass.CodeNode | myclass.QuestionNode} node 
      */
     async resetNode(node) {
         const nodeParams = await this.getOriginParams(node.nodeId)
-        if (!nodeParams) {throw new myclass.ApplicationError("Nodeの取得に失敗しました")}
+        if (nodeParams === undefined) {throw new myclass.ApplicationError("Nodeの取得に失敗しました")}
         if (node instanceof myclass.CodeNode && nodeParams.type == "code") {
             node.editor.setValue(nodeParams.content, -1)
         }
@@ -48,7 +50,7 @@ const reseter = {
                 let idx = 0
                 nodeParams.conponent.forEach(n => {
                     if (n.type == "explain") {return} 
-                    else if (n.type == "code") {
+                    else if (n.type == "code" && children[idx] instanceof myclass.CodeNode) {
                         children[idx].editor.setValue(n.content, -1)
                         idx += 1
                     }
@@ -63,23 +65,17 @@ const reseter = {
     /** get origin nodes string  
      * @returns {Promise<object>}
     */
-    async _getOriginNodes() {
-        try {
-            const res = await fetch(`${window.location.origin}/problems/${p_id}/info`, {
-                method: "GET"
-            })
+    async _fetchOriginNodes() {
+        const res = await fetch(`${window.location.origin}/problems/${p_id}/info`, {
+            method: "GET"
+        })
+        if (res.ok) {
             const json = await res.json()
-            if (res.ok) {
-                console.log(json.DESCR)
-                return json
-            }
-            else {
-                alert(`データの取得に失敗しました\n ${res.url}`)
-                throw new myclass.ApplicationError(json.DESCR)
-            }
+            console.log(json.DESCR)
+            return json 
         }
-        catch (e) {
-            console.error(e)
+        else {
+            throw new myclass.FetchError(res.status, res.statusText)
         }
     },
 
