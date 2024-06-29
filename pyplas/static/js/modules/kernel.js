@@ -1,14 +1,27 @@
+//@ts-check
+import {myNode, KernelError, FetchError} from "./myclass.js"
+
 
 class KernelHandler {
+    constructor() {
+        /** 実行したいnodeのnode-idを格納するque @type {Array<string>} */
+        this.execute_task_q = []
+        /** 実行回数カウンター @type {number} */
+        this.execute_counter = 0 
+        /** コードを実行中か否か @type {boolean} */
+        this.running = false 
+        /** 受信したJSON @type {JSON | undefined} */
+        this.msg = undefined
+    }
     /**
      * インスタンス変数の初期化とカーネルの起動を行う
      * @param {boolean} alreadyExist カーネルとの新規接続か、既存の接続を再接続するか
      */
     setUpKernel = async (alreadyExist=false) => {
-        this.execute_task_q = []    // 実行したいnodeのnode-idを格納する
-        this.execute_counter = 0    // 実行回数カウンター
-        this.running = false        // コードを実行中かを表す
-        this.msg = undefined        // ipykernelから受信したJSONを格納する
+        this.execute_task_q = []    
+        this.execute_counter = 0   
+        this.running = false        
+        this.msg = undefined        
 
         if (this.ws && this.ws.readyState != 3) {
             this.ws.close(1000, "Disconnect to restart the kernel.")
@@ -33,12 +46,14 @@ class KernelHandler {
                 this.running = true
             }
             if (data.msg_type == "error") {
-                this.execute_task_q = [this.execute_task_q[0]]
+                if (this.execute_task_q.length > 0) {
+                    this.execute_task_q = [this.execute_task_q[0]]
+                }
             }
             else if (data.msg_type == "exec-end-sig") {
                 this.execute_task_q.shift()
                 this.running = false
-                if (this.execute_task_q[0]) {
+                if (this.execute_task_q.length > 0) {
                     this._executeCode()
                 }
             }
@@ -50,8 +65,8 @@ class KernelHandler {
     }
     /**
      * カーネルidが有効かを調べる
-     * @param {string} kernel_id 
-     * @returns {bool} 
+     * @param {string | undefined} kernel_id 
+     * @returns {Promise<boolean>} 
      */
     isAliveKernel = async (kernel_id) => {
         const id = (kernel_id) ? kernel_id : this.kernel_id
@@ -60,11 +75,14 @@ class KernelHandler {
             const json = await res.json()
             console.log(`[KernelHandler] ${json.DESCR}`)
             return json.is_alive
+        } else {
+            throw new KernelError(res.statusText)
         }
+
     }
     /**
      * 有効なすべてのカーネルidを取得する
-     * @returns {Array<string>}
+     * @returns {Promise<Array>}
      */
     getKernelIds = async () => {
         const res = await fetch(`${window.location.origin}/kernel`, {method: "GET"})
@@ -73,7 +91,11 @@ class KernelHandler {
             console.log(`[KernelHandler] ${json.DESCR}`)
             return json.kernel_ids
         }
+        else {
+            throw new KernelError(res.statusText)
+        }
     }
+    
     /**
      * カーネルを起動する.
      * 
@@ -82,11 +104,12 @@ class KernelHandler {
     kernelStart = async () => {
         const id = (this.kernel_id) ? this.kernel_id : ""
         const res = await fetch(`${window.location.origin}/kernel/${id}`, {method: "POST"})
-        const json = await res.json()
-        console.log(`[Kernelhandler] ${json.DESCR}`)   
-        if (!res.ok) {
-            alert("Failed to start kernel.\nPlease restart the server.")
-            throw new KernelError("Failed to start new kernel.")
+        if (res.ok) {
+            const json = await res.json()
+            console.log(`[Kernelhandler] ${json.DESCR}`)   
+        }
+        else {
+            throw new KernelError(res.statusText)
         }
     }
     /**
@@ -97,24 +120,28 @@ class KernelHandler {
     kernelRestart = async () => {
         const res = await fetch(`${window.location.origin}/kernel/${this.kernel_id}/restart`,
                               {method: "POST"})
-        const json = await res.json()
-        console.log(`[KernelHandler] ${json.DESCR}`)
-        if (!res.ok) {
-            alert("Failed to restart kernel.\nPlease restart the server.")
-            throw new KernelError("Failed to restart kernel.")
+        if (res.ok) {
+            const json = await res.json()
+            console.log(`[KernelHandler] ${json.DESCR}`)
+        }
+        else {
+            throw new KernelError(res.statusText)
         }
     }
     /**
      * REST API を用いてカーネルに中断指示を出す
      * 
-     * @param {string} kernel_id カーネルid
      */
-    kernelInterrupt = async (kernel_id) => {
-        const id = (kernel_id) ? kernel_id : this.kernel_id
-        const res = await fetch(`${window.location.origin}/kernel/${id}/interrupt`,
+    kernelInterrupt = async () => {
+        const res = await fetch(`${window.location.origin}/kernel/${this.kernel_id}/interrupt`,
                               {method: "POST"})
-        const json = await res.json()
-        console.log(`[KernelHandler] ${json.DESCR}`)
+        if (res.ok) {
+            const json = await res.json()
+            console.log(`[KernelHandler] ${json.DESCR}`)
+        }
+        else {
+            throw new KernelError("Fail to interrupt kernel.")
+        }
     }
     /**
      * node-idを実行タスクキュー(execute_task_q)に格納する
@@ -146,18 +173,22 @@ class KernelHandler {
      * このメソッドはインスタンスから直接呼び出さない
      */
     _executeCode = () => {
+        if (!this.ws || this.ws.readyState != 1) {
+            throw new KernelError("websocket is disconnected")
+        }
         if (this.execute_task_q.length == 0) {
             return
         }
         const node_id = this.execute_task_q[0]
         const node = myNode.code(node_id)
-        node.element.querySelector(".return-box").innerHTML = ""
+        const r = node.element.querySelector(".return-box")
+        if (r) {r.innerHTML = ""}
         const msg = JSON.stringify({
             "code": node.editor.getValue(),
             "node_id": node_id
         })
         this.ws.send(msg)
-        this.execute_counter += 1
+        this.execute_counter  = this.execute_counter + 1
         console.log(`[KernelHandler] Executing code (node-id='${node_id}')`)
     }
     /**
@@ -173,8 +204,8 @@ class KernelHandler {
                 const intervalId = setInterval(()=> {
                     if (this.execute_task_q.length == 0 && this.running == false) {
                         clearInterval(intervalId)
-                        console.log("[KernelHandler] Ready for execute all!")
-                        resolve()
+                        console.log("[KernelHandler] Ready for execute all")
+                        resolve("kernel ready")
                     } else {
                         console.log("[KernelHandler] Wait for execute all.")
                         count ++
@@ -186,8 +217,7 @@ class KernelHandler {
                 }, 500)
             })
         } catch (err) {
-            alert("Execute Timeout")
-            return 
+            throw new KernelError("Kernel interrupt timeout.")
         }
 
         loc.querySelectorAll(":scope > .node.code").forEach(e => {
@@ -200,3 +230,4 @@ class KernelHandler {
 }
 
 const kh = new KernelHandler()
+export default kh

@@ -1,314 +1,328 @@
+//@ts-check
 // for /create/<p_id> or /problems/<p_id>
-///<reference path="./modules/myclass.js"/>
-///<reference path="./modules/kernel.js"/>
-///<reference path="./modules/utils.js"/>
 ///<reference path="./modules/create-utils.js"/>
 
+import { myNode } from "./modules/myclass.js"
+import * as myclass from "./modules/myclass.js"
+import {p_id, parentRoute} from "./modules/utils.js"
+import * as utils from "./modules/utils.js"
+import kh from "./modules/kernel.js"
+import reseter from "./modules/reset-manager.js"
 
-document.addEventListener("DOMContentLoaded", async () => {
-    document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
-    document.querySelector("#headTitle").href = `/${parentRoute}`
-    // markdown.js, highlight.jsの準備
-    if (parentRoute == "problems") {
-        document.querySelectorAll(".explain").forEach(elem => {
-            elem.innerHTML = marked.parse(elem.innerHTML)
-        })
-    }else if (parentRoute == "create") {
-        document.querySelectorAll(".node.explain").forEach(e => 
-            myNode.explain(e).showPreview()
-        )
+// document.addEventListener("DOMContentLoaded", async () => {
+document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
+document.querySelector("#headTitle").href = `/${parentRoute}`
+// markdown.js, highlight.jsの準備
+if (parentRoute == "problems") {
+    document.querySelectorAll(".explain").forEach(elem => {
+        elem.innerHTML = marked.parse(elem.innerHTML)
+    })
+}else if (parentRoute == "create") {
+    document.querySelectorAll(".node.explain").forEach(e => 
+        myNode.explain(e).showPreview()
+    )
+}
+hljs.highlightAll()
+
+// カーネルの起動, wsの接続
+await kh.setUpKernel()
+utils.watchValue(kh, "running", setExecuteAnimation)
+utils.watchValue(kh, "msg", renderMessage)
+
+// active node の監視
+utils.watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
+
+// ボタンイベントリスナー (左サイドバー)
+document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
+    const target = e.target.closest("a, button")
+    if (target === null) {return}
+    target.classList.add("disabled")
+    try {
+        // execute all ボタン ----- すべてのCode Nodeを実行する
+        if (target.classList.contains("btn-exec-all")) {
+            await kh.executeAll(document.querySelector("#nodesContainer"))
+        }
+        // kernel restart ボタン ----- kernelを再起動する
+        else if (target.classList.contains("btn-restart")) {
+            await kh.setUpKernel(true)
+            document.querySelectorAll(".node.code").forEach(e => {
+                myNode.code(e).resetState()
+            })
+        }
+        // kernel interrupt ボタン ----- 実行中のコードを中断する
+        else if (target.classList.contains("btn-interrupt")) {
+            await kh.kernelInterrupt()
+        } 
+        // problem save ボタン ----- 解答の保存もしくは問題の登録をおこなう
+        else if (target.classList.contains("btn-save")) {
+            if (parentRoute == "problems") {         // problemページの場合
+                await utils.saveUserData()
+            } 
+        }
+    } catch(e) {
+        if (e instanceof myclass.ApplicationError) {
+            alert(e.message)
+        }
+        else {throw e}
+    } finally {
+        target.classList.remove("disabled")
     }
-    hljs.highlightAll()
+})
 
-    // カーネルの起動, wsの接続
-    await kh.setUpKernel()
-    watchValue(kh, "running", setExecuteAnimation)
-    watchValue(kh, "msg", renderMessage)
-
-    // active node の監視
-    watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
-    
-    // ボタンイベントリスナー (左サイドバー)
-    document.querySelector("#kernel-ops").addEventListener("click", async e => {
-        const target = e.target.closest("a, button")
-        if (!target) {return}
-        target.classList.add("disabled")
-        try {
-            // execute all ボタン ----- すべてのCode Nodeを実行する
-            if (target.classList.contains("btn-exec-all")) {
-                await kh.executeAll(document.querySelector("#nodesContainer"))
+// ボタンイベントリスナー (メイン)
+document.querySelector("main")?.addEventListener("click", async e => {
+    const target = e.target.closest("a, button")
+    if (!target) {return}
+    const node = myNode.get(e.target.closest(".node"))
+    target.classList.add("disabled")
+    try {
+        // ============================== 
+        //    一般
+        // ============================== 
+        if (node != null && target.classList.contains("btn-delme")) {
+            node.delme()
+        }
+        else if (node != null && target.classList.contains("btn-reset-input")) {
+            if (node instanceof myclass.QuestionNode || node instanceof myclass.CodeNode) {
+                reseter.resetNode(node)
             }
-            // kernel restart ボタン ----- kernelを再起動する
-            else if (target.classList.contains("btn-restart")) {
-                await kh.setUpKernel(true)
-                document.querySelectorAll(".node.code").forEach(e => {
-                    myNode.code(e).resetState()
-                })
-            }
-            // kernel interrupt ボタン ----- 実行中のコードを中断する
+        }
+        else if (target.classList.contains("btn-addMD")) {
+            e.stopPropagation()
+            const explainNode = await utils.addMD(target.closest(".node-control"), "afterend")
+            myNode.activeNode.node_id = explainNode.nodeId
+        } 
+        else if (target.classList.contains("btn-addCode")) {
+            e.stopPropagation()
+            const codeNode = await utils.addCode(target.closest(".node-control"), "afterend", {
+                user: Number(parentRoute == "create")
+            })
+            myNode.activeNode.node_id = codeNode.nodeId
+        } 
+        else if (target.classList.contains("btn-addQ")) {
+            const questionNode = await utils.addQ(target.closest(".node-control"), "afterend", 
+                        Number(target.dataset.ptype))
+            myNode.activeNode.node_id = questionNode.nodeId
+        }
+        // ============================== 
+        //    Code Node
+        // ============================== 
+        else if  (node instanceof myclass.CodeNode) {
+            if (target.classList.contains("btn-exec")) { 
+                await kh.execute(node.nodeId)
+            } 
             else if (target.classList.contains("btn-interrupt")) {
                 await kh.kernelInterrupt()
             } 
-            // problem save ボタン ----- 解答の保存もしくは問題の登録をおこなう
-            else if (target.classList.contains("btn-save")) {
-                if (parentRoute == "problems") {         // problemページの場合
-                    await saveUserData(p_id)
-                } else if (parentRoute == "create") {    // createページの場合
-                    await registerProblem(p_id)
-                }
-            }
-        } catch(e) {
-            console.error(e)
-        } finally {
-            target.classList.remove("disabled")
         }
-    })
-
-    // ボタンイベントリスナー (メイン)
-    document.querySelector("main").addEventListener("click", async e => {
-        const target = e.target.closest("a, button")
-        if (!target) {return}
-        const node = myNode.get(e.target.closest(".node"))
-        target.classList.add("disabled")
-        try {
-            // ============================== 
-            //    一般
-            // ============================== 
-            if (node && target.classList.contains("btn-delme")) {
-                node.delme()
-            }
-            else if (node && target.classList.contains("btn-reset-input")) {
-                reseter.resetNode(node)
-            }
-            else if (target.classList.contains("btn-addMD")) {
-                e.stopPropagation()
-                const explainNode = await addMD(target.closest(".node-control"), "afterend")
-                myNode.activeNode.node_id = explainNode.nodeId
+        // ============================== 
+        //    Question Node
+        // ============================== 
+        else if (node instanceof myclass.QuestionNode) {
+            if (target.classList.contains("btn-testing")) { 
+                await node.scoring()
             } 
-            else if (target.classList.contains("btn-addCode")) {
-                e.stopPropagation()
-                const codeNode = await addCode(target.closest(".node-control"), "afterend", {
-                    user: Number(parentRoute == "create")
-                })
-                myNode.activeNode.node_id = codeNode.nodeId
+            else if (target.classList.contains("btn-cancel")) {
+                await node.canceling()
             } 
-            else if (target.classList.contains("btn-addQ")) {
-                const questionNode = await addQ(target.closest(".node-control"), "afterend", 
-                            Number(target.dataset.ptype))
-                myNode.activeNode.node_id = questionNode.nodeId
+            else if (target.classList.contains("btn-load-ipynb")) {
+                const file = await utils.filePicker()
+                const loc = node.answerField
+                await utils.loadIpynb(file, loc, false, {
+                    user: Number(parentRoute=="create")}
+                )
             }
-            // ============================== 
-            //    Code Node
-            // ============================== 
-            else if  (node instanceof CodeNode) {
-                if (target.classList.contains("btn-exec")) { 
-                    await kh.execute(node.nodeId)
-                } 
-                else if (target.classList.contains("btn-interrupt")) {
-                    await kh.kernelInterrupt()
-                } 
+            else if (target.classList.contains("btn-exec-all")) {
+                await kh.executeAll(node.answerField)
+            }  
+        }
+        // ============================== 
+        //    Explain Node
+        // ============================== 
+        else if (node instanceof myclass.ExplainNode) {
+            if (target.classList.contains("btn-bold")) {
+                node.embedBold()
             }
-            // ============================== 
-            //    Question Node
-            // ============================== 
-            else if (node instanceof QuestionNode) {
-                if (target.classList.contains("btn-testing")) { 
-                    await node.scoring(p_id)
-                } 
-                else if (target.classList.contains("btn-cancel")) {
-                    await node.canceling(p_id)
-                } 
-                else if (target.classList.contains("btn-load-ipynb")) {
-                    const file = await filePicker()
-                    const loc = node.element.querySelector(".answer-content")
-                    if (!loc) {return}
-                    await loadIpynb(file, loc, false, {
-                        user: Number(parentRoute=="create")}
-                    )
-                }
-                else if (target.classList.contains("btn-exec-all")) {
-                    await kh.executeAll(node.element.querySelector(".answer-content"))
-                }  
+            else if (target.classList.contains("btn-italic")) {
+                node.embedItalic()
             }
-            // ============================== 
-            //    Explain Node
-            // ============================== 
-            else if (node instanceof ExplainNode) {
-                if (target.classList.contains("btn-bold")) {
-                    node.embedBold()
-                }
-                else if (target.classList.contains("btn-italic")) {
-                    node.embedItalic()
-                }
-                else if (target.classList.contains("btn-href")) {
-                    node.embedLink()
-                }
-                else if (target.classList.contains("btn-img")) {
-                    node.embedImg()
-                }
-                else if (target.classList.contains("btn-fib-p")) {{
-                    node.addFillInBlankProblem()
-                }}
-                else if (target.classList.contains("btn-sellect-p")) {
-                    node.addSelectionProblem()
-                }
-                else if (target.classList.contains("btn-preview")) {
-                    node.showPreview()
-                }
+            else if (target.classList.contains("btn-href")) {
+                node.embedLink()
+            }
+            else if (target.classList.contains("btn-img")) {
+                node.embedImg()
+            }
+            else if (target.classList.contains("btn-fib-p")) {{
+                node.addFillInBlankProblem()
+            }}
+            else if (target.classList.contains("btn-sellect-p")) {
+                node.addSelectionProblem()
+            }
+            else if (target.classList.contains("btn-preview")) {
+                node.showPreview()
             }
         }
-        catch (e) {
-            console.error(e)
+    }
+    catch (e) {
+        if (e instanceof myclass.ApplicationError) {
+            alert(e.message)
         }
+        else {throw e}
+    }
+    finally {
         target.classList.remove("disabled")
-    })
+    }
+})
 
-    // イベントリスナー (node, click)
-    window.addEventListener("click", e => {
-        const target = myNode.get(e.target.closest(".node"))
-        if (target) {
-            myNode.activeNode.node_id = target.nodeId
+// イベントリスナー (node, click)
+window.addEventListener("click", e => {
+    const target = myNode.get(e.target.closest(".node"))
+    if (target != null) {
+        myNode.activeNode.node_id = target.nodeId
+    }
+})
+
+// イベントリスナー (Key down)
+window.addEventListener("keydown", async e => {
+    const currentActiveNode = myNode.activeNode.get()
+    // ============================== 
+    //    Ctrl + Enter
+    // ============================== 
+    if (e.ctrlKey && e.key == "Enter") {
+        if (currentActiveNode instanceof myclass.ExplainNode) {
+            currentActiveNode.showPreview()
+        } 
+        else if (currentActiveNode instanceof myclass.CodeNode) {
+            currentActiveNode.editor.blur()
+            kh.execute(currentActiveNode.nodeId)
         }
-    })
-
-    // イベントリスナー (Key down)
-    window.addEventListener("keydown", async e => {
-        const currentActiveNode = myNode.activeNode.get()
-        // ============================== 
-        //    Ctrl + Enter
-        // ============================== 
-        if (e.ctrlKey && e.key == "Enter") {
-            if (currentActiveNode instanceof ExplainNode) {
-                currentActiveNode.showPreview()
+        else if (currentActiveNode instanceof myclass.QuestionNode) {
+            if (parentRoute == "problems") {
+                await currentActiveNode.scoring()
+            }
+        }
+    }
+    // ============================== 
+    //    Enter
+    // ============================== 
+    else if (e.key == "Enter" && e.target.tagName == "BODY") {
+        e.preventDefault()
+        if (currentActiveNode instanceof myclass.ExplainNode) {
+            currentActiveNode.showEditor()
+            currentActiveNode.editor.focus()
+        }
+        else if (currentActiveNode instanceof myclass.CodeNode) {
+            currentActiveNode.editor.focus()
+        }
+        else if (currentActiveNode instanceof myclass.QuestionNode) {
+            const answerNodes = currentActiveNode.childNodes
+            if (answerNodes.length == 0) {
+                const nodeControl = currentActiveNode.element.querySelector(".answer-content .node-control")
+                if (nodeControl != null) {
+                    const nextActiveNode = await utils.addCode(nodeControl, "afterend", {
+                        user: Number(parentRoute == "create")
+                    })
+                    myNode.activeNode.node_id = nextActiveNode.nodeId
+                }
             } 
-            else if (currentActiveNode instanceof CodeNode) {
-                currentActiveNode.editor.blur()
-                kh.execute(currentActiveNode.nodeId)
-            }
-            else if (currentActiveNode instanceof QuestionNode) {
-                if (parentRoute == "problems") {
-                    await currentActiveNode.scoring(p_id)
-                }
+            else {
+                myNode.activeNode.node_id = answerNodes[0].nodeId
             }
         }
-        // ============================== 
-        //    Enter
-        // ============================== 
-        else if (e.key == "Enter" && e.target.tagName == "BODY") {
-            e.preventDefault()
-            if (currentActiveNode instanceof ExplainNode) {
-                currentActiveNode.showEditor()
-                currentActiveNode.editor.focus()
-            }
-            else if (currentActiveNode instanceof CodeNode) {
-                currentActiveNode.editor.focus()
-            }
-            else if (currentActiveNode instanceof QuestionNode) {
-                const answerNodes = currentActiveNode.childNodes
-                if (answerNodes.length == 0) {
-                    const nodeControl = currentActiveNode.element.querySelector(".answer-content .node-control")
-                    if (nodeControl) {
-                        const nextActiveNode = await addCode(nodeControl, "afterend", {
-                            user: parentRoute == "create"
-                        })
-                        myNode.activeNode.node_id = nextActiveNode.nodeId
-                    }
-                } 
-                else {
-                    myNode.activeNode.node_id = answerNodes[0].nodeId
-                }
-            }
+    }
+    // ============================== 
+    //    Escape
+    // ============================== 
+    else if (e.key == "Escape") {
+        if (currentActiveNode instanceof myclass.EditorNode && e.target.tagName == "BODY") {
+            const e = currentActiveNode.parentQuestionNode
+            if (e != null) {myNode.activeNode.node_id = e.nodeId}
         }
-        // ============================== 
-        //    Escape in BODY
-        // ============================== 
-        else if (e.key == "Escape" && e.target.tagName == "BODY") {
-            try {
-                const e = currentActiveNode.parentQuestionNode
-                myNode.activeNode.node_id = e.nodeId
-            } catch {}
-        }
-        // [TEXTAREA] Escape ----- エディターのフォーカスを解除
-        else if (e.key == "Escape" && e.target.tagName == "TEXTAREA") {
+        else if (e.target.tagName == "TEXTAREA") {
             const targetNode = myNode.get(e.target.closest(".node"))
-            targetNode.editor.blur()
+            if (targetNode != null) {targetNode.editor.blur()}
         }
-        // [else] Escape ----- focusを解除
-        else if (e.key == "Escape" && !["BODY", "TEXTAREA"].includes(e.target.tagName)) {
+        else {
             e.target.blur()
         }
-        // [BODY] Ctrl-S ----- 解答の保存もしくは問題の登録
-        else if (e.ctrlKey && e.key == "s" && e.target.tagName == "BODY") {
-            e.preventDefault()
-            if (parentRoute == "problems") {
-                saveUserData(p_id)
-            } else if (parentRoute == "create") {
-                registerProblem(p_id)
+    }
+
+    // ============================== 
+    //    Ctrl-S
+    // ============================== 
+    else if (e.ctrlKey && e.key == "s" && e.target.tagName == "BODY") {
+        e.preventDefault()
+        if (parentRoute == "problems") {
+            await utils.saveUserData()
+        } 
+    }
+    // ============================== 
+    //    J or K
+    // ============================== 
+    else if ((e.key == "j" || e.key == "k") && e.target.tagName == "BODY") {
+        if (!currentActiveNode) {return}
+        const nextActiveNode = (e.key == "j") ? 
+            myNode.nextNode(currentActiveNode) : myNode.prevNode(currentActiveNode)
+        if (nextActiveNode != null) {
+            myNode.activeNode.node_id = nextActiveNode.nodeId
+            const {top, bottom} = nextActiveNode.element.getBoundingClientRect()
+            if (top < 0 || bottom > window.innerHeight) {
+                nextActiveNode.element.scrollIntoView({"behavior": "instant", "block": "center"})
             }
         }
-        // [BODY] j or k ----- active node の移動
-        else if ((e.key == "j" || e.key == "k") && e.target.tagName == "BODY") {
-            if (!currentActiveNode) {return}
-            const nextActiveNode = (e.key == "j") ? 
-                myNode.nextNode(currentActiveNode) : myNode.prevNode(currentActiveNode)
-            if (nextActiveNode) {
-                myNode.activeNode.node_id = nextActiveNode.nodeId
-                const {top, bottom} = nextActiveNode.element.getBoundingClientRect()
-                if (top < 0 || bottom > window.innerHeight) {
-                    nextActiveNode.element.scrollIntoView({"behavior": "instant", "block": "center"})
-                }
-            }
+    }
+    // ============================== 
+    //    Ctrl-L
+    // ============================== 
+    else if (e.ctrlKey && e.key == "l" && e.target.tagName == "BODY") {
+        e.preventDefault()
+        if (currentActiveNode != null) {
+            currentActiveNode.element.scrollIntoView({"behavior": "instant", "block": "center"})
         }
-        // [BODY] Ctrl-l ----- active nodeを画面中央に寄せる
-        else if (e.ctrlKey && e.key == "l" & e.target.tagName == "BODY") {
-            e.preventDefault()
-            if (currentActiveNode) {
-                currentActiveNode.element.scrollIntoView({"behavior": "instant", "block": "center"})
-            }
+    }
+    // ============================== 
+    //    B or A
+    // ============================== 
+    else if ((e.key == "b" || e.key == "a") && e.target.tagName == "BODY") {
+        if (currentActiveNode == null) {return}
+        const nodeCotnrol = (e.key == "b") ? 
+                currentActiveNode.element.nextElementSibling : currentActiveNode.element.previousElementSibling
+        if (nodeCotnrol != null && nodeCotnrol.classList.contains("node-control")) {
+            await utils.addCode(nodeCotnrol, "afterend", {
+                user: Number(parentRoute == "create")
+            })
         }
-        // [BODY] b or a ----- 下/上にCode Nodeを追加
-        else if ((e.key == "b" || e.key == "a") && e.target.tagName == "BODY") {
-            if (!currentActiveNode) {return}
-            const nodeCotnrol = (e.key == "b") ? 
-                    currentActiveNode.element.nextElementSibling : currentActiveNode.element.previousElementSibling
-            if (nodeCotnrol.classList.contains("node-control")) {
-                await addCode(nodeCotnrol, "afterend", {
-                    user: Number(parentRoute == "create")
-                })
+    }
+    // ============================== 
+    //    D
+    // ============================== 
+    else if (e.key == "d" && e.target.tagName == "BODY") {
+        if (currentActiveNode == null) {return}
+        try {
+            if (currentActiveNode.allowDelete()) {
+                let nextNode = 
+                    myNode.nextNode(currentActiveNode)
+                    || myNode.prevNode(currentActiveNode)
+                    || currentActiveNode.parentQuestionNode
+                currentActiveNode.delme()
+                myNode.activeNode.node_id = nextNode.nodeId
             }
+        } catch (e) {
+            console.error(e)
         }
-        // [BODY] d ----- active nodeを削除
-        else if (e.key == "d" && e.target.tagName == "BODY") {
-            if (!currentActiveNode) {return}
-            console.log(currentActiveNode.allowDelete())
-            try {
-                if (currentActiveNode.allowDelete()) {
-                    let nextNode = 
-                        myNode.nextNode(currentActiveNode)
-                        || myNode.prevNode(currentActiveNode)
-                        || currentActiveNode.parentQuestionNode
-                    console.log(nextNode)
-                    currentActiveNode.delme()
-                    myNode.activeNode.node_id = nextNode.nodeId
-                }
-            } catch (e) {
-                console.error(e)
-            }
-                  
-        }
-    })
-    // イベントリスナー (dblclick)
-    window.addEventListener("dblclick", e => {
-        const target = myNode.explain(e.target.closest(".node.explain"))
-        console.log(target)
-        target.showEditor()
-    })
+                
+    }
 })
+// イベントリスナー (dblclick)
+window.addEventListener("dblclick", e => {
+    const target = myNode.explain(e.target.closest(".node.explain"))
+    target.showEditor()
+})
+// })
 
 
 /**
  * KernelHandler classのrunningパラメータが変化した際に起動する関数
- * @param {KernelHandler} kh 
  * @param {boolean} oldValue
  * @param {boolean} newValue 
  */
@@ -323,7 +337,7 @@ function setExecuteAnimation(kh, oldValue, newValue) {
                 myNode.code(id).element.setAttribute("run-state", "suspending")
             })
         } catch(e) {
-            if (e instanceof NodeError) {}
+            if (e instanceof myclass.NodeError) {}
             else {console.error(e)}
         }
     // 非コード実行中(kh.running == false)の時
@@ -335,7 +349,6 @@ function setExecuteAnimation(kh, oldValue, newValue) {
 }
 /**
  * KernelHandlerがwsでメッセージを受信した際の処理を行う関数
- * @param {KernelHandler} kh 
  * @param {Object} oldValue 
  * @param {Object} newValue 
  */
@@ -361,7 +374,7 @@ function renderMessage(kh, oldValue, newValue) {
                     break;
             }
         } catch (e) {
-            if (e instanceof NodeError) {}
+            if (e instanceof myclass.NodeError) {}
             else (console.error(e))
         }
     }
@@ -369,15 +382,15 @@ function renderMessage(kh, oldValue, newValue) {
 function renderResult(res, form, type="text") {
     switch (type) {
         case "text":
-            var res = escapeHTML(res)
-            form.insertAdjacentHTML("beforeend", `<p class="exec-res">${res}</p>`)
+            const escapedt = utils.escapeHTML(res)
+            form.insertAdjacentHTML("beforeend", `<p class="exec-res">${escapedt}</p>`)
             break;
         case "img":
             form.insertAdjacentHTML("beforeend",`<img class="exec-res ms-2" src="data:image/png;base64,${res}" style="max-width: 95%;"/>`)
             break;
         case "error":
-            var res = escapeHTML(res, true).replace(/\n/g, "<br>")
-            form.insertAdjacentHTML("beforeend", `<p class="text-danger exec-res">${res}</p>`)
+            const escapede = utils.escapeHTML(res, true).replace(/\n/g, "<br>")
+            form.insertAdjacentHTML("beforeend", `<p class="text-danger exec-res">${escapede}</p>`)
             break;
         default:
             throw new Error('"type" argument can be one of "text", "img", or "error".')

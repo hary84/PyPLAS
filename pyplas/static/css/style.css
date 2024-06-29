@@ -228,6 +228,9 @@
     .mde  .toolbar  .only-inq { display: block; } 
     .question-options > .dropdown-toggle::after {content: none;}
     .node-control .toggle-addQ {display: none !important;}
+    .answer-content > .node.code .dropdown.code-options {
+      display: none;
+    }
   }
 }
 .question[progress="1"] {

@@ -3,7 +3,7 @@
 {% block head %}
 <title>Pyplas - Create</title>
 <link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
-<script src="{{ static_url('js/modules/create-utils.js') }}"></script>
+<script src="{{ static_url('js/modules/create-utils.js') }}" type="module"></script>
 {% end %}
 
 {% block head-nav-li %}
@@ -46,7 +46,7 @@
                 </select>
               </td>
               <td class="d-flex mx-auto">
-                <button class="btn btn-sm" onclick="deleteProblem('{{ d['p_id'] }}')"><i class="bi bi-trash3 text-danger"></i></button>
+                <button class="btn btn-sm btn-delp"><i class="bi bi-trash3 text-danger"></i></button>
                 <div class="vr"></div>
                 <button class="btn btn-sm" onclick="location.href='/create/{{ d['p_id'] }}'"><i class="bi bi-pencil-square"></i></button>
               </td>
@@ -56,14 +56,10 @@
         </table>
   </div>
   <div class="text-center">
-    <button class="btn btn-primary" onclick="updateProfiles(changedParams)"><i class="bi bi-arrow-clockwise"></i>  Update</button>
+    <button class="btn btn-primary btn-updatep"><i class="bi bi-arrow-clockwise"></i>  Update</button>
     <button class="btn btn-success" onclick="location.href='/create/new'"><i class="bi bi-plus-circle"></i>  New</button>
   </div>
 </main>
 <div class="col-xl-2 border-start"></div>
-<script>
-  const changedParams = {};
-  observeForm();
-</script>
 {% end %}
 

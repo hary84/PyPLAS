@@ -1,18 +1,23 @@
-const groups = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/).groups
+//@ts-check
+
+import { myNode } from "./myclass.js"
+import * as myclass from "./myclass.js"
+
+const groups = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/)?.groups
 /** current problem id (uuid) */
-const  p_id = groups.p_id
+export const p_id = groups?.p_id
 /** current user mode (problems or create)  */
-const parentRoute = groups.parent_path
+export const parentRoute = groups?.parent_path
 console.log(`problem_id(p_id) is '${p_id}'`)
-console.log(`parent path is '${parent}'`)
+console.log(`parent path is '${parentRoute}'`)
 
 /**
  * Explain Nodeを追加する
  * @param {Element} loc 
- * @param {string} pos
- * @returns {Promise<ExplainNode>} 
+ * @param {InsertPosition} pos
+ * @returns {Promise<myclass.ExplainNode>} 
  */
-async function addMD(loc, pos, {
+export async function addMD(loc, pos, {
     content=String(), 
     allow_del=true, 
     code=true,
@@ -37,19 +42,25 @@ async function addMD(loc, pos, {
             "node_id": node_id
         })
     })
-    const json = await res.json()
-    const htmlString = json.html 
-    loc.insertAdjacentHTML(pos, htmlString)
-    const explainNode = myNode.explain(node_id)
-    return explainNode
-}
+    if (res.ok) {
+        const json = await res.json()
+        const htmlString = json.html 
+        loc.insertAdjacentHTML(pos, htmlString)
+        const explainNode = myNode.explain(node_id)
+        return explainNode
+    }
+    else {
+        throw new myclass.FetchError(res.status, res.statusText)
+    }
+
+    }
 /**
 * Code Nodeを追加する.
 * @param {Element} loc 
-* @param {string} pos 
-* @returns {Promise<CodeNode>} 
+* @param {InsertPosition} pos 
+* @returns {Promise<myclass.CodeNode>} 
 */
-async function addCode(loc, pos, {
+export async function addCode(loc, pos, {
     content=String(), 
     user=0, 
     allow_del=true, 
@@ -74,20 +85,25 @@ async function addCode(loc, pos, {
             "node_id": node_id
         })
     })
-    const json = await res.json()
-    const htmlString = json.html 
-    loc.insertAdjacentHTML(pos, htmlString)
-    const codeNode = myNode.code(node_id)
-    return codeNode
+    if (res.ok) {
+        const json = await res.json()
+        const htmlString = json.html 
+        loc.insertAdjacentHTML(pos, htmlString)
+        const codeNode = myNode.code(node_id)
+        return codeNode
+    }
+    else {
+        throw new myclass.FetchError(res.status, res.statusText)
+    }
 }
 /**
 * Question Nodeをappend_tailの後ろに追加する
 * @param {Element} loc 
-* @param {string} pos 
+* @param {InsertPosition} pos 
 * @param {Number} ptype
-* @param {Promise<QuestionNode>} 
+* @returns {Promise<myclass.QuestionNode>} 
 */
-async function addQ(loc, pos, ptype) {
+export async function addQ(loc, pos, ptype) {
     if (loc === undefined || pos == undefined || ptype === undefined) {
         new Error("argument error")
     }
@@ -103,18 +119,23 @@ async function addQ(loc, pos, ptype) {
             "node_id": node_id,
         })
     })
-    const json = await res.json()
-    loc.insertAdjacentHTML(pos, json.html)
-    const questionNode = myNode.question(node_id)
-    return questionNode
+    if (res.ok) {
+        const json = await res.json()
+        loc.insertAdjacentHTML(pos, json.html)
+        const questionNode = myNode.question(node_id)
+        return questionNode
+    }
+    else {
+        throw new myclass.FetchError(res.status, res.statusText)
+    }
 }
 /**
  * objのpropertyが変化した際にfuncを実行する
  * @param {object} obj 
- * @param {property} propName 
+ * @param {string} propName 
  * @param {function} func 
  */
-function watchValue(obj, propName, func) {
+export function watchValue(obj, propName, func) {
     let value = obj[propName];
     Object.defineProperty(obj, propName, {
         get: () => value,
@@ -128,11 +149,10 @@ function watchValue(obj, propName, func) {
 }
 /**
  * ユーザーの入力を保存する
- * @param {string} p_id 
  */
-async function saveUserData(p_id) {
+export async function saveUserData() {
     const userInput = {}
-    document.querySelectorAll(".question").forEach(e => {
+    document.querySelectorAll(".question.node").forEach(e => {
         const questionNode = myNode.question(e)
         const params = questionNode.extractQuestionParams(0)
         userInput[params.q_id] = params.answers
@@ -143,8 +163,13 @@ async function saveUserData(p_id) {
         body: JSON.stringify({
             "q_content": userInput
         })})
-    const json = await res.json()
-    console.log(`[save] ${json.DESCR}`)
+    if (res.ok) {
+        const json = await res.json()
+        console.log(`[save] ${json.DESCR}`)
+        alert("Your answers are saved in the DB.")
+    } else {
+        throw new myclass.FetchError(res.status, res.statusText)
+    }
 }
 /**
  * ipynbをparseして, locの末尾にnodeとして挿入する
@@ -152,13 +177,17 @@ async function saveUserData(p_id) {
  * @param {Element} loc         nodeを追加する要素
  * @param {boolean} markdown    markdownを追加するか
  */
-async function loadIpynb(file, loc, markdown=true, {user=1}={}) {
+export async function loadIpynb(file, loc, markdown=true, {user=1}={}) {
     const ipynb = file
     console.log(`[FileReader] Load '${ipynb.name}' and embed in page.`)
     const reader = new FileReader()
     reader.readAsText(ipynb)
 
     reader.onload = async () => {
+        if (typeof reader.result != "string") {
+            alert("ipynbファイルを読み込めませんでした.")
+            return
+        } 
         const cells = JSON.parse(reader.result).cells
     
         for (const cell of cells) {
@@ -185,9 +214,8 @@ async function loadIpynb(file, loc, markdown=true, {user=1}={}) {
 }
 /**
  * DBからログを取得し, csvとしてダウンロードする
- * @returns {none}
  */
-async function downloadLog() {
+export async function downloadLog() {
     const number = document.querySelector("#inputNumber").value 
     const name = document.querySelector("#inputName").value 
 
@@ -196,8 +224,8 @@ async function downloadLog() {
         return 
     }
 
-    const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/).groups.cat_name
-    if (!cat) {throw new ApplicationError("Can not get current category.")}
+    const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/)?.groups?.cat_name
+    if (cat === undefined) {throw new myclass.ApplicationError("Can not get current category.")}
 
     window.location.href = 
         `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
@@ -207,7 +235,7 @@ async function downloadLog() {
  * @param {object} acceptMIME MINE typeがキー, ファイル拡張子のarrayが値のオブジェクト
  * @returns {Promise<File>} 選択されたファイルオブジェクト
  */
-async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
+export async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
     const [handle] = await window.showOpenFilePicker({
         multiple: false,
         types: [
@@ -225,7 +253,7 @@ async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
  * @param {boolean} ansi 
  * @returns {String}
  */
-function escapeHTML(str, ansi=false) {
+export function escapeHTML(str, ansi=false) {
     if (ansi) {
         var str =  str.replace(/\x1B[[;\d]+m/g, "")
     }

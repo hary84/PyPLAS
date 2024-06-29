@@ -1,18 +1,22 @@
-// import {p_id} from "./utils"
-// import {myNode} from "./myclass."
+//@ts-check
+
+import {p_id} from "./utils.js"
+import * as myclass  from "./myclass.js"
 
 /** node reset manager */
 const reseter = {
     /** problem info*/
-    origin: undefined, 
+    origin: {}, 
 
     /** 指定されたnodeの元データを取得する 
+     * 
+     * 見つからない場合, undefinedを返す
      * @param {string} nodeId 
-     * @returns {Promise<object> | Promise<undefined>}
+     * @returns {Promise<any>}
     */
     async getOriginParams(nodeId) {
-        if (this.origin === undefined) {
-            this.origin = await this._getOriginNodes()
+        if (Object.keys(this.origin).length == 0) {
+            this.origin = await this._fetchOriginNodes()
         }
         const o = JSON.parse(this.origin.page).body
         const index = this._getNodeIndex(nodeId)
@@ -20,16 +24,15 @@ const reseter = {
     }, 
     /**
      * CodeNodeのcontent, QuestionNodeのconponentを初期化する
-     * @param {BaseNode} node 
-     * @returns {null}
+     * @param {myclass.CodeNode | myclass.QuestionNode} node 
      */
     async resetNode(node) {
         const nodeParams = await this.getOriginParams(node.nodeId)
-        if (!nodeParams) {throw new ApplicationError("Nodeの取得に失敗しました")}
-        if (node instanceof CodeNode && nodeParams.type == "code") {
+        if (nodeParams === undefined) {throw new myclass.ApplicationError("Nodeの取得に失敗しました")}
+        if (node instanceof myclass.CodeNode && nodeParams.type == "code") {
             node.editor.setValue(nodeParams.content, -1)
         }
-        else if (node instanceof QuestionNode && nodeParams.type == "question") {
+        else if (node instanceof myclass.QuestionNode && nodeParams.type == "question") {
             if (node.ptype == "0") {
                 node.answerField.querySelectorAll("input, select").forEach(e => {
                     if (e.tagName == "SELECT") {e.selectedIndex=-1}
@@ -42,12 +45,12 @@ const reseter = {
             } else if (node.ptype == "1" && !node.editable) {
                 const children = node.childNodes
                 if (children.length > nodeParams.conponent.length) {
-                    throw new NodeStructureError(node.type)
+                    throw new myclass.NodeStructureError(node.type)
                 }
                 let idx = 0
                 nodeParams.conponent.forEach(n => {
                     if (n.type == "explain") {return} 
-                    else if (n.type == "code") {
+                    else if (n.type == "code" && children[idx] instanceof myclass.CodeNode) {
                         children[idx].editor.setValue(n.content, -1)
                         idx += 1
                     }
@@ -55,30 +58,24 @@ const reseter = {
             }
         }
         else {
-            throw new NodeStructureError(node.type)
+            throw new myclass.NodeStructureError(node.type)
         }
     },
 
     /** get origin nodes string  
      * @returns {Promise<object>}
     */
-    async _getOriginNodes() {
-        try {
-            const res = await fetch(`${window.location.origin}/problems/${p_id}/info`, {
-                method: "GET"
-            })
+    async _fetchOriginNodes() {
+        const res = await fetch(`${window.location.origin}/problems/${p_id}/info`, {
+            method: "GET"
+        })
+        if (res.ok) {
             const json = await res.json()
-            if (res.ok) {
-                console.log(json.DESCR)
-                return json
-            }
-            else {
-                alert(`データの取得に失敗しました\n ${res.url}`)
-                throw new ApplicationError(json.DESCR)
-            }
+            console.log(json.DESCR)
+            return json 
         }
-        catch (e) {
-            console.error(e)
+        else {
+            throw new myclass.FetchError(res.status, res.statusText)
         }
     },
 
@@ -102,3 +99,5 @@ const reseter = {
         return -1
     }
 }
+
+export default reseter

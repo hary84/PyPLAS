@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, date
 import json
 import os
@@ -9,6 +10,7 @@ import urllib.parse
 import tornado
 from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
+from jupyter_client import MultiKernelManager
 
 def print_traceback():
     """
@@ -39,10 +41,6 @@ def custom_exec(code: str) -> None:
     )
     asyncio.run(ls["__ex"]())
 
-class InvalidJSONError(Exception):
-    """POST, PUT, DELETE等でRequest-Bodyから取得したJSONが無効な形式"""
-
-
 def datetime_encoda(obj: object) -> str:
     """
     objがdatetimeオブジェクトであれば、isoformatの文字列に変換する
@@ -50,6 +48,16 @@ def datetime_encoda(obj: object) -> str:
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
     
+async def wait_and_shutdown_kernel(km: MultiKernelManager, kernel_id: str, wait_time: int=5):
+    """
+    wait_time秒後にkmが管理しているカーネルを停止する. 
+    """
+    await asyncio.sleep(wait_time)
+    await km.shutdown_kernel(kernel_id=kernel_id)
+
+class InvalidJSONError(Exception):
+    """POST, PUT, DELETE等でRequest-Bodyから取得したJSONが無効な形式"""
+
 
 class ApplicationHandler(tornado.web.RequestHandler):
 
@@ -59,6 +67,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
         self.is_dev_mode: bool = self.settings["develop"]
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:
+        self.set_status(status_code)
         self.render("error.html", status_code=status_code)
     
     def validate_JSON(self, keys:Union[list, dict]) -> bool:

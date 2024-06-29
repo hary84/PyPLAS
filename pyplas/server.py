@@ -460,8 +460,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             print(f"[WS] {self.close_reason}")
             pass 
         elif self.close_code == 1001:
-            IOLoop.current().spawn_callback(mult_km.shutdown_kernel, kernel_id=self.kernel_id)
-        
+            IOLoop.current().spawn_callback(util.wait_and_shutdown_kernel, km=mult_km, kernel_id=self.kernel_id)
 
 class KernelHandler(util.ApplicationHandler):
     """カーネル管理用 REST API"""
@@ -720,8 +719,8 @@ class ProblemCreateHandler(util.ApplicationHandler):
                     self.set_status(404)
                     self.finish({"DESCR": f"{self.request.full_url()} is not found."})
         except (util.InvalidJSONError, sqlite3.Error):
-            self.set_status(400)
-            self.finish({"DESCR": "Invalid request message or Invalid url query"})
+            self.set_status(400, "Invalid request message or Invalid url query")
+            self.finish()
 
     def register(self, p_id:str) -> None:
         """
