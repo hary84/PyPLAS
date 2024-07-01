@@ -62,8 +62,9 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
     } catch(e) {
         if (e instanceof myclass.ApplicationError) {
             alert(e.message)
+            console.error(e)
         }
-        else {throw e}
+        else {console.error(e)}
     } finally {
         target.classList.remove("disabled")
     }

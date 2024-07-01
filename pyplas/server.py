@@ -18,6 +18,7 @@ import tornado
 import tornado.websocket
 from tornado.ioloop import IOLoop
 
+import log
 import util
 import uimodules
 from uimodules import *
@@ -32,14 +33,15 @@ args = parser.parse_args()
 mult_km = AsyncMultiKernelManager()
 mult_km.updated = tornado.locks.Event()
 db_handler = util.DBHandler(page_path=os.path.join(os.getcwd(), "pyplas.db"),
-                       user_path=os.path.join(os.getcwd(), "user.db"),
-                       dev_user_path=os.path.join(os.getcwd(), "dev-user.db"),
-                       dev_mode=args.develop)
+                            user_path=os.path.join(os.getcwd(), "user.db"),
+                            dev_user_path=os.path.join(os.getcwd(), "dev-user.db"),
+                            dev_mode=args.develop)
+mylogger = log.get_logger(use_color=True)
 
 class MainHandler(util.ApplicationHandler):
     
     def prepare(self):
-        print(f"[{self.request.method}] {self.request.uri}")
+        mylogger.info(f"{self.request.method} {self.request.uri}")
         self.load_url_queries({"category": None})
 
     def get(self):
@@ -68,7 +70,7 @@ class ProblemHandler(util.ApplicationHandler):
 
     execute_pool = {}
     def prepare(self):
-        print(f"[{self.request.method}] {self.request.uri}")
+        mylogger.info(f"{self.request.method} {self.request.uri}")
 
     def get(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -111,9 +113,8 @@ class ProblemHandler(util.ApplicationHandler):
         try:
             page = db_handler.get_from_db(sql, p_id=p_id)
             assert len(page) != 0, f"p_id='{p_id}' does not exist in DB."
-        except (AssertionError, sqlite3.Error) as e:
-            util.print_traceback()
-            self.write_error(404)
+        except (AssertionError) as e:
+            self.write_error(404, reason=f"problem({p_id}) does not found.")
         else:
             page:dict = page[0]
             try:
@@ -123,8 +124,8 @@ class ProblemHandler(util.ApplicationHandler):
                             q_status=json.loads(page["q_status"]),
                             q_content=json.loads(page["q_content"]),
                             progress=[])
-            except:
-                util.print_traceback()
+            except Exception as e:
+                mylogger.error(e, exc_info=True)
                 self.write_error(500)
 
 
@@ -158,8 +159,8 @@ class ProblemHandler(util.ApplicationHandler):
             self.write(info[0] | 
                        {"DESCR": "get problem info"})
         except AssertionError:
-            self.set_status(404)
-            self.finish({"DESCR": f"problem({p_id}) is not found."})
+            self.set_status(404, reason=f"problem({p_id}) is not found.")
+            self.finish()
 
 
     async def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
@@ -172,13 +173,13 @@ class ProblemHandler(util.ApplicationHandler):
         try:
             # POST /problems
             if p_id is None and action is None:
-                self.set_status(404)
-                self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+                self.set_status(404, reason=f"{self.request.uri} is not found.")
+                self.finish()
             
             # POST /problems/<p_id>
             elif p_id is not None and action is None:
-                self.set_status(404)
-                self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+                self.set_status(404, reason=f"{self.request.uri} is not found.")
+                self.finish()
 
             # POST /problems/<p_id>/<action>
             elif p_id is not None and action is not None:
@@ -188,20 +189,23 @@ class ProblemHandler(util.ApplicationHandler):
                 elif action == "scoring":
                     self.load_json(validate=True, keys=["q_id", "ptype", "answers", "kernel_id"])
                     if self.json["kernel_id"] in ProblemHandler.execute_pool.keys():
-                        self.set_status(400)
-                        self.finish({"DESCR": "This question is currently being scored."})
+                        self.set_status(202, reason=f"This question is currently being scored.")
+                        self.finish()
                         return
                     await self.scoring(p_id)
                 elif action == "cancel":
                     self.load_url_queries(["kernel_id"])
                     self.canceling(p_id)
                 else:
-                    self.set_status(404)
-                    self.finish({"DESCR": f"{self.request.full_url()} is not found."})
-        except (util.InvalidJSONError, tornado.web.MissingArgumentError, sqlite3.Error):
-            util.print_traceback()
-            self.set_status(400)
-            self.finish({"DESCR": "Invalid request message or Invalid url query"})
+                    self.set_status(404, f"{self.request.uri} is not found.")
+                    self.finish()
+        except (util.InvalidJSONError, tornado.web.MissingArgumentError):
+            self.set_status(400, reason="invalid request body or Invalid url query")
+            self.finish()
+        except Exception as e:
+            mylogger.error(e, exc_info=True)
+            self.set_status(500, reason="internal server error")
+            self.finish()
 
     def saving(self, p_id:str) -> None:
         """
@@ -224,9 +228,6 @@ class ProblemHandler(util.ApplicationHandler):
                             q_content=json.dumps(self.json["q_content"]))
         except AssertionError:
             raise util.InvalidJSONError
-        except sqlite3.Error:
-            util.print_traceback()
-            raise
         else:
             self.finish({"body": json.dumps(self.json["q_content"]),
                         "DESCR": "data is successfully saved."})
@@ -264,19 +265,14 @@ class ProblemHandler(util.ApplicationHandler):
             elif self.json["ptype"] == 1: #  
                 result, content = await self.code_scoring()
             q_status = 2 if False not in result else 1
-            try:
-                # write result to logs, progress table
-                self._insert_and_update_progress(p_id=p_id, q_id=self.json["q_id"], 
-                                                 q_status=q_status,
-                                                 content=json.dumps(self.json["answers"]),
-                                                 keys=keys) 
-            except sqlite3.Error:
-                util.print_traceback()
-                raise 
-            else:
-                self.finish({"content": content,
-                             "progress": q_status,
-                             "DESCR": "Scoring complete."})
+            # write result to logs, progress table
+            self._insert_and_update_progress(p_id=p_id, q_id=self.json["q_id"], 
+                                                q_status=q_status,
+                                                content=json.dumps(self.json["answers"]),
+                                                keys=keys) 
+            self.finish({"content": content,
+                        "progress": q_status,
+                        "DESCR": "Scoring complete."})
 
     def canceling(self, p_id:Optional[str]=None) -> None:
         """
@@ -407,7 +403,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         self.kc: AsyncKernelClient = self.km.client()
         if not self.kc.channels_running:
             self.kc.start_channels()
-        print(f"[WS] WS is connecting with {self.kernel_id}")
+        mylogger.info(f"WEBSOCKET OPEN {self.request.uri}")
 
     async def on_message(self, received_msg: dict):
         """
@@ -421,7 +417,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         """
         await self.kc.wait_for_ready()
         received_msg = json.loads(received_msg)
-        print(f"[WS] WebSocket receive {received_msg}")
+        mylogger.info(f"WEBSOCKET RECEIVE {self.request.uri}")
         # await self.exec.wait()
         _code = received_msg.get("code", None)
         self.node_id = received_msg.get("node_id", None)
@@ -433,11 +429,11 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         """
         コード実行にまつわるipykernelからの一連のメッセージを受信
         """
-        print("===== spawn callback =====")
+        # print("===== spawn callback =====")
         while 1:
             try:
                 output = await self.kc.get_iopub_msg()
-                print(f"received {output['msg_type']}")
+                # print(f"received {output['msg_type']}")
                 if output["content"].get('execution_state', None) == "idle":
                     self.write_message(json.dumps({
                         "msg_type": "exec-end-sig", 
@@ -450,14 +446,12 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
             except tornado.websocket.WebSocketClosedError:
                 break
             except Exception:
-                util.print_traceback()
                 break
-        print("=========================")
+        # print("=========================")
 
     def on_close(self):
-        print(f"[WS] websocket is closing (close_code = {self.close_code})")
+        mylogger.info(f"WEBSOCKET CLOSE({self.close_code}) {self.request.uri} ")
         if self.close_code == 1000: 
-            print(f"[WS] {self.close_reason}")
             pass 
         elif self.close_code == 1001:
             IOLoop.current().spawn_callback(util.wait_and_shutdown_kernel, km=mult_km, kernel_id=self.kernel_id)
@@ -467,7 +461,7 @@ class KernelHandler(util.ApplicationHandler):
 
     def prepare(self) -> None:
         mult_km.updated.clear()
-        print(f"[{self.request.method}] {self.request.uri}")
+        mylogger.info(f"{self.request.method} {self.request.uri}")
 
     async def get(self, k_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -497,8 +491,8 @@ class KernelHandler(util.ApplicationHandler):
 
         # GET /kernel/<k_id>/<action>
         elif k_id is not None and action is not None:
-            self.set_status(404)
-            self.finish({"DESCR": "The URL is not valid."})
+            self.set_status(404, f"{self.request.uri} is not Found.")
+            self.finish()
 
     async def post(self, k_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -524,14 +518,18 @@ class KernelHandler(util.ApplicationHandler):
                 elif action == "interrupt":
                     await self.kernel_interrupt(kernel_id=k_id)
                 else:
-                    self.set_status(404)
-                    self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+                    self.set_status(404, reason=f"{self.request.uri} is not Found.")
+                    self.finish()
         except DuplicateKernelError as e:
-            self.set_status(500)
-            self.finish({"DESCR": f"kernel_id({k_id}) is already started."})
+            self.set_status(500, reason=f"kernel({k_id}) is already started.")
+            self.finish()
         except KeyError as e:
-            self.set_status(500)
-            self.finish({"DESCR": "kernel_id is not found in KM."})
+            self.set_status(500, reason=f"kernel_id({k_id}) is not found in KM.")
+            self.finish()
+        except Exception as e:
+            mylogger.error(e, exc_info=True)
+            self.set_status(500, reason="internal server error")
+            self.finish()
 
     async def kernel_start(self, kernel_id:Optional[str]=None) -> None:
         """
@@ -545,6 +543,7 @@ class KernelHandler(util.ApplicationHandler):
         except DuplicateKernelError as e:
             raise
         else:
+            mylogger.debug(f"kernel(kernel_id={kernel_id}) is started.")
             self.finish({"kernel_id": self.kernel_id,
                          "DESCR": "Kernel is successfully started."})
 
@@ -558,6 +557,7 @@ class KernelHandler(util.ApplicationHandler):
         except KeyError as e:
             raise
         else:
+            mylogger.debug(f"kernel(kernel_id={kernel_id}) is restarted.")
             self.finish({"kernel_id": kernel_id,
                          "DESCR": "Kernel is successfully restarted."})
 
@@ -571,6 +571,7 @@ class KernelHandler(util.ApplicationHandler):
         except KeyError as e:
             raise
         else:
+            mylogger.debug(f"kernel(kernel_id={kernel_id}) is interrupted.")
             self.finish({"kernel_id": kernel_id,
                          "DESCR": "Kernel is successfully interrupted."})
 
@@ -591,11 +592,11 @@ class KernelHandler(util.ApplicationHandler):
             
             # DELETE /kernel/<k_id>/<action>
             elif k_id is not None and action is not None:
-                self.set_status(404)
-                self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+                self.set_status(404, reason=f"{self.request.uri} is not found.")
+                self.finish()
         except KeyError:
-            self.set_status(500)
-            self.finish({"DESCR": "Kernel_id is not found in KM."})
+            self.set_status(500, reason=f"kernel_id({k_id}) is not found in KM.")
+            self.finish()
            
     async def kernel_shutdown(self, kernel_id:Optional[str]=None) -> None:
         """
@@ -623,9 +624,9 @@ class ProblemCreateHandler(util.ApplicationHandler):
     問題作成モード
     """
     def prepare(self):
-        print(f"[{self.request.method}] {self.request.uri}")
+        mylogger.info(f"{self.request.method} {self.request.uri}")
         if not self.is_dev_mode:
-            self.write_error(403)
+            self.write_error(403, reason="server is not developer mode.")
             
     def get(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -644,9 +645,9 @@ class ProblemCreateHandler(util.ApplicationHandler):
             cates = [r for r in cates]
             try:
                 self.render("create_index.html", problem_list=problems, categories=cates)
-            except: 
-                util.print_traceback()
-                self.write_error(500)
+            except Exception as e: 
+                mylogger.error(e, exc_info=True)
+                self.write_error(500, reason="Error occurred during rendering page")
             
         # GET /create/<p_id>
         elif p_id is not None and action is None:
@@ -684,9 +685,9 @@ class ProblemCreateHandler(util.ApplicationHandler):
                                 page=json.loads(page["page"]),
                                 answers=json.loads(page["answers"]),
                                 is_new=False)
-                except:
-                    util.print_traceback()
-                    self.write_error(500)
+                except Exception as e:
+                    mylogger.error(e, exc_info=True)
+                    self.write_error(500, reason="Error occurred during rendering page")
 
     def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -698,8 +699,8 @@ class ProblemCreateHandler(util.ApplicationHandler):
         try:
             # POST /create
             if p_id is None and action is None:
-                self.set_status(404)
-                self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+                self.set_status(404, reason=f"{self.request.uri} is not Found.")
+                self.finish()
 
             # POST /create/<p_id>
             elif p_id is not None and action is None:
@@ -707,8 +708,8 @@ class ProblemCreateHandler(util.ApplicationHandler):
                     self.load_json(validate=True, keys=["profiles"])
                     self.update_profile()
                 else:
-                    self.set_status(404)
-                    self.finish({"DESCR": f"{self.request.full_url()} is not found"})
+                    self.set_status(404, reason=f"{self.request.uri} is not Found.")
+                    self.finish()
 
             # POST /create/<p_id>/<action>
             elif p_id is not None and action is not None:
@@ -716,10 +717,14 @@ class ProblemCreateHandler(util.ApplicationHandler):
                     self.load_json(validate=True, keys=["title", "page", "answers"])
                     self.register(p_id=p_id)
                 else:
-                    self.set_status(404)
-                    self.finish({"DESCR": f"{self.request.full_url()} is not found."})
-        except (util.InvalidJSONError, sqlite3.Error):
-            self.set_status(400, "Invalid request message or Invalid url query")
+                    self.set_status(404, reason=f"{self.request.uri} is not Found.")
+                    self.finish()
+        except util.InvalidJSONError:
+            self.set_status(400, reason="Invalid request message or Invalid url query")
+            self.finish()
+        except Exception as e:
+            mylogger.error(e, exc_info=True)
+            self.set_status(500, reason="internal server error")
             self.finish()
 
     def register(self, p_id:str) -> None:
@@ -731,30 +736,20 @@ class ProblemCreateHandler(util.ApplicationHandler):
             self.p_id = str(uuid.uuid4())
             sql = r"""INSERT INTO pages(p_id, title, page, answers) 
             VALUES(:p_id, :title, :page, :answers)"""
-            try:
-                db_handler.write_to_db(sql, p_id=self.p_id, title=self.json["title"], 
-                                page=json.dumps(self.json["page"]),
-                                answers=json.dumps(self.json["answers"]))
-            except sqlite3.Error:
-                util.print_traceback()
-                raise 
-            else:
-                self.finish({"p_id": self.p_id,
-                             "DESCR": "New Problem is successfully registered."})
+            db_handler.write_to_db(sql, p_id=self.p_id, title=self.json["title"], 
+                                   page=json.dumps(self.json["page"]),
+                                   answers=json.dumps(self.json["answers"]))
+            self.finish({"p_id": self.p_id,
+                         "DESCR": "New Problem is successfully registered."})
         # edit exist problem
         else: 
             sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers 
             WHERE p_id=:p_id"""
-            try:
-                db_handler.write_to_db(sql, p_id=p_id, title=self.json["title"],
-                                page=json.dumps(self.json["page"]),
-                                answers=json.dumps(self.json["answers"]))
-            except sqlite3.Error:
-                util.print_traceback()
-                raise 
-            else:
-                self.finish({"p_id": p_id,
-                             "DESCR": f"Problem({p_id}) is successfully saved."})
+            db_handler.write_to_db(sql, p_id=p_id, title=self.json["title"],
+                            page=json.dumps(self.json["page"]),
+                            answers=json.dumps(self.json["answers"]))
+            self.finish({"p_id": p_id,
+                         "DESCR": f"Problem({p_id}) is successfully saved."})
 
     def update_profile(self) -> None:
         """
@@ -762,15 +757,10 @@ class ProblemCreateHandler(util.ApplicationHandler):
         """
         sql = r"""UPDATE pages SET title=:title, category=:category, status=:status 
         WHERE p_id=:p_id"""
-        try:
-            params = [{"p_id": key} | v for key, v in self.json["profiles"].items()]
-            db_handler.write_to_db_many(sql, params)
-        except sqlite3.Error:
-            util.print_traceback()
-            raise 
-        else:
-            self.write({"profile": json.dumps(self.json),
-                        "DESCR": "problem profile is successfully updated."})
+        params = [{"p_id": key} | v for key, v in self.json["profiles"].items()]
+        db_handler.write_to_db_many(sql, params)
+        self.write({"profile": json.dumps(self.json),
+                    "DESCR": "problem profile is successfully updated."})
 
     def delete(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -779,30 +769,25 @@ class ProblemCreateHandler(util.ApplicationHandler):
         """
         # DELETE /create
         if p_id is None and action is None:
-            self.set_status(404)
-            self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+            self.set_status(404, reason=f"{self.request.uri} is not Found.")
+            self.finish()
 
         # DELETE /create/<p_id>
         elif p_id is not None and action is None:
             sql = r"""DELETE FROM pages WHERE p_id=:p_id"""
-            try:
-                db_handler.write_to_db(sql, p_id=p_id)
-            except sqlite3.Error as e:
-                util.print_traceback()
-                raise
-            else:
-                self.finish({"kernel_id": p_id,
-                             "DESCR": f"Problem({p_id}) is successfully deleted."})
+            db_handler.write_to_db(sql, p_id=p_id)
+            self.finish({"kernel_id": p_id,
+                         "DESCR": f"Problem({p_id}) is successfully deleted."})
                 
         # DELETE /create/<p_id>/<action>
         elif p_id is not None and action is not None:
-            self.set_status(404)
-            self.finish({"DESCR": f"{self.request.full_url()} is not found."})
+            self.set_status(404, reason=f"{self.request.uri} is not Found.")
+            self.finish()
 
 
 class RenderHTMLModuleHandler(util.ApplicationHandler):
     def prepare(self):
-        print(f"[{self.request.method}] {self.request.uri}")
+        mylogger.info(f"{self.request.method} {self.request.uri}")
         self.load_url_queries({"action": None})
 
     def post(self):
@@ -865,13 +850,14 @@ async def main():
     def shutdown_server(signum, frame):
         print()
         db_handler.close()
-        print(f"[Server Stop] DB is successfully closed.")
+        mylogger.info("[Server Stop] DB is successfully closed.")
         for ex, f in ProblemHandler.execute_pool.values():
             for e in ex._processes.values():
                 print(f"[Server Stop] Process: {e} is killed")
+                mylogger.info(f"[Server Stop] Process: {e} is killed")
                 e.kill()
         run_sync(mult_km._async_shutdown_all)()
-        print("[Server Stop] All Ipykernel is successfully shutteddown.")
+        mylogger.info("[Server Stop] All Ipykernel is successfully shutteddown.")
         shutdown_event.set()
 
     signal.signal(signal.SIGTERM, shutdown_server)

@@ -344,7 +344,7 @@ export class QuestionNode extends BaseNode {
         const params = this.extractQuestionParams(0)
         if (toast === null || progress === null) {throw new NodeStructureError(this.type)}
 
-        toast.classList.remove("show")
+        // toast.classList.remove("show")
         progress.classList.remove("d-none")
         const res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
             method: "POST",
@@ -356,9 +356,9 @@ export class QuestionNode extends BaseNode {
                 "kernel_id": this.nodeId
             })
         })
-        progress.classList.add("d-none")
-
-        if (res.ok) {
+        
+        if (res.ok && res.status == 200) {
+            progress.classList.add("d-none")
             const json = await res.json()
             console.log(`[scoring] ${json.DESCR}`)
             this.element.setAttribute("progress", json.progress)
@@ -370,7 +370,11 @@ export class QuestionNode extends BaseNode {
             }
             toast.classList.add("show")
         }
+        else if (res.ok && res.status == 202) {
+
+        }
         else {
+            progress.classList.add("d-none")
             throw new FetchError(res.status, res.statusText)
         }
     }

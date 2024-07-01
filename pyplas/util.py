@@ -1,8 +1,10 @@
 import asyncio
 from datetime import datetime, date
+from io import StringIO
 import json
 import os
 import sqlite3
+import sys
 import traceback
 from typing import Any, Optional, Union
 import urllib.parse
@@ -31,15 +33,20 @@ def custom_exec(code: str) -> None:
     code: str
         実行したいコード
     """
-    import asyncio
+    original_stdout = sys.stdout 
+    sys.stdout = StringIO()
     ls = {}
-    exec(
-        "async def __ex(): " +
-        "".join(f"\n    {row}" for row in code.split('\n')),
-        {},
-        ls
-    )
-    asyncio.run(ls["__ex"]())
+    try:
+        exec(
+            "async def __ex(): " +
+            "".join(f"\n    {row}" for row in code.split('\n')),
+            {},
+            ls
+        )
+        asyncio.run(ls["__ex"]())
+    finally:
+        sys.stdout = original_stdout
+
 
 def datetime_encoda(obj: object) -> str:
     """
@@ -67,7 +74,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
         self.is_dev_mode: bool = self.settings["develop"]
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:
-        self.set_status(status_code)
+        self.set_status(status_code, kwargs.get("reason", None))
         self.render("error.html", status_code=status_code)
     
     def validate_JSON(self, keys:Union[list, dict]) -> bool:
@@ -80,7 +87,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
             検証の対象となるキーのリストまたは{key: type}のdict
         """
         if self.json is None:
-            return False
+            raise InvalidJSONError
         if isinstance(keys, list):
             try:
                 for key in keys:
@@ -111,7 +118,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
             if validate:
                 self.validate_JSON(keys)
         else:
-            self.json = {}
+            raise InvalidJSONError
             
     def load_url_queries(self, names: Union[list[str], dict[str, Any]]):
         """
