@@ -39,11 +39,11 @@
 					  {% if ptype == 1 %}
 						<li><a class="dropdown-item btn-exec-all">Execute All</a></li>
 					  {% end %}
+					  {% if ptype == 1 and (editable == True or user == 1) %}
+						<li><a class="dropdown-item btn-load-ipynb">load Jupyter Notebook</a></li>
+					  {% end %}
 					  {% if user == 0 %}
 					  	<li><a class="dropdown-item btn-reset-input">Reset Input</a></li>
-					  {% end %}
-					  {% if ptype == 1 and editable == True %}
-						<li><a class="dropdown-item btn-load-ipynb">load Jupyter Notebook</a></li>
 					  {% end %}
 					</ul>
 				</div>

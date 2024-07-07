@@ -447,7 +447,8 @@ export class EditorNode extends BaseNode {
 
         const editor = ace.edit(editableElem, {
             mode: "ace/mode/python",
-            theme: "ace/theme/one_dark",
+            theme: "ace/theme/cloud_editor_dark",
+            fontSize: "0.9rem",
             showPrintMargin: false,
             maxLines: maxLines,
             minLines: defaultLineNumbers,
@@ -468,6 +469,7 @@ export class EditorNode extends BaseNode {
         const editor = ace.edit(editableElem, {
             mode: "ace/mode/markdown",
             theme: "ace/theme/sql_server",
+            fontSize: "1rem",
             showGutter: false,
             highlightActiveLine: false,
             maxLines: maxLines,
@@ -570,7 +572,7 @@ export class ExplainNode extends EditorNode {
         this.editor.insert("[](http:~)")
     }
     embedImg = () => {
-        this.editor.insert("![]()")
+        this.editor.insert("<p><img src='/static/img/ ' alt=''/></p>")
     }
     addFillInBlankProblem = () => {
         const tag = [

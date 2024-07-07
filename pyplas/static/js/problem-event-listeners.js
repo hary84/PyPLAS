@@ -316,8 +316,10 @@ window.addEventListener("keydown", async e => {
 })
 // イベントリスナー (dblclick)
 window.addEventListener("dblclick", e => {
-    const target = myNode.explain(e.target.closest(".node.explain"))
-    target.showEditor()
+    const target = e.target.closest(".node.explain")
+    if (target != null) {
+        myNode.explain(target).showEditor()
+    }
 })
 // })
 

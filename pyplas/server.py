@@ -6,7 +6,6 @@ import json
 import os  
 from io import StringIO
 import signal
-import sqlite3
 from typing import Optional, Tuple, Union
 import uuid
 
@@ -403,7 +402,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         self.kc: AsyncKernelClient = self.km.client()
         if not self.kc.channels_running:
             self.kc.start_channels()
-        mylogger.info(f"WEBSOCKET OPEN {self.request.uri}")
+        mylogger.info(f"WS OPEN {self.request.uri}")
 
     async def on_message(self, received_msg: dict):
         """
@@ -417,7 +416,7 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         """
         await self.kc.wait_for_ready()
         received_msg = json.loads(received_msg)
-        mylogger.info(f"WEBSOCKET RECEIVE {self.request.uri}")
+        mylogger.info(f"WS RECEIVE {self.request.uri}")
         # await self.exec.wait()
         _code = received_msg.get("code", None)
         self.node_id = received_msg.get("node_id", None)
@@ -450,11 +449,12 @@ class ExecutionHandler(tornado.websocket.WebSocketHandler):
         # print("=========================")
 
     def on_close(self):
-        mylogger.info(f"WEBSOCKET CLOSE({self.close_code}) {self.request.uri} ")
+        mylogger.info(f"WS CLOSE({self.close_code}) {self.request.uri} ")
         if self.close_code == 1000: 
             pass 
         elif self.close_code == 1001:
             IOLoop.current().spawn_callback(util.wait_and_shutdown_kernel, km=mult_km, kernel_id=self.kernel_id)
+            mylogger.debug(f"kernel(kernel_id={self.kernel_id}) is stopped.")
 
 class KernelHandler(util.ApplicationHandler):
     """カーネル管理用 REST API"""

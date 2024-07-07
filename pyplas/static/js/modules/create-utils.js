@@ -27,7 +27,9 @@ window.addEventListener("keydown", async e=> {
         e.stopPropagation()
     }
 })
-observeForm()
+if (p_id === undefined) {
+    observeForm()
+}
 
 /**
  * ページ全体をパースしてサーバーに登録を要請する

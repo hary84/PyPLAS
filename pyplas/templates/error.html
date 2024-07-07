@@ -22,12 +22,7 @@
 {% block main %}
 <main class="col px-3 vh-100 mt-3">
     <div class="card border-0 my-3">
-        {% import os %}
-        {% if os.path.exists(os.path.join(os.getcwd(), f'static/img/{status_code}-error.jpg')) %}
-            <img src="{{ static_url(f'img/{status_code}-error.jpg') }}" height=300px width=100% class="card-img-top" alt="{{status_code}} error img" style="object-fit: cover;">
-        {% else %}
-            <img src="{{ static_url('img/default-error.jpg') }}" height=300px width=100% class="card-img-top" alt="error img" style="object-fit: cover;">
-        {% end %}
+        <img src="{{ static_url('img/error/default-error.jpg') }}" height=300px width=100% class="card-img-top" alt="{{status_code}} error img" style="object-fit: cover;">
         <div class="card-body text-center">
             {% if status_code == 403 %}
                 <h2 class="card-title text-danger border-bottom border-danger text-center">403 Forbidden </h2>
