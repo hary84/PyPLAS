@@ -11,7 +11,7 @@ class CustomFormatter(logging.Formatter):
     red = "\x1b[31;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    fmt = "%(levelname)-9s  %(asctime)s [%(filename)s:%(lineno)-4d] %(message)s"
+    fmt = "%(levelname)-9s  %(asctime)s [%(filename)20s:%(lineno)4d] %(message)s"
 
     FORMATS = {
         logging.DEBUG: grey + fmt + reset,
@@ -30,8 +30,8 @@ class CustomFormatter(logging.Formatter):
             formatter =  logging.Formatter(self.fmt)
             return formatter.format(record)
 
-def get_logger(use_color:bool=True):
-    logger = logging.getLogger(__name__)
+def get_logger(name: str, use_color:bool=True):
+    logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler()
@@ -44,7 +44,7 @@ def get_logger(use_color:bool=True):
 
 
 if __name__ == "__main__":
-    mylogger = get_logger()
+    mylogger = get_logger(__name__)
 
     try:
         1 / 0 

@@ -2,6 +2,5 @@
 /dev/
 __pycache__/
 
-
-/pyplas/*.db
-!/pyplas/pyplas.db
+/pyplas/database/*.db
+!/pyplas/database/pyplas.db

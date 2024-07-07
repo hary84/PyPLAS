@@ -245,6 +245,10 @@ window.addEventListener("keydown", async e => {
         }
         else {
             e.target.blur()
+            if (currentActiveNode instanceof myclass.QuestionNode) {
+                const toast = currentActiveNode.element.querySelector(".for-toast > .toast")
+                toast?.classList.remove("show")
+            }
         }
     }
 
