@@ -10,6 +10,7 @@ DEV_USER_DB_PATH = "pyplas/database/dev-user.db"
 TEMPLATE_DIR = "pyplas/templates"
 STATIC_DIR = "pyplas/static"
 
+SCHEMA_PATH = "pyplas/models/schema"
 
 db: DBHandler = None
 

@@ -1,0 +1,16 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Scoring Validate",
+    "type": "object",
+    "properties": {
+        "q_id": {"type": "string"},
+        "ptype": {"type": "integer"},
+        "answers": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "kernel_id": {"type": "string"}
+    }
+}

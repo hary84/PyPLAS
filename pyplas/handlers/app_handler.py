@@ -1,10 +1,13 @@
 import json
 from typing import Any, Union
 import urllib
+from jsonschema import ValidationError
 
 import tornado
 from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
+
+from pyplas.models import validate_json
 
 class InvalidJSONError(Exception):
     """POST, PUT, DELETE等でRequest-Bodyから取得したJSONが無効な形式"""
@@ -20,7 +23,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
         self.set_status(status_code, kwargs.get("reason", None))
         self.render("error.html", status_code=status_code)
     
-    def validate_JSON(self, keys:Union[list, dict]) -> bool:
+    def validate_JSON(self, keys:Union[list, dict]=None, schema:str=None) -> bool:
         """
         POSTやPUTから送られてきたJSONに対応するkeyがあるかどうか検証する
 
@@ -28,10 +31,18 @@ class ApplicationHandler(tornado.web.RequestHandler):
         ----------
         key: list or dict 
             検証の対象となるキーのリストまたは{key: type}のdict
+        schema: str 
+            検証に使いたいjsonファイルのファイル名(拡張子込)
         """
         if self.json is None:
             raise InvalidJSONError
-        if isinstance(keys, list):
+        
+        if schema is not None:
+            try:
+                validate_json(self.json, schema)
+            except ValidationError :
+                raise InvalidJSONError   
+        elif isinstance(keys, list):
             try:
                 for key in keys:
                     self.json[key]
@@ -45,7 +56,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
                 raise InvalidJSONError
             
             
-    def load_json(self, validate:bool=False, keys:Union[list, dict]=[]) -> Union[None, bool]:
+    def load_json(self, validate:bool=False, **kwargs) -> Union[None, bool]:
         """
         POSTやPUTから送られてきたJSONをpythonのdictに変換する
         
@@ -53,13 +64,13 @@ class ApplicationHandler(tornado.web.RequestHandler):
         ----------
         validate: bool, default False
             キーやタイプについて検証するか否か
-        keys: list or dict, default []
-            検証の対象になるキーのリストまたは辞書
+        kwargs: 
+            validate_json関数に渡す引数
         """
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.json = json.loads(self.request.body)
             if validate:
-                self.validate_JSON(keys)
+                self.validate_JSON(**kwargs)
         else:
             raise InvalidJSONError
             
