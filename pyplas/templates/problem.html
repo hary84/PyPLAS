@@ -4,8 +4,13 @@
 <title>PyPLAS - {{ title }}</title>
 <style>
     .node-control .btn-addMD {display: none !important;}
+    .question[ptype="1"] > .card-body > .answer-content > .code.node {
+        .dropdown.code-options {
+            display: none;
+        }
+    }
 </style>
-<script src="{{ static_url('js/modules/notebook.js') }}" type="module"></script>
+<script src="{{ static_url('js/notebook.js') }}" type="module"></script>
 {% end %}
 
 {% block head-nav-li %}

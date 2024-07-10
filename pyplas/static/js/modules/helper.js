@@ -13,7 +13,7 @@ console.log(`mode is '${problem_meta.mode}'`)
 
 
 export function isCreateMode() {
-    return problem_meta.parent_path == "create"
+    return problem_meta.mode == "create"
 }
 
 /**

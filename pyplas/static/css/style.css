@@ -230,8 +230,17 @@
 /* card-body */
   .card-body {
     .mde  .toolbar  .only-inq { display: block; } 
-    .question-options > .dropdown-toggle::after {content: none;}
     .node-control .toggle-addQ {display: none !important;}
+    .question-info {
+      .dropdown.question-options {
+        .dropdown-toggle::after {
+          content: none;
+        }
+      }
+      .dropdown.question-options:not(:has(.dropdown-item)) {
+        display: none;
+      }
+    }
   }
 }
 .question[progress="1"] {

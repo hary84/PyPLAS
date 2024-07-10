@@ -1,13 +1,13 @@
 //@ts-check
 // for /create/<p_id> or /problems/<p_id>
 
-import { myNode } from "./myclass.js"
-import * as myclass from "./myclass.js"
-import * as utils from "./utils.js"
-import * as helper from "./helper.js"
-import kh from "./kernel.js"
-import reseter from "./reset-manager.js"
-import * as creator from "./create-utils.js"
+import { myNode } from "./modules/myclass.js"
+import * as myclass from "./modules/myclass.js"
+import * as utils from "./modules/utils.js"
+import * as helper from "./modules/helper.js"
+import kh from "./modules/kernel.js"
+import reseter from "./modules/reset-manager.js"
+import * as error from "./modules/error.js"
 
 
 document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
@@ -34,7 +34,7 @@ helper.watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
 
 // ボタンイベントリスナー (左サイドバー)
 document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
-    const target = e.target.closest("a, button")
+    const target = e.target?.closest("a, button")
     if (target === null) {return}
     target.classList.add("disabled")
     try {
@@ -58,11 +58,11 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
             if (!helper.isCreateMode()) {         // problemページの場合
                 await utils.saveUserData()
             } else {
-                await creator.registerProblem()
+                await utils.registerProblem()
             }
         }
     } catch(e) {
-        if (e instanceof myclass.ApplicationError) {
+        if (e instanceof error.ApplicationError) {
             alert(e.message)
             console.error(e)
         }
@@ -74,9 +74,9 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
 
 // ボタンイベントリスナー (メイン)
 document.querySelector("main")?.addEventListener("click", async e => {
-    const target = e.target.closest("a, button")
+    const target = e.target?.closest("a, button")
     if (!target) {return}
-    const node = myNode.get(e.target.closest(".node"))
+    const node = myNode.get(e.target?.closest(".node"))
     target.classList.add("disabled")
     try {
         // ============================== 
@@ -131,9 +131,8 @@ document.querySelector("main")?.addEventListener("click", async e => {
             else if (target.classList.contains("btn-load-ipynb")) {
                 const file = await helper.filePicker()
                 const loc = node.answerField
-                await utils.loadIpynb(file, loc, false, {
-                    user: Number(helper.isCreateMode())}
-                )
+                const user = helper.isCreateMode()? 1 : 0
+                await utils.loadIpynb(file, loc, user)
             }
             else if (target.classList.contains("btn-exec-all")) {
                 await kh.executeAll(node.answerField)
@@ -167,7 +166,7 @@ document.querySelector("main")?.addEventListener("click", async e => {
         }
     }
     catch (e) {
-        if (e instanceof myclass.ApplicationError) {
+        if (e instanceof error.ApplicationError) {
             alert(e.message)
         }
         else {throw e}
@@ -179,7 +178,7 @@ document.querySelector("main")?.addEventListener("click", async e => {
 
 // イベントリスナー (node, click)
 window.addEventListener("click", e => {
-    const target = myNode.get(e.target.closest(".node"))
+    const target = myNode.get(e.target?.closest(".node"))
     if (target != null) {
         myNode.activeNode.node_id = target.nodeId
     }
@@ -208,7 +207,7 @@ window.addEventListener("keydown", async e => {
     // ============================== 
     //    Enter
     // ============================== 
-    else if (e.key == "Enter" && e.target.tagName == "BODY") {
+    else if (e.key == "Enter" && e.target?.tagName == "BODY") {
         e.preventDefault()
         if (currentActiveNode instanceof myclass.ExplainNode) {
             currentActiveNode.showEditor()
@@ -237,16 +236,16 @@ window.addEventListener("keydown", async e => {
     //    Escape
     // ============================== 
     else if (e.key == "Escape") {
-        if (currentActiveNode instanceof myclass.EditorNode && e.target.tagName == "BODY") {
+        if (currentActiveNode instanceof myclass.EditorNode && e.target?.tagName == "BODY") {
             const e = currentActiveNode.parentQuestionNode
             if (e != null) {myNode.activeNode.node_id = e.nodeId}
         }
-        else if (e.target.tagName == "TEXTAREA") {
-            const targetNode = myNode.get(e.target.closest(".node"))
-            if (targetNode != null) {targetNode.editor.blur()}
+        else if (e.target?.tagName == "TEXTAREA") {
+            const targetNode = myNode.get(e.target?.closest(".node"))
+            if (targetNode instanceof myclass.EditorNode) {targetNode.editor.blur()}
         }
         else {
-            e.target.blur()
+            e.target?.blur()
             if (currentActiveNode instanceof myclass.QuestionNode) {
                 const toast = currentActiveNode.element.querySelector(".for-toast > .toast")
                 toast?.classList.remove("show")
@@ -257,18 +256,18 @@ window.addEventListener("keydown", async e => {
     // ============================== 
     //    Ctrl-S
     // ============================== 
-    else if (e.ctrlKey && e.key == "s" && e.target.tagName == "BODY") {
+    else if (e.ctrlKey && e.key == "s" && e.target?.tagName == "BODY") {
         e.preventDefault()
         if (!helper.isCreateMode()) {
             await utils.saveUserData()
         } else {
-            await creator.registerProblem()
+            await utils.registerProblem()
         }
     }
     // ============================== 
     //    J or K
     // ============================== 
-    else if ((e.key == "j" || e.key == "k") && e.target.tagName == "BODY") {
+    else if ((e.key == "j" || e.key == "k") && e.target?.tagName == "BODY") {
         if (!currentActiveNode) {return}
         const nextActiveNode = (e.key == "j") ? 
             myNode.nextNode(currentActiveNode) : myNode.prevNode(currentActiveNode)
@@ -283,7 +282,7 @@ window.addEventListener("keydown", async e => {
     // ============================== 
     //    Ctrl-L
     // ============================== 
-    else if (e.ctrlKey && e.key == "l" && e.target.tagName == "BODY") {
+    else if (e.ctrlKey && e.key == "l" && e.target?.tagName == "BODY") {
         e.preventDefault()
         if (currentActiveNode != null) {
             currentActiveNode.element.scrollIntoView({"behavior": "instant", "block": "center"})
@@ -292,7 +291,7 @@ window.addEventListener("keydown", async e => {
     // ============================== 
     //    B or A
     // ============================== 
-    else if ((e.key == "b" || e.key == "a") && e.target.tagName == "BODY") {
+    else if ((e.key == "b" || e.key == "a") && e.target?.tagName == "BODY") {
         if (currentActiveNode == null) {return}
         const nodeCotnrol = (e.key == "b") ? 
                 currentActiveNode.element.nextElementSibling : currentActiveNode.element.previousElementSibling
@@ -305,7 +304,7 @@ window.addEventListener("keydown", async e => {
     // ============================== 
     //    D
     // ============================== 
-    else if (e.key == "d" && e.target.tagName == "BODY") {
+    else if (e.key == "d" && e.target?.tagName == "BODY") {
         if (currentActiveNode == null) {return}
         try {
             if (currentActiveNode.allowDelete()) {
@@ -324,12 +323,20 @@ window.addEventListener("keydown", async e => {
 })
 // イベントリスナー (dblclick)
 window.addEventListener("dblclick", e => {
-    const target = e.target.closest(".node.explain")
+    const target = e.target?.closest(".node.explain")
     if (target != null) {
         myNode.explain(target).showEditor()
     }
 })
-// })
+
+document.querySelector("input#ipynbForm")?.addEventListener("change", async e => {
+    const file = e.target?.files[0]
+    const loc = document.querySelector("#nodesContainer")
+    const user = helper.isCreateMode() ? 1 : 0
+    await utils.loadIpynb(file, loc, user)
+
+})
+
 
 
 /**
@@ -343,7 +350,7 @@ function setExecuteAnimation(kh, oldValue, newValue) {
         try {
             const runningNode = myNode.code(kh.execute_task_q[0])
             runningNode.element.setAttribute("run-state", "running")
-            runningNode.element.querySelector(".node-side").classList.add("bg-success-subtle")
+            runningNode.element.querySelector(".node-side")?.classList.add("bg-success-subtle")
             kh.execute_task_q.slice(1, ).forEach(id => {
                 myNode.code(id).element.setAttribute("run-state", "suspending")
             })

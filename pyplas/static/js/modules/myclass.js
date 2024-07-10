@@ -1,6 +1,7 @@
 //@ts-check
 
 import {problem_meta} from "./helper.js"
+import * as error from "./error.js"
 
 export const myNode = {
     /** active node */
@@ -375,7 +376,7 @@ export class QuestionNode extends BaseNode {
         }
         else {
             progress.classList.add("d-none")
-            throw new FetchError(res.status, res.statusText)
+            throw new error.FetchError(res.status, res.statusText)
         }
     }
     /**
@@ -390,7 +391,7 @@ export class QuestionNode extends BaseNode {
             console.log(json.DESCR)
         }
         else {
-            throw new FetchError(res.status, res.statusText)
+            throw new error.FetchError(res.status, res.statusText)
         }
     }
 
@@ -546,21 +547,17 @@ export class ExplainNode extends EditorNode {
     showPreview = () => {
         const html = marked.parse(this.editor.getValue())
         const preview = this.element.querySelector(".for-preview")
-        try {
-            preview.innerHTML = html 
-            this.highlighlting()
-            this.element.querySelector(".mde").classList.add("preview-active")
-
-        } catch (e) {
-            if (e instanceof TypeError) {throw new NodeStructureError(this.type)}
-        }
-    }
-    showEditor = () => {
-        try {
-            this.element.querySelector(".mde").classList.remove("preview-active")
-        } catch {
+        const mde = this.element.querySelector(".mde")
+        if (mde === null || preview === null) {
             throw new NodeStructureError(this.type)
         }
+        preview.innerHTML = html 
+        mde.classList.add("preview-active")
+    }
+    showEditor = () => {
+        const mde = this.element.querySelector(".mde")
+        if (mde === null) {throw new NodeStructureError(this.type)}
+        mde.classList.remove("preview-active")
     }
     embedBold = () => {
         this.editor.insert(`**${this.editor.getCopyText()}**`)
@@ -598,35 +595,9 @@ export class ExplainNode extends EditorNode {
         this.editor.insert(tag)
     }
 }
-/** 基底エラー */
-export class ApplicationError extends Error {
-    /** @param {string} msg */
-    constructor(msg) {
-        super(msg)
-        this.name = this.constructor.name
-    }
-}
-/** fetch api に関するエラー*/
-export class FetchError extends ApplicationError {
-    /** 
-     * @param {number} statusCode 
-     * @param {string} statusText
-    */
-    constructor(statusCode, statusText) {
-        super(`${statusCode} - ${statusText}`)
-        this.statusCode = statusCode
-        this.statusText = statusText
-    }
-}
-/** KernelHandlerに関する基底エラー */
-export class KernelError extends ApplicationError {
-    /** @param {string} msg */
-    constructor(msg) {
-        super(msg)
-    }
-}
+
 /** Nodeに関する基底エラー */
-export class NodeError extends ApplicationError {
+export class NodeError extends error.ApplicationError {
     /**@param {string} msg */
     constructor(msg) {
         super(msg)
