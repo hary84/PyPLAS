@@ -1,40 +1,13 @@
 //@ts-check
-import { p_id, parentRoute } from "./utils.js" 
+import { problem_meta } from "./helper.js" 
 import { myNode, ExplainNode, CodeNode, QuestionNode, FetchError } from "./myclass.js"
 
-const changedParams = {}
-document.querySelector("#kernel-ops .btn-save")?.addEventListener("click", async e => {
-    if (parentRoute == "create") {
-        await registerProblem()
-    }
-})
-document.addEventListener("click", async e => {
-    const btn = e.target.closest(".btn") 
-    if (btn == null) {return} 
-    if (btn.classList.contains("btn-delp")) {
-        const target = e.target.closest("tr").getAttribute("target")
-        await deleteProblem(target)
-        e.stopPropagation()
-    }
-    else if (btn.classList.contains("btn-updatep")) {
-        await updateProfiles(changedParams)
-        e.stopPropagation()
-    }
-})
-window.addEventListener("keydown", async e=> {
-    if (e.ctrlKey && e.key == "s") {
-        await registerProblem()
-        e.stopPropagation()
-    }
-})
-if (p_id === undefined) {
-    observeForm()
-}
 
+export const changedParams = {}
 /**
  * ページ全体をパースしてサーバーに登録を要請する
  */
-async function registerProblem() {
+export async function registerProblem() {
 
     const title = document.querySelector("#titleForm").value
     if (title.length == 0) {
@@ -97,7 +70,7 @@ async function registerProblem() {
         "answers": answers    // dict
     }
 
-    const res = await fetch(`${window.location.origin}/create/${p_id}/register`,{
+    const res = await fetch(`${window.location.origin}/create/${problem_meta.p_id}/register`,{
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(send_msg)
@@ -116,7 +89,7 @@ async function registerProblem() {
 /**
  * 問題の削除を要請する
  */
-async function deleteProblem(p_id) {
+export async function deleteProblem(p_id) {
     const agree = confirm("本当に削除しますか？")
     if (!agree) {return}
  
@@ -135,7 +108,7 @@ async function deleteProblem(p_id) {
  * pageのstatus, category, titleを変更する
  * @param {object} changedParams {p_id: [title, category, status]}
  */
-async function updateProfiles(changedParams) {
+export async function updateProfiles(changedParams) {
     const res = await fetch(`${window.location.origin}/create/profile`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -154,7 +127,7 @@ async function updateProfiles(changedParams) {
  * formに変更があった際に、グローバル変数changedParamsにp_id, title, category, status
  * を格納する。
  */
-function observeForm() {
+export function observeForm() {
     const initialFormValue = {}
     document.querySelectorAll("input, select").forEach(elem => {
         const p_id = elem.closest("tr").getAttribute("target")

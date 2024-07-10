@@ -1,23 +1,23 @@
 //@ts-check
 // for /create/<p_id> or /problems/<p_id>
-///<reference path="./modules/create-utils.js"/>
 
-import { myNode } from "./modules/myclass.js"
-import * as myclass from "./modules/myclass.js"
-import {p_id, parentRoute} from "./modules/utils.js"
-import * as utils from "./modules/utils.js"
-import kh from "./modules/kernel.js"
-import reseter from "./modules/reset-manager.js"
+import { myNode } from "./myclass.js"
+import * as myclass from "./myclass.js"
+import * as utils from "./utils.js"
+import * as helper from "./helper.js"
+import kh from "./kernel.js"
+import reseter from "./reset-manager.js"
+import * as creator from "./create-utils.js"
 
-// document.addEventListener("DOMContentLoaded", async () => {
+
 document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
-document.querySelector("#headTitle").href = `/${parentRoute}`
+document.querySelector("#headTitle").href = `/${helper.problem_meta.mode}`
 // markdown.js, highlight.jsの準備
-if (parentRoute == "problems") {
+if (!helper.isCreateMode()) {
     document.querySelectorAll(".explain").forEach(elem => {
         elem.innerHTML = marked.parse(elem.innerHTML)
     })
-}else if (parentRoute == "create") {
+}else {
     document.querySelectorAll(".node.explain").forEach(e => 
         myNode.explain(e).showPreview()
     )
@@ -26,11 +26,11 @@ hljs.highlightAll()
 
 // カーネルの起動, wsの接続
 await kh.setUpKernel()
-utils.watchValue(kh, "running", setExecuteAnimation)
-utils.watchValue(kh, "msg", renderMessage)
+helper.watchValue(kh, "running", setExecuteAnimation)
+helper.watchValue(kh, "msg", renderMessage)
 
 // active node の監視
-utils.watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
+helper.watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
 
 // ボタンイベントリスナー (左サイドバー)
 document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
@@ -55,9 +55,11 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
         } 
         // problem save ボタン ----- 解答の保存もしくは問題の登録をおこなう
         else if (target.classList.contains("btn-save")) {
-            if (parentRoute == "problems") {         // problemページの場合
+            if (!helper.isCreateMode()) {         // problemページの場合
                 await utils.saveUserData()
-            } 
+            } else {
+                await creator.registerProblem()
+            }
         }
     } catch(e) {
         if (e instanceof myclass.ApplicationError) {
@@ -96,7 +98,7 @@ document.querySelector("main")?.addEventListener("click", async e => {
         else if (target.classList.contains("btn-addCode")) {
             e.stopPropagation()
             const codeNode = await utils.addCode(target.closest(".node-control"), "afterend", {
-                user: Number(parentRoute == "create")
+                user: Number(helper.isCreateMode())
             })
             myNode.activeNode.node_id = codeNode.nodeId
         } 
@@ -127,10 +129,10 @@ document.querySelector("main")?.addEventListener("click", async e => {
                 await node.canceling()
             } 
             else if (target.classList.contains("btn-load-ipynb")) {
-                const file = await utils.filePicker()
+                const file = await helper.filePicker()
                 const loc = node.answerField
                 await utils.loadIpynb(file, loc, false, {
-                    user: Number(parentRoute=="create")}
+                    user: Number(helper.isCreateMode())}
                 )
             }
             else if (target.classList.contains("btn-exec-all")) {
@@ -198,9 +200,9 @@ window.addEventListener("keydown", async e => {
             kh.execute(currentActiveNode.nodeId)
         }
         else if (currentActiveNode instanceof myclass.QuestionNode) {
-            if (parentRoute == "problems") {
+            if (!helper.isCreateMode()) {
                 await currentActiveNode.scoring()
-            }
+            } 
         }
     }
     // ============================== 
@@ -221,7 +223,7 @@ window.addEventListener("keydown", async e => {
                 const nodeControl = currentActiveNode.element.querySelector(".answer-content .node-control")
                 if (nodeControl != null) {
                     const nextActiveNode = await utils.addCode(nodeControl, "afterend", {
-                        user: Number(parentRoute == "create")
+                        user: Number(helper.isCreateMode())
                     })
                     myNode.activeNode.node_id = nextActiveNode.nodeId
                 }
@@ -257,9 +259,11 @@ window.addEventListener("keydown", async e => {
     // ============================== 
     else if (e.ctrlKey && e.key == "s" && e.target.tagName == "BODY") {
         e.preventDefault()
-        if (parentRoute == "problems") {
+        if (!helper.isCreateMode()) {
             await utils.saveUserData()
-        } 
+        } else {
+            await creator.registerProblem()
+        }
     }
     // ============================== 
     //    J or K
@@ -294,7 +298,7 @@ window.addEventListener("keydown", async e => {
                 currentActiveNode.element.nextElementSibling : currentActiveNode.element.previousElementSibling
         if (nodeCotnrol != null && nodeCotnrol.classList.contains("node-control")) {
             await utils.addCode(nodeCotnrol, "afterend", {
-                user: Number(parentRoute == "create")
+                user: Number(helper.isCreateMode())
             })
         }
     }
@@ -389,14 +393,14 @@ function renderMessage(kh, oldValue, newValue) {
 function renderResult(res, form, type="text") {
     switch (type) {
         case "text":
-            const escapedt = utils.escapeHTML(res)
+            const escapedt = helper.escapeHTML(res)
             form.insertAdjacentHTML("beforeend", `<p class="exec-res">${escapedt}</p>`)
             break;
         case "img":
             form.insertAdjacentHTML("beforeend",`<img class="exec-res ms-2" src="data:image/png;base64,${res}" style="max-width: 95%;"/>`)
             break;
         case "error":
-            const escapede = utils.escapeHTML(res, true).replace(/\n/g, "<br>")
+            const escapede = helper.escapeHTML(res, true).replace(/\n/g, "<br>")
             form.insertAdjacentHTML("beforeend", `<p class="text-danger exec-res">${escapede}</p>`)
             break;
         default:

@@ -1,6 +1,6 @@
 //@ts-check
 
-import {p_id} from "./utils.js"
+import {problem_meta} from "./helper.js"
 import * as myclass  from "./myclass.js"
 
 /** node reset manager */
@@ -66,7 +66,7 @@ const reseter = {
      * @returns {Promise<object>}
     */
     async _fetchOriginNodes() {
-        const res = await fetch(`${window.location.origin}/problems/${p_id}/info`, {
+        const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/info`, {
             method: "GET"
         })
         if (res.ok) {

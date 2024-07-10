@@ -1,6 +1,6 @@
 //@ts-check
 
-import {p_id} from "./utils.js"
+import {problem_meta} from "./helper.js"
 
 export const myNode = {
     /** active node */
@@ -346,7 +346,7 @@ export class QuestionNode extends BaseNode {
 
         // toast.classList.remove("show")
         progress.classList.remove("d-none")
-        const res = await fetch(`${window.location.origin}/problems/${p_id}/scoring`, {
+        const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/scoring`, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -382,7 +382,7 @@ export class QuestionNode extends BaseNode {
      * 採点のキャンセル
      */
     canceling = async () => {
-        const res = await fetch(`${window.location.origin}/problems/${p_id}/cancel?kernel_id=${this.nodeId}`, {
+        const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/cancel?kernel_id=${this.nodeId}`, {
             method: "POST",
         })
         if (res.ok) {

@@ -2,14 +2,7 @@
 
 import { myNode } from "./myclass.js"
 import * as myclass from "./myclass.js"
-
-const groups = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/)?.groups
-/** current problem id (uuid) */
-export const p_id = groups?.p_id
-/** current user mode (problems or create)  */
-export const parentRoute = groups?.parent_path
-console.log(`problem_id(p_id) is '${p_id}'`)
-console.log(`parent path is '${parentRoute}'`)
+import { problem_meta } from "./helper.js"
 
 /**
  * Explain Nodeを追加する
@@ -129,24 +122,7 @@ export async function addQ(loc, pos, ptype) {
         throw new myclass.FetchError(res.status, res.statusText)
     }
 }
-/**
- * objのpropertyが変化した際にfuncを実行する
- * @param {object} obj 
- * @param {string} propName 
- * @param {function} func 
- */
-export function watchValue(obj, propName, func) {
-    let value = obj[propName];
-    Object.defineProperty(obj, propName, {
-        get: () => value,
-        set: newValue => {
-            const oldValue = value;
-            value = newValue;
-            func(obj, oldValue, newValue);
-        },
-        configurable: true
-    });
-}
+
 /**
  * ユーザーの入力を保存する
  */
@@ -157,7 +133,7 @@ export async function saveUserData() {
         const params = questionNode.extractQuestionParams(0)
         userInput[params.q_id] = params.answers
     })
-    const res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
+    const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/save`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -230,41 +206,4 @@ export async function downloadLog() {
     window.location.href = 
         `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
 }
-/**
- * showFilePickerでファイルピッカーを表示し, Fileオブジェクトを返す. 
- * @param {object} acceptMIME MINE typeがキー, ファイル拡張子のarrayが値のオブジェクト
- * @returns {Promise<File>} 選択されたファイルオブジェクト
- */
-export async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
-    const [handle] = await window.showOpenFilePicker({
-        multiple: false,
-        types: [
-            {
-                accept: acceptMIME
-            }
-        ]
-    })
-    const file = await handle.getFile()
-    return file
-}
-/**
- * 文字列をhtmlとansiエスケープする
- * @param {String} str 
- * @param {boolean} ansi 
- * @returns {String}
- */
-export function escapeHTML(str, ansi=false) {
-    if (ansi) {
-        var str =  str.replace(/\x1B[[;\d]+m/g, "")
-    }
-    return str.replace(/[&'`"<>]/g, function(match) {
-        return {
-            '&': '&amp;',
-            "'": '&#x27;',
-            '`': '&#x60;',
-            '"': '&quot;',
-            '<': '&lt;',
-            '>': '&gt;',
-        }[match]
-    });
-}
+
