@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional
 
 from jupyter_client.multikernelmanager import DuplicateKernelError
@@ -73,7 +74,7 @@ class KernelHandler(ApplicationHandler):
                     self.set_status(404, reason=f"{self.request.uri} is not Found.")
                     self.finish()
         except DuplicateKernelError as e:
-            self.set_status(500, reason=f"kernel({k_id}) is already started.")
+            self.set_status(500, reason=f"kernel({k_id}) is already exist.")
             self.finish()
         except KeyError as e:
             self.set_status(500, reason=f"kernel_id({k_id}) is not found in KM.")

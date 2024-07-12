@@ -11,13 +11,16 @@ import * as error from "./modules/error.js"
 
 
 document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
-document.querySelector("#headTitle").href = `/${helper.problem_meta.mode}`
+
 // markdown.js, highlight.jsの準備
 if (!helper.isCreateMode()) {
+    const mycat = document.querySelector("#problemCategory")?.innerHTML
+    document.querySelector("#headTitle").href = `/?category=${mycat}`
     document.querySelectorAll(".explain").forEach(elem => {
         elem.innerHTML = marked.parse(elem.innerHTML)
     })
-}else {
+} else {
+    document.querySelector("#headTitle").href = `/${helper.problem_meta.mode}`
     document.querySelectorAll(".node.explain").forEach(e => 
         myNode.explain(e).showPreview()
     )

@@ -3,7 +3,7 @@ from datetime import datetime, date
 import json 
 
 from jupyter_client import AsyncKernelManager, AsyncKernelClient
-from tornado.websocket import WebSocketHandler, WebSocketClosedError
+from tornado.websocket import WebSocketHandler
 from tornado.ioloop import IOLoop
 
 from pyplas.utils import get_logger, globals as g
@@ -36,11 +36,9 @@ class ExecutionHandler(WebSocketHandler):
         await self.kc.wait_for_ready()
         received_msg = json.loads(received_msg)
         mylogger.info(f"WS RECEIVE {self.request.uri}")
-        # await self.exec.wait()
-        _code = received_msg.get("code", None)
-        self.node_id = received_msg.get("node_id", None)
+        _code = received_msg.get("code", "")
+        self.node_id = received_msg.get("node_id", "unknown")
         self.kc.execute(_code)
-        # self.exec.clear()
         IOLoop.current().spawn_callback(self.messaging)
 
     async def messaging(self):
@@ -58,16 +56,14 @@ class ExecutionHandler(WebSocketHandler):
                 else:
                     output.update({"node_id": self.node_id})
                     self.write_message(json.dumps(output, default=datetime_encoda))
-            except WebSocketClosedError:
-                break
             except Exception:
                 break
 
     def on_close(self):
         mylogger.info(f"WS CLOSE({self.close_code}) {self.request.uri} ")
-        if self.close_code == 1000: 
+        if self.close_code == 1000: # when restarting kernel
             pass 
-        elif self.close_code == 1001:
+        elif self.close_code == 1001: # when closing page
             IOLoop.current().spawn_callback(wait_and_shutdown_kernel, kernel_id=self.kernel_id)
             mylogger.debug(f"kernel(kernel_id={self.kernel_id}) is stopped.")
 

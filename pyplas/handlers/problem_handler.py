@@ -3,6 +3,7 @@ from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from io import StringIO
 import json
+import sqlite3
 import sys
 from typing import Optional, Union, Tuple
 
@@ -42,8 +43,13 @@ class ProblemHandler(ApplicationHandler):
         # GET /problems/<p_id>/<action>    
         elif p_id is not None and action is not None: 
             if p_id == "log" and action == "download":
-                self.load_url_queries(["cat", "name", "num"])
-                self.log_downdload(**self.query)
+                try:
+                    self.load_url_queries(["cat", "name", "num"])
+                except tornado.web.MissingArgumentError:
+                    self.set_status(400, reason="Invalid url query. Please set 'cat', 'name', 'num'.")
+                    self.finish()
+                else:
+                    self.log_downdload(**self.query)
             elif action == "info":
                 self.get_problem_info(p_id=p_id)
             else:    
@@ -54,10 +60,11 @@ class ProblemHandler(ApplicationHandler):
         """
         DBから問題を取得し, レンダリングする
         """
-        sql = r"""SELECT pages.title, pages.page, 
+        sql = r"""SELECT pages.title, pages.page, categories.cat_name,
             COALESCE(user.progress.q_status, '{}') AS q_status, 
             COALESCE(user.progress.q_content, '{}') AS q_content
             FROM pages 
+            INNER JOIN categories ON category = categories.cat_id
             LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
             WHERE pages.p_id=:p_id AND status=1"""
         try:
@@ -73,7 +80,8 @@ class ProblemHandler(ApplicationHandler):
                             page=json.loads(page["page"]),
                             q_status=json.loads(page["q_status"]),
                             q_content=json.loads(page["q_content"]),
-                            progress=[])
+                            progress=[],
+                            category=page["cat_name"])
             except Exception as e:
                 mylogger.error(e, exc_info=True)
                 self.write_error(500)
@@ -152,6 +160,9 @@ class ProblemHandler(ApplicationHandler):
         except (InvalidJSONError, tornado.web.MissingArgumentError):
             self.set_status(400, reason="invalid request body or Invalid url query")
             self.finish()
+        except sqlite3.Error as e:
+            self.set_status(400, reason=str(e))
+            self.finish()
         except Exception as e:
             mylogger.error(e, exc_info=True)
             self.set_status(500, reason="internal server error")
@@ -170,17 +181,11 @@ class ProblemHandler(ApplicationHandler):
         write_p_status = r"""UPDATE user.progress SET 
             p_status = 1
             WHERE p_id = :p_id AND p_status == 0"""
-        try:
-            for key, value in self.json["q_content"].items():
-                assert isinstance(key, str), "data key is invalid type. expected 'str'"
-                assert isinstance(value, list), "data value is invalid type. expected 'list'"
-            g.db.write_to_db((write_content, write_p_status), p_id=p_id, 
-                            q_content=json.dumps(self.json["q_content"]))
-        except AssertionError:
-            raise InvalidJSONError
-        else:
-            self.finish({"body": json.dumps(self.json["q_content"]),
-                        "DESCR": "data is successfully saved."})
+
+        g.db.write_to_db((write_content, write_p_status), p_id=p_id, 
+                        q_content=json.dumps(self.json["q_content"]))
+        self.finish({"body": json.dumps(self.json["q_content"]),
+                    "DESCR": "data is successfully saved."})
 
     async def scoring(self, p_id:str) -> None:
         """
@@ -210,10 +215,12 @@ class ProblemHandler(ApplicationHandler):
             # html problem
             if self.json["ptype"] == 0: 
                 result, content = self.html_scoring()
-
             # code test problem
             elif self.json["ptype"] == 1: #  
                 result, content = await self.code_scoring()
+            else:
+                raise InvalidJSONError
+            
             q_status = 2 if False not in result else 1
             # write result to logs, progress table
             self._insert_and_update_progress(p_id=p_id, q_id=self.json["q_id"], 
