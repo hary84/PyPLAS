@@ -11,7 +11,7 @@ RUN apt-get update && \
     make && \
     make install && \
     cd .. && \
-    rm -rf sqlite-autoconf-3450000 sqlite-autoconf-3450000.tar.gz && \
+    rm -rf sqlite-autoconf-3450300 sqlite-autoconf-3450300.tar.gz && \
     apt-get remove -y wget build-essential && \
     apt-get autoremove -y && \
     apt-get clean
@@ -27,11 +27,12 @@ WORKDIR /app
 COPY . /app
 
 # # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -U pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # # Make port 80 available to the world outside this container
 EXPOSE 8888
 
 # # Run app.py when the container launches
-ENTRYPOINT ["python" "run.py"]
-CMD [""]
+ENTRYPOINT ["python", "run.py"]
+CMD []
