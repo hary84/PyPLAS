@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from typing import Optional
 import uuid
 
@@ -110,6 +111,9 @@ class ProblemCreateHandler(ApplicationHandler):
         except InvalidJSONError:
             self.set_status(400, reason="Invalid request message or Invalid url query")
             self.finish()
+        except sqlite3.Error as e:
+            self.set_status(400, reason=str(e))
+            self.finish()
         except Exception as e:
             mylogger.error(e, exc_info=True)
             self.set_status(500, reason="internal server error")
@@ -164,7 +168,7 @@ class ProblemCreateHandler(ApplicationHandler):
         elif p_id is not None and action is None:
             sql = r"""DELETE FROM pages WHERE p_id=:p_id"""
             g.db.write_to_db(sql, p_id=p_id)
-            self.finish({"kernel_id": p_id,
+            self.finish({"p_id": p_id,
                          "DESCR": f"Problem({p_id}) is successfully deleted."})
                 
         # DELETE /create/<p_id>/<action>

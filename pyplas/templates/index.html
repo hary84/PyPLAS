@@ -2,13 +2,7 @@
 
 {% block head %}
 <title>PyPLAS</title>
-<script type="module">
-    import {downloadLog} from "../static/js/modules/utils.js" 
-
-    document.querySelector("#logDownloader").addEventListener("click", async (e) => {
-        await downloadLog()
-    })
-</script>
+<script src="{{ static_url('js/index.js') }}" type="module"></script>
 {% end %}
 
 {% block head-nav-li %}

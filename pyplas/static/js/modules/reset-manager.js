@@ -1,7 +1,8 @@
 //@ts-check
 
-import {p_id} from "./utils.js"
+import {problem_meta} from "./helper.js"
 import * as myclass  from "./myclass.js"
+import * as error from "./error.js"
 
 /** node reset manager */
 const reseter = {
@@ -28,7 +29,7 @@ const reseter = {
      */
     async resetNode(node) {
         const nodeParams = await this.getOriginParams(node.nodeId)
-        if (nodeParams === undefined) {throw new myclass.ApplicationError("Nodeの取得に失敗しました")}
+        if (nodeParams === undefined) {throw new error.ApplicationError("Fail to get Node Object.")}
         if (node instanceof myclass.CodeNode && nodeParams.type == "code") {
             node.editor.setValue(nodeParams.content, -1)
         }
@@ -66,7 +67,7 @@ const reseter = {
      * @returns {Promise<object>}
     */
     async _fetchOriginNodes() {
-        const res = await fetch(`${window.location.origin}/problems/${p_id}/info`, {
+        const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/info`, {
             method: "GET"
         })
         if (res.ok) {
@@ -75,7 +76,7 @@ const reseter = {
             return json 
         }
         else {
-            throw new myclass.FetchError(res.status, res.statusText)
+            throw new error.FetchError(res.status, res.statusText)
         }
     },
 

@@ -34,6 +34,9 @@ class DBHandler:
         self.conn.execute(
             r"ATTACH DATABASE :user_path AS user", 
             {"user_path": self.user_path})
+        
+        self.conn.execute(r"PRAGMA foreign_keys=ON")
+        self.conn.commit()
 
     def _connect(self, path:str) -> sqlite3.Connection:
         """
@@ -134,7 +137,7 @@ class DBHandler:
             for q in sqls:
                 self.conn.execute(q, (kwargs))
         except sqlite3.Error as e:
-            print(e)
+            self.logger.error(e)
             self.conn.rollback()
             raise
         else:
@@ -155,7 +158,7 @@ class DBHandler:
         try:
             self.conn.executemany(sql, params)
         except sqlite3.Error as e:
-            print(e)
+            self.logger.error(e)
             self.conn.rollback()
             raise 
         else:

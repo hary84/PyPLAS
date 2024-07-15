@@ -1,6 +1,6 @@
 //@ts-check
-import {myNode, KernelError, FetchError} from "./myclass.js"
-
+import {myNode} from "./myclass.js"
+import * as error from "./error.js"
 
 class KernelHandler {
     constructor() {
@@ -231,3 +231,11 @@ class KernelHandler {
 
 const kh = new KernelHandler()
 export default kh
+
+/** KernelHandlerに関する基底エラー */
+export class KernelError extends error.ApplicationError {
+    /** @param {string} msg */
+    constructor(msg) {
+        super(msg)
+    }
+}

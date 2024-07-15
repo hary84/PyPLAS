@@ -2,14 +2,8 @@
 
 import { myNode } from "./myclass.js"
 import * as myclass from "./myclass.js"
-
-const groups = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/)?.groups
-/** current problem id (uuid) */
-export const p_id = groups?.p_id
-/** current user mode (problems or create)  */
-export const parentRoute = groups?.parent_path
-console.log(`problem_id(p_id) is '${p_id}'`)
-console.log(`parent path is '${parentRoute}'`)
+import { problem_meta } from "./helper.js"
+import * as error from "./error.js"
 
 /**
  * Explain Nodeを追加する
@@ -50,7 +44,7 @@ export async function addMD(loc, pos, {
         return explainNode
     }
     else {
-        throw new myclass.FetchError(res.status, res.statusText)
+        throw new error.FetchError(res.status, res.statusText)
     }
 
     }
@@ -93,7 +87,7 @@ export async function addCode(loc, pos, {
         return codeNode
     }
     else {
-        throw new myclass.FetchError(res.status, res.statusText)
+        throw new error.FetchError(res.status, res.statusText)
     }
 }
 /**
@@ -126,27 +120,10 @@ export async function addQ(loc, pos, ptype) {
         return questionNode
     }
     else {
-        throw new myclass.FetchError(res.status, res.statusText)
+        throw new error.FetchError(res.status, res.statusText)
     }
 }
-/**
- * objのpropertyが変化した際にfuncを実行する
- * @param {object} obj 
- * @param {string} propName 
- * @param {function} func 
- */
-export function watchValue(obj, propName, func) {
-    let value = obj[propName];
-    Object.defineProperty(obj, propName, {
-        get: () => value,
-        set: newValue => {
-            const oldValue = value;
-            value = newValue;
-            func(obj, oldValue, newValue);
-        },
-        configurable: true
-    });
-}
+
 /**
  * ユーザーの入力を保存する
  */
@@ -157,7 +134,7 @@ export async function saveUserData() {
         const params = questionNode.extractQuestionParams(0)
         userInput[params.q_id] = params.answers
     })
-    const res = await fetch(`${window.location.origin}/problems/${p_id}/save`, {
+    const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/save`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -168,16 +145,16 @@ export async function saveUserData() {
         console.log(`[save] ${json.DESCR}`)
         alert("Your answers are saved in the DB.")
     } else {
-        throw new myclass.FetchError(res.status, res.statusText)
+        throw new error.FetchError(res.status, res.statusText)
     }
 }
 /**
  * ipynbをparseして, locの末尾にnodeとして挿入する
- * @param {File} file           fileオブジェクト
- * @param {Element} loc         nodeを追加する要素
- * @param {boolean} markdown    markdownを追加するか
+ * @param {File} file           
+ * @param {Element} loc         
+ * @param {number} user         
  */
-export async function loadIpynb(file, loc, markdown=true, {user=1}={}) {
+export async function loadIpynb(file, loc, user=1) {
     const ipynb = file
     console.log(`[FileReader] Load '${ipynb.name}' and embed in page.`)
     const reader = new FileReader()
@@ -198,7 +175,7 @@ export async function loadIpynb(file, loc, markdown=true, {user=1}={}) {
                     allow_del:true,
                 })
             }
-            else if (markdown && cell.cell_type == "markdown") {
+            else if (user==1 && cell.cell_type == "markdown") {
                 const node = await addMD(loc, "beforeend", {
                     content:cell.source.join(""), 
                     allow_del:true,
@@ -213,58 +190,83 @@ export async function loadIpynb(file, loc, markdown=true, {user=1}={}) {
     }
 }
 /**
- * DBからログを取得し, csvとしてダウンロードする
+ * ページ全体をパースしてサーバーに登録を要請する
  */
-export async function downloadLog() {
-    const number = document.querySelector("#inputNumber").value 
-    const name = document.querySelector("#inputName").value 
+export async function registerProblem() {
 
-    if (number.length == 0 || name.length == 0) {
-        alert("Input your name or student number.")
+    const title = document.querySelector("#titleForm")?.value
+    if (title === undefined || title.length == 0) {
+        alert("input problem title")
         return 
     }
 
-    const cat = window.location.search.match(/category=(?<cat_name>[-\w]+)/)?.groups?.cat_name
-    if (cat === undefined) {throw new myclass.ApplicationError("Can not get current category.")}
-
-    window.location.href = 
-        `${window.location.origin}/problems/log/download?cat=${cat}&name=${name}&num=${number}`
-}
-/**
- * showFilePickerでファイルピッカーを表示し, Fileオブジェクトを返す. 
- * @param {object} acceptMIME MINE typeがキー, ファイル拡張子のarrayが値のオブジェクト
- * @returns {Promise<File>} 選択されたファイルオブジェクト
- */
-export async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
-    const [handle] = await window.showOpenFilePicker({
-        multiple: false,
-        types: [
-            {
-                accept: acceptMIME
-            }
-        ]
+    // 概要欄のSummary, Data Source, Environmentを取得
+    const headers = []
+    document.querySelectorAll("#summary .node.explain").forEach(e => {
+        const explainNode = myNode.explain(e)
+        headers.push(explainNode.editor.getValue())
     })
-    const file = await handle.getFile()
-    return file
-}
-/**
- * 文字列をhtmlとansiエスケープする
- * @param {String} str 
- * @param {boolean} ansi 
- * @returns {String}
- */
-export function escapeHTML(str, ansi=false) {
-    if (ansi) {
-        var str =  str.replace(/\x1B[[;\d]+m/g, "")
+    // The Source CodeからNodeを取得
+    const body = []
+    const answers = {}
+    let q_id = 1
+    document.querySelectorAll("#nodesContainer > .node").forEach(e => {
+        const node = myNode.get(e)
+        // Explain Node
+        if (node instanceof myclass.ExplainNode) {
+            body.push({
+                "type": "explain",
+                "content": node.editor.getValue()
+            })
+        }
+        // Code Node
+        else if (node instanceof myclass.CodeNode) {
+            const params = node.extractCodeParams()
+            body.push({
+                "type": "code",
+                "content": params.content,
+                "readonly": params.readonly
+            })
+        }
+        // Question Node
+        else if (node instanceof myclass.QuestionNode) {
+            const params = node.extractQuestionParams(1)
+            answers[`${q_id}`] = params.answers 
+            body.push({
+                "type": "question",             // str
+                "q_id": String(q_id),           // str
+                "ptype": params.ptype,          // int
+                "conponent": params.conponent,  // dict
+                "question": params.question,    // str
+                "editable": params.editable,    // bool
+            })
+            q_id += 1
+        }
+    })
+    const page = {
+        "header": {"summary": headers[0],
+                   "source": headers[1],
+                   "env": headers[2]},
+        "body": body
     }
-    return str.replace(/[&'`"<>]/g, function(match) {
-        return {
-            '&': '&amp;',
-            "'": '&#x27;',
-            '`': '&#x60;',
-            '"': '&quot;',
-            '<': '&lt;',
-            '>': '&gt;',
-        }[match]
-    });
+    const send_msg = {
+        "title": title,       // str
+        "page": page,         // dict
+        "answers": answers    // dict
+    }
+
+    const res = await fetch(`${window.location.origin}/create/${problem_meta.p_id}/register`,{
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(send_msg)
+    })
+    if (res.ok) {
+        const json = await res.json()
+        console.log(`[register] ${json.DESCR}`)
+        alert("the problem is saved in DB.")
+        window.location.href = `/create/${json.p_id}`
+    }
+    else {
+        throw new error.FetchError(res.status, res.statusText)
+    } 
 }

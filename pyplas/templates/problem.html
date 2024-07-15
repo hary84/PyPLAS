@@ -4,8 +4,13 @@
 <title>PyPLAS - {{ title }}</title>
 <style>
     .node-control .btn-addMD {display: none !important;}
+    .question[ptype="1"] > .card-body > .answer-content > .code.node {
+        .dropdown.code-options {
+            display: none;
+        }
+    }
 </style>
-<script src="{{ static_url('js/problem-event-listeners.js') }}" type="module"></script>
+<script src="{{ static_url('js/notebook.js') }}" type="module"></script>
 {% end %}
 
 {% block head-nav-li %}
@@ -94,6 +99,9 @@
 </main>
 <div class="col-xxl-2 d-none d-xxl-block bg-white border-start">
     <div class="mt-5 position-sticky" style="top: 10%;">
+        <h4>Category: </h4>
+        <h4 class="mb-4"><span class="badge bg-info" id="problemCategory">{{ category }}</span></h4>
+        <h4>Questions</h4>
         <nav id="question-nav" class="h-100 flex-column align-items-stretch pe-4">
             <nav class="nav nav-pills flex-column">
                 {% set i = 1%}
