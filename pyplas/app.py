@@ -55,15 +55,14 @@ async def main():
 
     def shutdown_server(signum, frame):
         print()
+        for p in  ProblemHandler.execute_pool.values():
+            p.kill()
+        logger.info(f"[Server Stop] All Subprocess are killed")
+
+        run_sync(g.km._async_shutdown_all)()
+        logger.info("[Server Stop] All Ipykernel are successfully shutteddown.")
         g.db.close()
         logger.info("[Server Stop] DB is successfully closed.")
-        for ex, f in ProblemHandler.execute_pool.values():
-            for e in ex._processes.values():
-                print(f"[Server Stop] Process: {e} is killed")
-                logger.info(f"[Server Stop] Process: {e} is killed")
-                e.kill()
-        run_sync(g.km._async_shutdown_all)()
-        logger.info("[Server Stop] All Ipykernel is successfully shutteddown.")
         shutdown_event.set()
 
     signal.signal(signal.SIGTERM, shutdown_server)

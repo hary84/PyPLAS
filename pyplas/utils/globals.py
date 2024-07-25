@@ -12,6 +12,8 @@ STATIC_DIR = "pyplas/static"
 
 SCHEMA_PATH = "pyplas/models/schema"
 
+PYTHON_TEMP_DIR = "pyplas/temp"
+
 db: DBHandler = None
 
 km = AsyncMultiKernelManager()

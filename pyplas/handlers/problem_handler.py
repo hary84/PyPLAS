@@ -1,10 +1,9 @@
-import asyncio
-from concurrent.futures import ProcessPoolExecutor
-from concurrent.futures.process import BrokenProcessPool
 from io import StringIO
 import json
+import os
 import sqlite3
-import sys
+import subprocess
+import tempfile
 from typing import Optional, Union, Tuple
 
 import pandas as pd 
@@ -240,10 +239,11 @@ class ProblemHandler(ApplicationHandler):
         p_id: str
             問題のid
         """
-        executor = ProblemHandler.execute_pool.pop(self.query["kernel_id"], None)
-        if executor is not None:
-            for e in executor._processes.values():
-                e.kill()
+        kernel_id = self.query["kernel_id"]
+        process = ProblemHandler.execute_pool.pop(kernel_id, None)
+        if process is not None:
+            process.kill()
+            mylogger.debug(f"cancel code scoring({kernel_id})")
         self.finish({"DESCR": "Code testing is successfully canceled."})
 
     def html_scoring(self) -> Tuple[list, str]:
@@ -282,29 +282,38 @@ class ProblemHandler(ApplicationHandler):
         content: str
             toastに表示される文字列
         """
-        # set up test kernel
-        kernel_id = self.json["kernel_id"]
         code = "\n".join(self.json["answers"] + self.target_answers)
-        executor = ProcessPoolExecutor(max_workers=1)
-        future = IOLoop.current().run_in_executor(executor, custom_exec, code)
-        ProblemHandler.execute_pool[kernel_id] = executor
-        try:
-            await future
-        except BrokenProcessPool as e:
+        with tempfile.NamedTemporaryFile(delete=True, dir=g.PYTHON_TEMP_DIR, suffix=".py") as tmp:
+            mylogger.debug(f"create temporary file: {tmp.name}")
+            file_path = os.path.join(g.PYTHON_TEMP_DIR, tmp.name)
+            with open(file_path, "w") as f:
+                f.write(code)
+                mylogger.debug(f"write codes in temporary file({tmp.name})")
+
+            process = subprocess.Popen(["python", file_path],
+                                       stdout=subprocess.PIPE, 
+                                       stderr=subprocess.PIPE)
+            ProblemHandler.execute_pool[self.json["kernel_id"]] = process
+            future = IOLoop.current().run_in_executor(None, process.communicate)
+            stdout, stderr = await future 
+            returncode = process.returncode
+
+        decoded_stdout = stdout.decode()
+        decoded_stderr = stderr.decode()
+        mylogger.debug(f"subprocess returncode is {returncode}")
+
+        if returncode == -9:
             result = [False]
-            content = f"[Cancel]: The code execution process has been destroyed."
-        except Exception as e:
-            for process in executor._processes.values():
-                process.kill()
-            result = [False]
-            content = f"[{e.__class__.__name__}] {e}"
-        else:
+            content = "Code Scoring has been cancelled."
+        elif returncode == 0:
             result = [True]
             content = "Complete"
-        finally:
-            ProblemHandler.execute_pool.pop(kernel_id, None)
+        else:
+            result = [False]
+            content = decoded_stderr
 
-        return (result, content)    
+        ProblemHandler.execute_pool.pop(self.json["kernel_id"], None)
+        return (result, content)
 
     def _insert_and_update_progress(self, p_id: str, q_id:str, q_status:int, content:str,
                                     keys: list) -> None:
@@ -345,27 +354,3 @@ class ProblemHandler(ApplicationHandler):
                          p_id=p_id, q_id=q_id,
                          status=q_status,
                          content=content)
-
-
-def custom_exec(code: str) -> None:
-    """
-    exec()関数を使って任意のコードを実行する
-
-    Parameters
-    ----------
-    code: str
-        実行したいコード
-    """
-    original_stdout = sys.stdout 
-    sys.stdout = StringIO()
-    ls = {}
-    try:
-        exec(
-            "async def __ex(): " +
-            "".join(f"\n    {row}" for row in code.split('\n')),
-            {},
-            ls
-        )
-        asyncio.run(ls["__ex"]())
-    finally:
-        sys.stdout = original_stdout
