@@ -3,4 +3,3 @@
 __pycache__/
 
 /pyplas/database/*.db
-!/pyplas/database/pyplas.db
