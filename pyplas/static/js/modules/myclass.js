@@ -313,15 +313,21 @@ export class QuestionNode extends BaseNode {
                 editable = this.element.querySelector(".editable-flag").checked // editable
                 if (!editable) { // conponent
                     answerContent.querySelectorAll(".node").forEach(e => {
-                        if (e.classList.contains("explain")) {
-                            var type = "explain"
-                            var content = new ExplainNode(e).editor.getValue()
+                        const n = myNode.get(e)
+                        if (n instanceof ExplainNode) {
+                            conponent.push({
+                                "type": "explain",
+                                "content": n.editor.getValue()
+                            })
                         }
-                        else if (e.classList.contains("code")) {
-                            var type = "code"
-                            var content = new CodeNode(e).editor.getValue()
+                        else if (n instanceof CodeNode) {
+                            const param = n.extractCodeParams()
+                            conponent.push({
+                                "type": "code",
+                                "content": param.content,
+                                "readonly": param.readonly
+                            })
                         }
-                        conponent.push({"type": type, "content": content})
                     })
                 }
             }
