@@ -2,19 +2,9 @@ from jupyter_client import AsyncMultiKernelManager
 import tornado
 
 from pyplas.models import DBHandler
+from .. import config as cfg
 
-PROBLEM_DB_PATH = "pyplas/database/pyplas.db"
-USER_DB_PATH = "pyplas/database/user.db"
-DEV_USER_DB_PATH = "pyplas/database/dev-user.db"
-
-TEMPLATE_DIR = "pyplas/templates"
-STATIC_DIR = "pyplas/static"
-
-SCHEMA_PATH = "pyplas/models/schema"
-
-PYTHON_TEMP_DIR = "pyplas/temp"
-
-db: DBHandler = None
+db = DBHandler()
 
 km = AsyncMultiKernelManager()
 km.updated = tornado.locks.Event()

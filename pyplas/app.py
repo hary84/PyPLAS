@@ -7,8 +7,8 @@ import tornado
 
 from pyplas.utils import get_logger, globals as g
 from . import uimodules
+from . import config as cfg
 from pyplas.handlers import *
-from pyplas.models import DBHandler
 
 
 # parse command-line argment
@@ -18,10 +18,7 @@ parser.add_argument("-d", "--develop", action="store_true", help="Run the server
 args = parser.parse_args()
 
 # setup global variables
-g.db = DBHandler(page_path=g.PROBLEM_DB_PATH,
-                 user_path=g.USER_DB_PATH,
-                 dev_user_path=g.DEV_USER_DB_PATH,
-                 dev_mode=args.develop)
+g.db.setup(dev_mode=args.develop)
 
 logger = get_logger(__name__)
 
@@ -41,8 +38,8 @@ def make_app():
         (r"/api/render/?", RenderHTMLModuleHandler),
     ],
     default_handler_class=ErrorHandler,
-    template_path=g.TEMPLATE_DIR,
-    static_path=g.STATIC_DIR,
+    template_path=cfg.TEMPLATE_DIR,
+    static_path=cfg.STATIC_DIR,
     debug=True,
     ui_modules=uimodules,
     develop=args.develop,
