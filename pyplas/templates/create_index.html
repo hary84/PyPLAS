@@ -34,6 +34,7 @@
               <td><input type="text" class="title-form form-control form-control-sm" for="title" value="{{ d['title'] }}"></td>
               <td>
                 <select class="select-category form-select form-select-sm" for="category">
+                  <option value="" {{"selected" if d['category'] is None else "" }}>None</option>
                   {% for cat_d in categories %}
                     <option value="{{ cat_d['cat_id'] }}" {{"selected" if d['category'] == cat_d['cat_id'] else "" }}>{{ cat_d['cat_name'] }}</option>
                   {% end %}
