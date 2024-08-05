@@ -215,7 +215,7 @@ class ProblemHandler(ApplicationHandler):
             if self.json["ptype"] == 0: 
                 result, content = self.html_scoring()
             # code test problem
-            elif self.json["ptype"] == 1: #  
+            elif self.json["ptype"] == 1:  
                 result, content = await self.code_scoring()
             else:
                 raise InvalidJSONError
@@ -223,9 +223,9 @@ class ProblemHandler(ApplicationHandler):
             q_status = 2 if False not in result else 1
             # write result to logs, progress table
             self._insert_and_update_progress(p_id=p_id, q_id=self.json["q_id"], 
-                                                q_status=q_status,
-                                                content=json.dumps(self.json["answers"]),
-                                                keys=keys) 
+                                            q_status=q_status,
+                                            content=json.dumps(self.json["answers"]),
+                                            keys=keys) 
             self.finish({"content": content,
                         "progress": q_status,
                         "DESCR": "Scoring complete."})
@@ -288,7 +288,6 @@ class ProblemHandler(ApplicationHandler):
             file_path = os.path.join(cfg.PYTHON_TEMP_DIR, tmp.name)
             with open(file_path, "w") as f:
                 f.write(code)
-                mylogger.debug(f"write codes in temporary file({tmp.name})")
 
             process = subprocess.Popen(["python", file_path],
                                        stdout=subprocess.PIPE, 

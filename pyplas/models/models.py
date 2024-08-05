@@ -150,7 +150,7 @@ class DBHandler:
             for q in sqls:
                 self.conn.execute(q, (kwargs))
         except sqlite3.Error as e:
-            self.logger.error(e)
+            self.logger.error(e, exc_info=True)
             self.conn.rollback()
             raise
         else:
