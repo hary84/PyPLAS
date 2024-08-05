@@ -4,98 +4,111 @@ import sqlite3
 from typing import Optional, Union
 
 from pyplas.utils.log import get_logger
+from .. import config as cfg
 
+class InvalidDBSchema(Exception):
+    """DBの構造が無効"""
+
+
+def create_problem_db(path: str):
+    """空の問題DBを作成する. 
+    
+    Parameters
+    ----------
+    path: str
+        DBの保存先パス
+    """
+    with open(os.path.join(cfg.SCHEMA_PATH, "categories.sql"), "r", encoding="utf-8") as f:
+        categories = f.read(-1)
+
+    with open(os.path.join(cfg.SCHEMA_PATH, "pages.sql"), "r", encoding="utf-8") as f:
+        pages = f.read(-1)
+
+    with sqlite3.connect(path) as conn:
+        conn.executescript(categories)
+        conn.execute(pages)
+        conn.commit()
+
+def create_user_db(path: str):
+    """空のユーザDBを作成する
+    
+    Parameters
+    ----------
+    path: str
+        DBの保存先パス
+    """
+    with open(os.path.join(cfg.SCHEMA_PATH, "logs.sql"), "r", encoding="utf-8") as f:
+        logs = f.read(-1)
+
+    with open(os.path.join(cfg.SCHEMA_PATH, "progress.sql"), "r", encoding="utf-8") as f:
+        progress = f.read(-1)
+
+    with sqlite3.connect(path) as conn:
+        conn.executescript(logs)
+        conn.executescript(progress)
+        conn.commit()
+
+def check_db_schema(db_path: str, table_name: list[str]):
+    """DBのschemaが正しいかをチェックする. 正しくない場合, 
+    InvalidDBSchemaエラーを発生させる. """
+
+    for tname in table_name:
+        with sqlite3.connect(db_path) as conn:
+            cur = conn.execute(r"SELECT sql FROM sqlite_master WHERE name = :name",
+                        {"name": tname})
+            actual = cur.fetchone()[0]
+            
+        with open(os.path.join(cfg.SCHEMA_PATH, f"{tname}.sql"), "r", encoding="utf-8") as f:
+            correct = f.read(-1)
+
+        if actual != correct:
+            raise InvalidDBSchema
 
 class DBHandler:
     """
     DBに関わる処理を行うクラス
     """
-    def __init__(self, page_path:str, user_path:str, dev_user_path:str,
-                 dev_mode:bool=False):
-        self.page_path:str = page_path 
-        self.user_path:str = user_path 
-        self.dev_mode:bool = dev_mode
+    def __init__(self):
+        self.page_path = cfg.PROBLEM_DB_PATH
         self.conn:Optional[sqlite3.Connection] = None
         self.logger: Logger = get_logger(self.__class__.__name__)
 
-        # set dev_user_path in self.user_path if dev_mode is true
+    def setup(self, dev_mode:bool=False):
+        """ユーザDBへのパスを設定し, 問題DBに接続する."""
+        self.dev_mode = dev_mode
         if self.dev_mode:
-            self.user_path = dev_user_path
-            self._clean_up()
+            self.user_path = cfg.DEV_USER_DB_PATH
+        else:            
+            self.user_path = cfg.USER_DB_PATH
+        self._connect()
 
-        # create user.db/dev-user.db if not exist
+    def _connect(self) -> sqlite3.Connection:
+        """
+        問題DBに接続し, ユーザDBをATTACHする. 問題/ユーザDBが存在しない, またはschemaが異なる場合, 
+        空の問題/ユーザDBを作成する. 
+
+        このメソッドは直接呼び出さない.
+        """
+        if not os.path.exists(self.page_path):
+            create_problem_db(self.page_path)
+            self.logger.info(f"create problem DB ({self.page_path})")
+        else:
+            check_db_schema(self.page_path, ["categories", "pages"])
+
         if not os.path.exists(self.user_path):
-            self._setup_user_db(self.user_path)
+            create_user_db(self.user_path)
+            self.logger.info(f"create user DB ({self.user_path})")
 
-        # connect pyplas.db 
-        self.conn = self._connect(self.page_path)
+        else:
+            check_db_schema(self.user_path, ["logs", "progress"])
 
-        # attach user.db in pyplas.db
-        self.conn.execute(
-            r"ATTACH DATABASE :user_path AS user", 
-            {"user_path": self.user_path})
-        
-        self.conn.execute(r"PRAGMA foreign_keys=ON")
+        self.conn = sqlite3.connect(self.page_path)
+        self.conn.row_factory = self._dict_factory
+        self.conn.execute(r"ATTACH DATABASE :user_path AS user", 
+                          {"user_path": self.user_path})
+        self.conn.execute(r"PRAGMA foreign_key=ON")
         self.conn.commit()
-
-    def _connect(self, path:str) -> sqlite3.Connection:
-        """
-        DBに接続する. pathに.dbファイルが存在しない場合, FileNotFoundErrorを投げる.
-
-        このメソッドは直接呼び出さない.
-
-        Parameters
-        ----------
-        path: str
-            dbファイルのパス
-
-        Returns
-        -------
-        conn: sqlite3.Connection 
-            dbとのコネクションオブジェクト
-        """
-        if not os.path.exists(path):
-            raise FileNotFoundError
-        conn = sqlite3.connect(path)
-        conn.row_factory = self._dict_factory
-        self.logger.debug(f"connect with DB({path})")
-        return conn
-    
-    def _setup_user_db(self, db_path:str) -> None:
-        """
-        userデータ用DBを用意する. テーブルが存在しないならば, logsテーブルとprogressテーブルを作成する.
-
-        このメソッドは直接呼び出さない.
-
-        Parameters
-        ----------
-        db_path: str
-            userデータ用DBファイルのパス
-        """
-        conn = sqlite3.connect(db_path)
-        
-        create_logs = r"""CREATE TABLE IF NOT EXISTS logs (
-            p_id TEXT,
-            category INT NOT NULL,
-            q_id TEXT NOT NULL,
-            content TEXT NOT NULL,
-            result INT NOT NULL,
-            answer_at DEFAULT CURRENT_TIMESTAMP,
-            CHECK(result = 1 OR result = 2)
-        )"""
-        create_progress = r"""CREATE TABLE IF NOT EXISTS progress (
-            p_id TEXT PRIMARY_KEY UNIQUE,
-            q_status JSON NOT NULL,
-            q_content JSON NOT NULL,
-            p_status INT DEFAULT 0,
-            CHECK(p_status = 0 OR p_status = 1 OR p_status = 2)
-        )"""
-        conn.execute(create_logs)
-        conn.execute(create_progress)
-        conn.commit()
-        conn.close()
-        self.logger.debug(f"initialize user DB({db_path})")
-
+        self.logger.debug(f"connect with DB({self.page_path})")
 
     def _dict_factory(self, cursor, row):
         """
@@ -137,7 +150,7 @@ class DBHandler:
             for q in sqls:
                 self.conn.execute(q, (kwargs))
         except sqlite3.Error as e:
-            self.logger.error(e)
+            self.logger.error(e, exc_info=True)
             self.conn.rollback()
             raise
         else:
@@ -185,7 +198,6 @@ class DBHandler:
             if self.check_connect():
                 self.logger.warn(f"Before delete db file, please disconnect from the database({self.page_path})")
             os.remove(self.user_path)
-            self.logger.debug("The DB has been cleaned up.")
 
     def close(self) -> None:
         """

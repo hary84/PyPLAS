@@ -7,7 +7,7 @@ import tornado
 from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
 
-from pyplas.models import validate_json
+from pyplas.utils.helper import validate_json
 
 class InvalidJSONError(Exception):
     """POST, PUT, DELETE等でRequest-Bodyから取得したJSONが無効な形式"""
