@@ -35,6 +35,8 @@ def make_app():
         (r"/create/?", ProblemCreateHandler),
         (r"/create/(?P<p_id>[\w-]*)/?", ProblemCreateHandler),
         (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
+        (r"/category/?", CategoryHandler),
+        (r"/category/(?P<cat_id>[\w-]+)/?", CategoryHandler),
         (r"/api/render/?", RenderHTMLModuleHandler),
     ],
     default_handler_class=ErrorHandler,
