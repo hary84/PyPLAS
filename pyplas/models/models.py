@@ -106,7 +106,7 @@ class DBHandler:
         self.conn.row_factory = self._dict_factory
         self.conn.execute(r"ATTACH DATABASE :user_path AS user", 
                           {"user_path": self.user_path})
-        self.conn.execute(r"PRAGMA foreign_key=ON")
+        self.conn.execute(r"PRAGMA foreign_keys=ON")
         self.conn.commit()
         self.logger.debug(f"connect with DB({self.page_path})")
 

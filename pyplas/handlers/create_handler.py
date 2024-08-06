@@ -147,7 +147,12 @@ class ProblemCreateHandler(ApplicationHandler):
         """
         pagesテーブルのprofile(title, category, status)を変更する
         """
-        sql = r"""UPDATE pages SET title=:title, category=:category, status=:status 
+        sql = r"""UPDATE pages SET title=:title, 
+        category=CASE
+            WHEN :category = "" THEN NULL
+            ELSE :category
+            END,
+            status=:status 
         WHERE p_id=:p_id"""
         params = [{"p_id": key} | v for key, v in self.json["profiles"].items()]
         g.db.write_to_db_many(sql, params)

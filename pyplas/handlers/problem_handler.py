@@ -63,7 +63,7 @@ class ProblemHandler(ApplicationHandler):
             COALESCE(user.progress.q_status, '{}') AS q_status, 
             COALESCE(user.progress.q_content, '{}') AS q_content
             FROM pages 
-            INNER JOIN categories ON category = categories.cat_id
+            LEFT OUTER JOIN categories ON category = categories.cat_id
             LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
             WHERE pages.p_id=:p_id AND status=1"""
         try:
