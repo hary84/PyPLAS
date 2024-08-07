@@ -14,47 +14,17 @@
 {% end %}
 
 {% block head-nav-li %}
-<li class="nav-item px-4">
-    <a href="/" class="nav-link text-light">Home</a>
+<li class="nav-item align-self-center">
+    <a href="/" class="nav-link text-light"><i class="bi bi-house"></i> Home</a>
 </li>
-<li class="nav-item px-4">
-    <a href="" class="nav-link text-light disabled">prev</a>
-</li>
-<li class="nav-item px-4">
-    <a href="" class="nav-link text-light disabled">next</a>
+<li class="nav-item align-self-center">
+    <a href="/?category={{category}}" class="nav-link text-light text-decoration-underline">My Category</a>
 </li>
 {% end %}
 
 {% block side-content %}
 <p class="fs-5 fw-bold border-bottom px-2">SideMenu</p>
 {% module Template('modules/side_kernel_ops.html') %}
-<div class="accordion" id="accordionExample">
-    <div class="accordion-item">
-        <h2 class="accordion-header">
-            <button class="accordion-button py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProgress" aria-expanded="true" aria-controls="collapseProgress">
-            Progress
-            </button>
-        </h2>
-        <div id="collapseProgress" class="accordion-collapse collapse show">
-            <div class="accordion-body px-1 ">
-                <div class="list-group list-group-flush" style="font-size: 0.9rem;">
-                    {% for d in progress %}
-                        <a class="list-group-item pe-0 ps-1 py-1 rounded {% if conponent['id'] == d['id'] %} list-group-item-secondary {% end %}" href="/problems/{{ d['id'] }}">
-                            {% if d["status"] == 0 %}
-                            <i class="bi bi-circle text-dark"></i>
-                            {% elif d["status"] == 1 %} 
-                                <i class="bi bi-triangle text-warning"></i>
-                            {% elif d["status"] == 2 %}
-                                <i class="bi bi-check2-circle text-success"></i>
-                            {% end %}
-                            {{ d["title"] }}
-                        </a>
-                    {% end %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% end %}
 
 {% block main %}

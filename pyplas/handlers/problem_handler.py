@@ -79,7 +79,6 @@ class ProblemHandler(ApplicationHandler):
                             page=json.loads(page["page"]),
                             q_status=json.loads(page["q_status"]),
                             q_content=json.loads(page["q_content"]),
-                            progress=[],
                             category=page["cat_name"])
             except Exception as e:
                 mylogger.error(e, exc_info=True)

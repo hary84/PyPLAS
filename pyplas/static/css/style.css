@@ -1,3 +1,11 @@
+:root {
+  --z-index-base: 1000;
+  --z-index-code-config: calc(var(--z-index-base) + 10);
+  --z-index-toast: calc(var(--z-index-base) + 20);
+  --z-index-header: calc(var(--z-index-base) + 30);
+  --z-index-offcanvas: calc(var(--z-index-base) + 100) /** max **/
+}
+
 .only-inq {
   display: none;
 }
@@ -6,6 +14,7 @@
   display: block;
 }
 
+/* when node is selected */
 .active-node {
     border-left: solid 0.5rem var(--bs-primary);
     border-radius: 2%;
@@ -22,9 +31,11 @@
   }
 }
 
-/* =============
-  node container 
-================ */
+/* ==================================
+  nodesContainer
+  - Nodes directly under this element
+===================================== */
+
 #nodesContainer > .explain {
   margin-left: 1rem !important;
 }
@@ -49,29 +60,15 @@
   animation-iteration-count: infinite;
 }
 
-
-/* ========
-  accordion 
-=========== */
-.accordion-button:focus {
-  box-shadow: none;
-  border-color: rgba(0,0,0,.125);
-}
-.accordion-button:not(.collapsed) {
-  opacity: 100%;
-  background-color: white;
-}
-
-
-/* =======================
+/* ===========================================================
   dynamic-nodes-container
-========================== */
-/* 共通 */
+  - Element to which nodes is dynamically added directly below
+============================================================== */
 .dynamic-nodes-container {
   border: dotted;
   background-color: rgb(247 247 247);
 } 
-/* 共通 内部にNodeオブジェクトが存在する場合 */
+/* When there are Nodes in */
 .dynamic-nodes-container:has(.node) {
   .node-control {
     .btn-group {
@@ -93,9 +90,7 @@
       display: none;
   }
 }
-/* .dynamic-nodes-container内部にNodeオブジェクトが存在しない場合
-     (#nodeContainerをもつ場合)
- */
+/* when there are not Nodes in (with #nodesContainer) */
 .dynamic-nodes-container#nodesContainer:not(:has(.node)) {
   text-align: center;
   height: auto;
@@ -106,9 +101,7 @@
       opacity: 0.6;
   }
 } 
-/* .dynamic-nodes-container内部にNodeオブジェクトが存在しない場合
-     (answer-contentをもつ場合)
- */
+/* when there are not Nodes in (with .answer-content) */
 .dynamic-nodes-container.answer-content:not(:has(.node)) {
   .node-control {
     .btn {
@@ -121,7 +114,7 @@
 }
 
 /* ===========
-  editor
+  Editor
 ============== */
 .editor {
   height: auto;
@@ -214,7 +207,6 @@
   question Node 
 =============== */
 .question {
-/* card-header */
   .card-header {
     .btn {
       height: 1.5rem;
@@ -227,7 +219,6 @@
       }
     }
   }
-/* card-body */
   .card-body {
     .mde  .toolbar  .only-inq { display: block; } 
     .node-control .toggle-addQ {display: none !important;}
@@ -243,6 +234,7 @@
     }
   }
 }
+/* when answers is wrong */
 .question[progress="1"] {
   .toast {
     border: solid var(--bs-danger);
@@ -256,6 +248,7 @@
     }
   }
 }
+/* when answers is correct */
 .question[progress="2"] {
   .toast {
     border: solid var(--bs-success);
@@ -271,7 +264,7 @@
 }
 
 
-/* 各question Nodeの進捗バッチ */
+/* progress badge */
 *[progress="0"] {
   .progress-badge {
     background-color: var(--bs-gray-300);

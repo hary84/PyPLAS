@@ -18,27 +18,27 @@
     {% end %}
   </head>
   <body>
-      <header class="navbar bg-dark d-frex flex-wrap py-2 px-5 justify-content-center shadow position-sticky" style="top: 0;z-index: 10000;">
-          <a href="/" class="d-frex text-decoration-none me-md-auto" id="headTitle">
-              <img src="{{ static_url('img/logo/logo.jpg') }}" alt="logo" height=45 class="align-middle rounded">
-              <span class="text-light fs-2 px-2 d-inline-block align-middle">PyPLAS</span>
-              <span class="text-light fs-4 d-none d-xxl-inline-block align-bottom">Python Programming Learning Assistant System</span>
-          </a>
-          <ul class="nav fs-5 text-light">
-            {% block head-nav-li %}
-            {% end %}
-            <li class="d-lg-none">
-                <button class="nav-link text-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#SideMenu" aria-controls="sideMenu"
-                aria-expanded="false" aria-label="Toggle navigation">
+      <header class="bg-dark py-2 shadow position-sticky top-0" style="z-index: var(--z-index-header);">
+        <div class="container-xxl d-flex">
+            <a href="/" class="d-frex text-decoration-none me-auto" id="headTitle">
+                <img src="{{ static_url('img/logo/logo.jpg') }}" alt="logo" height=45 class="align-middle rounded">
+                <span class="text-light fs-2 px-2 d-inline-block align-middle">PyPLAS</span>
+                <span class="text-light fs-4 d-none d-lg-inline-block align-bottom">Python Programming Learning Assistant System</span>
+            </a>
+            <ul class="nav me-5">
+              {% block head-nav-li %}
+              {% end %}
+            </ul>
+            <button class="d-lg-none ms-lg-auto nav-link fs-2 text-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#SideMenu" aria-controls="sideMenu"
+                ria-expanded="false" aria-label="Toggle navigation">
                 <i class="bi bi-list"></i>
-                </button>
-            </li>
-        </ul>
+            </button>
+        </div>
       </header>
     <div class="container-xxl">
         <div class="row">
-            <div class="bg-white col-lg-2 offcanvas-lg mt-3 border-end">
-                <div class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" data-bs-scroll="true" id="SideMenu">
+            <div class="bg-white col-lg-2 mt-3 border-end">
+                <div class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" data-bs-scroll="true" id="SideMenu" style="z-index: var(--z-index-offcanvas);">
                     <div class="offcanvas-header">
                         <p class="offcanvas-title fs-1 fw-bold">
                             <img src="{{ static_url('img/logo/logo.jpg') }}" alt="" width="40" height="40">
