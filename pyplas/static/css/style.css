@@ -18,7 +18,7 @@
 .active-node {
     border-left: solid 0.5rem var(--bs-primary);
     border-radius: 2%;
-    margin-left: 0 !important;
+    padding-left: 0 !important;
 }
 
 /* when offcanvas show (larger than lg) */
@@ -38,9 +38,6 @@
 
 #nodesContainer > .explain {
   margin-left: 1rem !important;
-}
-#nodesContainer > :is(.explain, .code, .question) {
-  margin-bottom: 1.5rem !important;
 }
 
 /* =============
@@ -141,7 +138,6 @@
   Code Node
 ============= */
 .code {
-  display: flex;
   .node-side {
       padding-top: 0.15rem;
       .btn {
@@ -177,11 +173,12 @@
       }
       .return-box {
           padding: 0.1rem 0 1rem 0;
+          overflow-x: auto;
           p {
               padding: 0 1rem;
               margin-bottom: 0rem;
               white-space: pre-wrap;
-              font-size: 0.7rem;
+              font-size: 0.85rem;
           }
       }
   }

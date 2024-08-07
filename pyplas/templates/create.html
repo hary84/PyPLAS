@@ -4,6 +4,12 @@
 <title>PyPLAS - edit</title>
 <link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
 <script src="{{ static_url('js/notebook.js') }}" type="module"></script>
+<style>
+    .node {
+        margin-top: 0 !important;
+        margin-bottom: .25rem !important;
+    }
+</style>
 {% end %}
 
 {% block head-nav-li %}
@@ -76,4 +82,6 @@
 {% end %}
 
 {% block side-content-r %}
+<h4>Category: </h4>
+<h4 class="mb-4"><span class="badge bg-info" id="problemCategory">{{ category }}</span></h4>
 {% end %}

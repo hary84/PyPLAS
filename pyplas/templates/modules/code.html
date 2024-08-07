@@ -1,4 +1,4 @@
-<div class="code node mx-2 my-2" node-id="{{node_id}}" run-state="idle">
+<div class="code node my-2 w-100 d-flex pe-2" node-id="{{node_id}}" run-state="idle" style="padding-left: .5rem;">
     <div class="node-side bg-light rounded-start-2 border border-dark-subtle border-1">
         <button class="btn-exec btn btn-sm btn-outline-dark" tabindex="-1">
             <i class="bi bi-caret-right-fill blocked-bi text-dark"></i>
@@ -11,7 +11,7 @@
             <i class="bi bi-stop-circle text-dark blocked-bi"></i>
         </button>
     </div>
-    <div class="node-prime position-relative w-100">
+    <div class="node-prime position-relative w-100" style="flex: 1; min-width: 0">
         <div class="code-config bg-secondary-subtle m-1 d-flex position-absolute end-0 top-0" style="z-index: var(--z-index-code-config);">
             {% if allow_del %}
                 <button class="btn btn-danger btn-delme" tabindex="-1"><i class="bi bi-trash blocked-bi"></i></button>
@@ -36,7 +36,7 @@
                 </ul>
             </div>
         </div>
-        <div class="node-code editor border rounded-end-2 {{ 'readonly' if readonly else '' }} w-100">{%raw content %}</div>
+        <div class="node-code editor border rounded-end-2 {{ 'readonly' if readonly and user==0 else '' }} w-100">{%raw content %}</div>
         <div class="return-box border border-dark-subtle rounded-end-1"></div>            
     </div>
 </div>

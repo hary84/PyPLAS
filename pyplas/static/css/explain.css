@@ -1,0 +1,6 @@
+.explain.static, .mde-container > .for-preview {
+    img {
+        display: block;
+        margin: auto;
+    }
+}
