@@ -35,4 +35,8 @@ class MainHandler(ApplicationHandler):
             p_list = [r for r in p_list]
             cat = []
 
-        self.render("index.html", category_list=cat, problem_list=p_list, category=self.query["category"])
+        self.render("index.html", 
+                    category_list=cat, 
+                    problem_list=p_list, 
+                    category=self.query["category"],
+                    dev_mode=self.is_dev_mode)
