@@ -20,7 +20,8 @@
     <a href="/create" class="nav-link text-light"> Create</a>
 </li>
 <li class="nav-item align-self-center">
-    <a href="" class="nav-link text-light"> Demo</a>
+    <a href="{{ current_url.replace('create', 'problems')}}" 
+        class="nav-link {{ 'disabled text-secondary' if is_new else 'text-light' }}"> Demo</a>
 </li>
 {% end %}
 

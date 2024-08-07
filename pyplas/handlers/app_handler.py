@@ -1,5 +1,5 @@
 import json
-from typing import Any, Union
+from typing import Any, Dict, Union
 import urllib
 from jsonschema import ValidationError
 
@@ -18,6 +18,11 @@ class ApplicationHandler(tornado.web.RequestHandler):
         super().__init__(application, request, **kwargs)
         self.json: dict = None
         self.is_dev_mode: bool = self.settings["develop"]
+
+    def get_template_namespace(self) -> Dict[str, Any]:
+        namespace = super().get_template_namespace()
+        namespace["current_url"] = self.request.uri
+        return namespace
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:
         self.set_status(status_code, kwargs.get("reason", None))
