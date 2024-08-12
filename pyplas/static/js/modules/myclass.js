@@ -458,7 +458,7 @@ export class EditorNode extends BaseNode {
             fontSize: "0.9rem",
             showPrintMargin: false,
             maxLines: maxLines,
-            minLines: defaultLineNumbers,
+            // minLines: defaultLineNumbers,
             readOnly: editableElem.classList.contains("readonly")
         });
         editor.container.childNodes[0].tabIndex = -1
