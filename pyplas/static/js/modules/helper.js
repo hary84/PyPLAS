@@ -72,3 +72,69 @@ export function escapeHTML(str, ansi=false) {
         }[match]
     });
 }
+
+
+export const pagination = {
+    itemsPerPage: 10,
+    currentPage: 0,
+
+    items: Array(),
+    /** @property {Element | undefined} targetTableElem */
+    targetTableElem: undefined,
+
+    /**
+     * テーブルにページネーションを実装する
+     * @param {string} tableTag  
+     */
+    init(tableTag, itemsPerPage=10) {
+        this.itemsPerPage = itemsPerPage
+        const content = document.querySelector(tableTag);
+        this.targetTableElem = content
+        this.items = Array.from(content.getElementsByTagName("tr")).slice(1)
+        this.createPageButton()
+        this.showPage()
+        this.updateButtonState()
+    },
+
+    /** ページ移動ボタンを追加する */
+    createPageButton() {
+        const totalPages = Math.ceil(this.items.length / this.itemsPerPage)
+        const paginationContainer = document.createElement("div")
+        this.targetTableElem.after(paginationContainer)
+        const paginationDiv = this.targetTableElem.nextElementSibling
+        paginationDiv?.classList.add("pagination")
+        for (let i=0; i<totalPages; i++) {
+            const pageButton = document.createElement("button")
+            pageButton.classList.add("btn", "btn-sm", "btn-outline-dark")
+            pageButton.textContent = String(i + 1)
+            pageButton.addEventListener("click", () => {
+                this.currentPage = i; 
+                this.showPage()
+                this.updateButtonState()
+            })
+            paginationDiv?.appendChild(pageButton)
+        }
+    },
+
+    /** currentPageを表示する */
+    showPage() {
+        const startIndex = this.currentPage * this.itemsPerPage
+        const endIndex = startIndex + this.itemsPerPage
+        this.items.forEach((item, idx) => {
+            item.classList.toggle("pgn-hidden", idx < startIndex || idx >= endIndex)
+        })
+    },
+
+    /** ページ移動ボタンの状態を変更する */
+    updateButtonState() {
+        const pageButtons = document.querySelectorAll(".pagination button")
+        pageButtons.forEach((btn, idx) => {
+            if (idx == this.currentPage) {
+                btn.classList.add("active")
+            }
+            else {
+                btn.classList.remove("active")
+            }
+        })
+    }
+}

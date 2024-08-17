@@ -1,9 +1,11 @@
 //@ts-check 
 import * as error from "./modules/error.js"
+import * as helper from "./modules/helper.js"
 
 const changedParams = {}
 
 observeForm()
+helper.pagination.init("#problemList")
 
 document.addEventListener("click", async e => {
     const btn = e.target.closest(".btn") 
