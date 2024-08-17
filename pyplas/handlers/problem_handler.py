@@ -65,9 +65,9 @@ class ProblemHandler(ApplicationHandler):
             FROM pages 
             LEFT OUTER JOIN categories ON category = categories.cat_id
             LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
-            WHERE pages.p_id=:p_id AND status=1"""
+            WHERE pages.p_id=:p_id AND (status=1 OR :is_dev)"""
         try:
-            page = g.db.get_from_db(sql, p_id=p_id)
+            page = g.db.get_from_db(sql, p_id=p_id, is_dev=self.is_dev_mode)
             assert len(page) != 0, f"p_id='{p_id}' does not exist in DB."
         except (AssertionError) as e:
             self.write_error(404, reason=f"problem({p_id}) does not found.")
@@ -79,7 +79,6 @@ class ProblemHandler(ApplicationHandler):
                             page=json.loads(page["page"]),
                             q_status=json.loads(page["q_status"]),
                             q_content=json.loads(page["q_content"]),
-                            progress=[],
                             category=page["cat_name"])
             except Exception as e:
                 mylogger.error(e, exc_info=True)

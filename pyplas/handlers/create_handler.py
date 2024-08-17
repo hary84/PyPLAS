@@ -56,11 +56,15 @@ class ProblemCreateHandler(ApplicationHandler):
                         title="",
                         page={},
                         answers={},
-                        is_new=True)
+                        is_new=True,
+                        category=None)
 
         # edit exist page   
         else:
-            sql = r"SELECT title, page, answers FROM pages where p_id = :p_id"
+            sql = r"""SELECT title, page, answers, cat.cat_name AS cat_name
+            FROM pages 
+            LEFT OUTER JOIN categories AS cat ON category = cat.cat_id 
+            WHERE p_id = :p_id"""
             page = g.db.get_from_db(sql, p_id=p_id)
             try:
                 assert len(page) != 0
@@ -73,7 +77,8 @@ class ProblemCreateHandler(ApplicationHandler):
                                 title=page["title"],
                                 page=json.loads(page["page"]),
                                 answers=json.loads(page["answers"]),
-                                is_new=False)
+                                is_new=False,
+                                category=page["cat_name"])
                 except Exception as e:
                     mylogger.error(e, exc_info=True)
                     self.write_error(500, reason="Error occurred during rendering page")

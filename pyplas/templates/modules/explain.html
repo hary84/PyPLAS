@@ -1,4 +1,5 @@
-<div class="explain {{'node' if editor else 'static'}} mx-2 my-2" {% if editor %} node-id="{{node_id}}" {% end %}>
+<div class="explain {{'node' if editor else 'static'}} my-3 pe-2" {% if editor %} node-id="{{node_id}}" {% end %}
+    style="padding-left: .5rem;">
     {% if editor %}
         {% module Template("modules/MDE.html",
                            content=content, 

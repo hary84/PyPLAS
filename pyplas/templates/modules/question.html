@@ -3,14 +3,10 @@
 	<div class="for-toast">
 		{% module Template("modules/toast.html") %}
 	</div>
+
 	<div class="card-header bg-success-subtle d-flex">
 		Question
-		{% if ptype == 0 %}
-			<span class="ms-2 fw-bold text-secondary">HTML</span>
-		{% elif ptype == 1 %}
-			<span class="ms-2 fw-bold text-secondary">Code Test</span>
-		{% end %}
-
+		<span class="ms-2 fw-bold text-secondary">{{"HTML" if ptype==0 else "Code Test"}}</span>
 		{% if user == 0 %}
 			<span class="progress-badge badge rounded-pill ms-auto"> </span>
 		{% elif user == 1 %}
@@ -26,8 +22,8 @@
 			</div>
 		{% end %}
 	</div>
-	<div class="card-body py-2 position-relative pt-2">
 
+	<div class="card-body py-2 position-relative pt-2">
 		<div class="question-info">
 			<div class="mb-0 d-flex">
 				<span class="badge bg-success me-auto" style="align-self: center;">Question</span>
@@ -96,7 +92,7 @@
 
 		{% if (user == 1) and (ptype == 1) %}
 			<div class="test-code mt-2">
-				<p class="mb-0"><span class="badge bg-danger">Test Code</span></p>
+				<p class="mb-2"><span class="badge bg-danger">Test Code</span></p>
 				{% module Code(content=answers, allow_del=False, user=0) %}
 			</div>
 		{% end %}

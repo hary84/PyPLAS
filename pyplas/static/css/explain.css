@@ -1,0 +1,9 @@
+.explain.static, .mde-container > .for-preview {
+    img {
+        display: block;
+        margin: auto;
+    }
+    pre:has(code) {
+        margin: 0, .25rem, 0, .25rem
+    }
+}

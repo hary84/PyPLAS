@@ -10,6 +10,12 @@
 
 
 {% block side-content %}
+{% if dev_mode %}
+    <p class="fs-4 text-secondary border-bottom border-dark">For Developer</p>
+    <div class="mb-2">
+        <a href="/create" class="btn btn-danger mx-1">Go to create page</a>
+    </div>
+{% end %}
 <p class="fs-4 text-secondary border-bottom border-dark">User's Guide</p>
 <ul class="list-group">
     <li class="list-group-item">An item</li>
@@ -21,84 +27,83 @@
 {% end %}
 
 {% block main %}
-<main class="col px-3 vh-100 mt-3">
-    <div class="px-2" id="progress">
-        {% if category is None %}
-            <p class="fs-3 border-bottom border-dark fw-bold">  Categories</p>
-            <div id="catContainer" class="d-flex justify-content-center" style="flex-wrap: wrap;">
-                {% for cat_dict in category_list %}
-                    <div class="card m-2" style="width: 45%;" onclick="location.href='./?category={{cat_dict["cat_name"]}}'">
-                        {% if cat_dict['logo_url'] is None %}
-                            <img src="{{ static_url(f'img/logo/logo.jpg') }}" width="50%" height="100px" class="card-img-top" alt="category logo" style="object-fit: cover;">
-                        {% else %}
-                            <img src="{{ cat_dict['logo_url'] }}" onerror="this.src='{{static_url('img/logo/logo.jpg')}}'" width="50%" height="100px" class="card-img-top" alt="category logo" style="object-fit: cover;">
-                        {% end %}
-                        <div class="card-body">
-                            <h5>{{ cat_dict["cat_name"] }}</h5>
-                        </div>
-                    </div>
-                {% end %}
-            </div>
-        {% else %}
-            <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-bookmarks"></i>  Problems</p>
-            {% if len(problem_list) != 0%}
-                <table class="table table-hover mb-5">
-                    <thead>
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">title</th>
-                            <th scope="col">progress</th>
-                        </tr>
-                    </thead>
-                    {% for i, d in enumerate(problem_list) %}
-                        <tbody>
-                            <tr onclick="location.href='./problems/{{ d['p_id']}}'">
-                                <th>{{ i }}</th>
-                                <td scope="row">{{ d['title'] }}</td>
-                                <td>
-                                    {% if d['p_status'] == 0 %}
-                                        <i class="bi bi-door-closed text-danger"></i>
-                                        未学習
-                                    {% elif d['p_status'] == 1 %}
-                                        <i class="bi bi-slash-circle text-warning"></i>
-                                        学習中
-                                    {% elif d['p_status'] == 2 %}
-                                        <i class="bi bi-check-circle text-success"></i>
-                                        完了
-                                    {% end %}
-                                </td>
-                            </tr>
-                        </tbody>
+<div class="px-2 mt-3" id="progress">
+    {% if category is None %}
+        <p class="fs-3 border-bottom border-dark fw-bold">  Categories</p>
+        <div id="catContainer" class="d-flex justify-content-center" style="flex-wrap: wrap;">
+            {% for cat_dict in category_list %}
+                <div class="card m-2" style="width: 45%;" onclick="location.href='./?category={{cat_dict["cat_name"]}}'">
+                    {% if cat_dict['logo_url'] is None %}
+                        <img src="{{ static_url(f'img/logo/logo.jpg') }}" width="50%" height="100px" class="card-img-top" alt="category logo" style="object-fit: cover;">
+                    {% else %}
+                        <img src="{{ cat_dict['logo_url'] }}" onerror="this.src='{{static_url('img/logo/logo.jpg')}}'" width="50%" height="100px" class="card-img-top" alt="category logo" style="object-fit: cover;">
                     {% end %}
-                </table> 
-                <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-terminal"></i>  Log</p>
-                <form>
-                    <div class="mb-3">
-                    <label for="inputNumber" class="form-label">Student ID</label>
-                    <input type="input" class="form-control" id="inputNumber" autocomplete="off">
-                    <div id="numberHelp" class="form-text">Input your student ID.</div>
-                    </div>
-                    <div class="mb-3">
-                    <label for="inputName" class="form-label">Name</label>
-                    <input type="input" class="form-control" id="inputName" autocomplete="off">
-                    <div id="nameHelp" class="form-text">Input your Name.</div>
-                    </div>
-                    <a class="btn btn-primary" id="logDownloader">Download</a>
-                </form>
-            {% else %}
-                <div class="card border-0 my-3">
-                    <img src="{{ static_url(f'img/error/in-preparation.jpg') }}" height=300px width=100% class="card-img-top" alt="404 error img" style="object-fit: cover;">
-                    <div class="card-body text-center">
-                        <h2 class="card-title text-primary-emphasis border-bottom border-primary text-center pb-1">In Preparation</h2>
-                        <p class="card-text w-50 text-center my-4 mx-auto">Sorry, there are no categories registered.</p>
-                        <a class="btn btn-primary text-center" href="/"><i class="bi bi-house"></i>  Go To Home</a>
+                    <div class="card-body">
+                        <h5>{{ cat_dict["cat_name"] }}</h5>
                     </div>
                 </div>
             {% end %}
+        </div>
+    {% else %}
+        <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-bookmarks"></i>  Problems</p>
+        {% if len(problem_list) != 0%}
+            <table class="table table-hover mb-5">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">title</th>
+                        <th scope="col">progress</th>
+                    </tr>
+                </thead>
+                {% for i, d in enumerate(problem_list) %}
+                    <tbody>
+                        <tr onclick="location.href='./problems/{{ d['p_id']}}'">
+                            <th>{{ i }}</th>
+                            <td scope="row">{{ d['title'] }}</td>
+                            <td>
+                                {% if d['p_status'] == 0 %}
+                                    <i class="bi bi-door-closed text-danger"></i>
+                                    未学習
+                                {% elif d['p_status'] == 1 %}
+                                    <i class="bi bi-slash-circle text-warning"></i>
+                                    学習中
+                                {% elif d['p_status'] == 2 %}
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    完了
+                                {% end %}
+                            </td>
+                        </tr>
+                    </tbody>
+                {% end %}
+            </table> 
+            <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-terminal"></i>  Log</p>
+            <form>
+                <div class="mb-3">
+                <label for="inputNumber" class="form-label">Student ID</label>
+                <input type="input" class="form-control" id="inputNumber" autocomplete="off">
+                <div id="numberHelp" class="form-text">Input your student ID.</div>
+                </div>
+                <div class="mb-3">
+                <label for="inputName" class="form-label">Name</label>
+                <input type="input" class="form-control" id="inputName" autocomplete="off">
+                <div id="nameHelp" class="form-text">Input your Name.</div>
+                </div>
+                <a class="btn btn-primary" id="logDownloader">Download</a>
+            </form>
+        {% else %}
+            <div class="card border-0 my-3">
+                <img src="{{ static_url(f'img/error/in-preparation.jpg') }}" height=300px width=100% class="card-img-top" alt="404 error img" style="object-fit: cover;">
+                <div class="card-body text-center">
+                    <h2 class="card-title text-primary-emphasis border-bottom border-primary text-center pb-1">In Preparation</h2>
+                    <p class="card-text w-50 text-center my-4 mx-auto">Sorry, there are no problems registered.</p>
+                    <a class="btn btn-primary text-center" href="/"><i class="bi bi-house"></i>  Go To Home</a>
+                </div>
+            </div>
         {% end %}
-  </div>
+    {% end %}
+</div>
+{% end %}
 
-</main>
-<div class="col-xl-2 border-start"></div>
+{% block side-content-r %}
 {% end %}
 

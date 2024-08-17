@@ -14,13 +14,10 @@ document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e
 
 // markdown.js, highlight.jsの準備
 if (!helper.isCreateMode()) {
-    const mycat = document.querySelector("#problemCategory")?.innerHTML
-    document.querySelector("#headTitle").href = `/?category=${mycat}`
     document.querySelectorAll(".explain").forEach(elem => {
         elem.innerHTML = marked.parse(elem.innerHTML)
     })
 } else {
-    document.querySelector("#headTitle").href = `/${helper.problem_meta.mode}`
     document.querySelectorAll(".node.explain").forEach(e => 
         myNode.explain(e).showPreview()
     )

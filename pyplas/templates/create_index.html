@@ -11,56 +11,64 @@
 
 
 {% block side-content %}
+<p class="fs-4 text-secondary border-bottom border-dark">User's Guide</p>
+<ul class="list-group">
+    <li class="list-group-item">An item</li>
+    <li class="list-group-item">A second item</li>
+    <li class="list-group-item">A third item</li>
+    <li class="list-group-item">A fourth item</li>
+    <li class="list-group-item">And a fifth one</li>
+</ul>
 {% end %}
 
 {% block main %}
-<main class="col px-3 vh-100 mt-3">
-  <div class="" id="progress">
-      <p class="fs-3 border-bottom border-dark">Problems</p>
-      <table class="table table-hover table-responsive ms-3">
-          <thead>
-            <tr>
-              <th scope="col" style="width: 10%;">#</th>
-              <th scope="col" style="width: 30%;">title</th>
-              <th scope="col" style="width: 25%;">category</th>
-              <th scope="col" style="width: 25%;">status</th>
-              <th scope="col" style="width: 10%;">ops</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for i, d in enumerate(problem_list) %}
-            <tr target="{{ d['p_id'] }}">
-              <th scope="row">{{ i }}</th>
-              <td><input type="text" class="title-form form-control form-control-sm" for="title" value="{{ d['title'] }}"></td>
-              <td>
-                <select class="select-category form-select form-select-sm" for="category">
-                  <option value="" {{"selected" if d['category'] is None else "" }}>None</option>
-                  {% for cat_d in categories %}
-                    <option value="{{ cat_d['cat_id'] }}" {{"selected" if d['category'] == cat_d['cat_id'] else "" }}>{{ cat_d['cat_name'] }}</option>
-                  {% end %}
-                </select>
-              </td>
-              <td>
-                <select class="select-status form-select form-select-sm" for="status" aria-label="Default select example">
-                  <option value="0" {{"selected" if d['status']==0 else "" }}>非公開</option>
-                  <option value="1" {{"selected" if d['status']==1 else "" }}>公開中</option>
-                </select>
-              </td>
-              <td class="d-flex mx-auto">
-                <button class="btn btn-sm btn-delp"><i class="bi bi-trash3 text-danger"></i></button>
-                <div class="vr"></div>
-                <button class="btn btn-sm" onclick="location.href='/create/{{ d['p_id'] }}'"><i class="bi bi-pencil-square"></i></button>
-              </td>
-            </tr>
-          {% end %}
-          </tbody>
-        </table>
-  </div>
-  <div class="text-center">
-    <button class="btn btn-primary btn-updatep"><i class="bi bi-arrow-clockwise"></i>  Update</button>
-    <button class="btn btn-success" onclick="location.href='/create/new'"><i class="bi bi-plus-circle"></i>  New</button>
-  </div>
-</main>
-<div class="col-xl-2 border-start"></div>
+<div class="" id="progress">
+    <p class="fs-3 border-bottom border-dark">Create Problems</p>
+    <table class="table table-hover table-responsive ms-3">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 10%;">#</th>
+            <th scope="col" style="width: 30%;">title</th>
+            <th scope="col" style="width: 25%;">category</th>
+            <th scope="col" style="width: 25%;">status</th>
+            <th scope="col" style="width: 10%;">ops</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for i, d in enumerate(problem_list) %}
+          <tr target="{{ d['p_id'] }}">
+            <th scope="row">{{ i }}</th>
+            <td><input type="text" class="title-form form-control form-control-sm" for="title" value="{{ d['title'] }}"></td>
+            <td>
+              <select class="select-category form-select form-select-sm" for="category">
+                <option value="" {{"selected" if d['category'] is None else "" }}>None</option>
+                {% for cat_d in categories %}
+                  <option value="{{ cat_d['cat_id'] }}" {{"selected" if d['category'] == cat_d['cat_id'] else "" }}>{{ cat_d['cat_name'] }}</option>
+                {% end %}
+              </select>
+            </td>
+            <td>
+              <select class="select-status form-select form-select-sm" for="status" aria-label="Default select example">
+                <option value="0" {{"selected" if d['status']==0 else "" }}>非公開</option>
+                <option value="1" {{"selected" if d['status']==1 else "" }}>公開中</option>
+              </select>
+            </td>
+            <td class="d-flex mx-auto">
+              <button class="btn btn-sm btn-delp"><i class="bi bi-trash3 text-danger"></i></button>
+              <div class="vr"></div>
+              <button class="btn btn-sm" onclick="location.href='/create/{{ d['p_id'] }}'"><i class="bi bi-pencil-square"></i></button>
+            </td>
+          </tr>
+        {% end %}
+        </tbody>
+      </table>
+</div>
+<div class="text-center">
+  <button class="btn btn-primary btn-updatep"><i class="bi bi-arrow-clockwise"></i>  Update</button>
+  <button class="btn btn-success" onclick="location.href='/create/new'"><i class="bi bi-plus-circle"></i>  New</button>
+</div>
+{% end %}
+
+{% block side-content-r %}
 {% end %}
 
