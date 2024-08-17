@@ -5,7 +5,7 @@ import * as helper from "./modules/helper.js"
 const changedParams = {}
 
 observeForm()
-helper.pagination.init("#problemList")
+helper.pagination.init("#problemList", 2)
 
 document.addEventListener("click", async e => {
     const btn = e.target.closest(".btn") 
@@ -19,6 +19,25 @@ document.addEventListener("click", async e => {
     }
 })
 
+const categoryTag = Array.from(document.querySelectorAll(".category-tag"))
+categoryTag.forEach(btn=> {
+    btn.addEventListener("click", (e) => {
+        // radio button
+        categoryTag.forEach(tag=> {
+            if (tag != btn) {
+                tag.classList.remove("active")
+            }
+        })
+        const category = e.target.dataset.category
+        const trList = Array.from(document.querySelectorAll("#problemList tr")).slice(1)
+        trList.forEach(e => {
+            const registeredCat = e.querySelector("select.select-category")?.value
+            e.classList.toggle("d-none", registeredCat != category && btn.classList.contains("active"))
+        })
+        helper.pagination.update()
+    })
+
+})
 
 /**
  * 問題の削除を要請する
@@ -62,7 +81,8 @@ async function updateProfiles() {
  */
 function observeForm() {
     const initialFormValue = {}
-    document.querySelectorAll("input, select").forEach(elem => {
+    const tbl = document.querySelector("#problemList")
+    tbl.querySelectorAll("input, select").forEach(elem => {
         const p_id = elem.closest("tr").getAttribute("target")
         if (!(p_id in initialFormValue)) {
             initialFormValue[p_id] = {}
@@ -71,7 +91,7 @@ function observeForm() {
         initialFormValue[p_id][tag] = elem.value
     })
 
-    document.querySelectorAll("input, select").forEach(elem => {
+    tbl.querySelectorAll("input, select").forEach(elem => {
         elem.addEventListener("change", () => {
             const tr = elem.closest("tr")
             const p_id = tr.getAttribute("target")

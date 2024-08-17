@@ -24,6 +24,11 @@
 {% block main %}
 <div class="" id="progress">
     <p class="fs-3 border-bottom border-dark">Create Problems</p>
+    <div id="cateogoryFilterContainer">
+      {% for cat_d in categories %}
+        <button class="category-tag btn btn-sm btn-outline-info" data-category="{{cat_d['cat_id']}}" data-bs-toggle="button"># {{ cat_d['cat_name'] }}</button>
+      {% end %}
+    </div>
     <table class="table table-hover table-responsive ms-3" id="problemList">
         <thead>
           <tr>

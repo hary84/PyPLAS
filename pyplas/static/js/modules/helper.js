@@ -75,6 +75,7 @@ export function escapeHTML(str, ansi=false) {
 
 
 export const pagination = {
+    tableTag: "",
     itemsPerPage: 10,
     currentPage: 0,
 
@@ -87,10 +88,16 @@ export const pagination = {
      * @param {string} tableTag  
      */
     init(tableTag, itemsPerPage=10) {
+        this.tableTag = tableTag
         this.itemsPerPage = itemsPerPage
+        this.currentPage = 0
+        
         const content = document.querySelector(tableTag);
         this.targetTableElem = content
-        this.items = Array.from(content.getElementsByTagName("tr")).slice(1)
+        this.items = Array.from(content.getElementsByTagName("tr")).filter(e=>{
+            return window.getComputedStyle(e).display !== "none"
+        }).slice(1)
+
         this.createPageButton()
         this.showPage()
         this.updateButtonState()
@@ -102,7 +109,7 @@ export const pagination = {
         const paginationContainer = document.createElement("div")
         this.targetTableElem.after(paginationContainer)
         const paginationDiv = this.targetTableElem.nextElementSibling
-        paginationDiv?.classList.add("pagination")
+        paginationDiv?.classList.add("my-pagination")
         for (let i=0; i<totalPages; i++) {
             const pageButton = document.createElement("button")
             pageButton.classList.add("btn", "btn-sm", "btn-outline-dark")
@@ -127,7 +134,7 @@ export const pagination = {
 
     /** ページ移動ボタンの状態を変更する */
     updateButtonState() {
-        const pageButtons = document.querySelectorAll(".pagination button")
+        const pageButtons = document.querySelectorAll(".my-pagination button")
         pageButtons.forEach((btn, idx) => {
             if (idx == this.currentPage) {
                 btn.classList.add("active")
@@ -136,5 +143,17 @@ export const pagination = {
                 btn.classList.remove("active")
             }
         })
+    },
+
+    update() {
+        const paginationDiv = this.targetTableElem.nextElementSibling
+        if (paginationDiv != null && paginationDiv.classList.contains("my-pagination")) {
+            paginationDiv.remove()
+            const fullItems = Array.from(this.targetTableElem.querySelectorAll("tr")).slice(1)
+            fullItems.forEach(e => {
+                e.classList.remove("pgn-hidden")
+            })
+        }
+        this.init(this.tableTag, this.itemsPerPage)
     }
 }
