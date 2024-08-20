@@ -5,7 +5,7 @@ import * as helper from "./modules/helper.js"
 const changedParams = {}
 
 observeForm()
-helper.pagination.init("#problemList", 2)
+helper.pagination.init("#problemList", 10)
 
 document.addEventListener("click", async e => {
     const btn = e.target.closest(".btn") 
