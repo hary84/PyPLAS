@@ -1,17 +1,19 @@
+from typing import Optional
+import uuid
+
 from bs4 import BeautifulSoup
 from tornado.web import UIModule 
 from tornado.escape import to_unicode
-import uuid
 
 class Code(UIModule):
     def render(self, content:str="", readonly:bool=False, user:int=0, 
-               allow_del:bool=False, node_id:str=None, **kwargs) -> bytes:
+               allow_del:bool=False, node_id:Optional[str]=None, **kwargs) -> bytes:
         """
         Parameters
         ----------
-        *content: str or list
+        content*: str
             code content
-        *readonly: bool
+        readonly*: bool
             False: CAN edit code
             True : CAN NOT edit code 
         user: int
@@ -22,8 +24,6 @@ class Code(UIModule):
         node_id: str
             random uuid4
         """
-        if type(content) == list:
-            content = "\n".join(content)
 
         if node_id is None:
             node_id = str(uuid.uuid4())
@@ -39,11 +39,11 @@ class Code(UIModule):
 
 class Explain(UIModule):
     def render(self, editor:bool=False, content:str="", 
-               allow_del:bool=False, node_id=None, **kwargs) -> str:
+               allow_del:bool=False, node_id:Optional[str]=None, **kwargs) -> str:
         """
-        Parameters (* params is saved in DB -> pages)
+        Parameters 
         ----------
-        *content: str or list
+        content*: str
             markdown content 
         editor: bool
             False: is PLAIN text
@@ -53,8 +53,7 @@ class Explain(UIModule):
         node_id: str 
             ramdom uuid4
         """
-        if type(content) == list:
-            content = "\n".join(content)
+
         if node_id is None:
             node_id = str(uuid.uuid4())
             
@@ -70,37 +69,37 @@ class Explain(UIModule):
 class Question(UIModule):
     def render(self, q_id:str, ptype:int=0, user:int=0, conponent:list=[], question:str="",
                answers:list=[], saved_answers:list=[], 
-               editable:bool=False, progress:int=0, node_id:str=None, **kwargs) -> str:
+               editable:bool=False, progress:int=0, node_id:Optional[str]=None, **kwargs) -> str:
         """
-        Parameters (* params is saved in DB -> pages)
+        Parameters
         ----------
-        *q_id: str
+        q_id*: str
             question id (unique)
-        *ptype: int
-            0: HTML Problem
+        ptype*: int
+            0: HTML Problem  
             1: Code Writing Problem
         user: int
-            0: learner
+            0: learner  
             1: problem creator 
-        *conponent: list
+        conponent*: list
             contents 
-            :Only used in ptype=1 and editable=False
+            :Only used in ptype=1 and editable=False  
             :e.g. [Node, Node, ...]
-        *question: str
+        question*: str
             question text
         answers: list
-            correct answer list (used if user = 1)
-            :e.g. [answer, answer, ...]
+            correct answer list (used if user = 1)  
+            e.g. [answer, answer, ...]
         saved_answers: list
-            answers saved in DB (used if user =0)
-            :e.g. [answer, answer, ...]
-        *editable: bool
-            False: CAN NOT add/remove Markdown, Code
+            answers saved in DB (used if user =0)  
+            e.g. [answer, answer, ...]
+        editable*: bool
+            False: CAN NOT add/remove Markdown, Code  
             True : CAN add/remove Markdown, Code
         progress: int
-            0: untried
-            1: tried
-            2: complete
+            0: untried  
+            1: tried  
+            2: complete  
         node_id: str 
             ramdom uuid4
         """
