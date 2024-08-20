@@ -31,6 +31,17 @@
   }
 }
 
+/* ==============================
+ pagination 
+ ================================*/
+.my-pagination {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+.pgn-hidden {
+  display: none;
+}
+
 /* ==================================
   nodesContainer
   - Nodes directly under this element

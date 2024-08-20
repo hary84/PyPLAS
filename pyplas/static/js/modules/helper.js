@@ -72,3 +72,88 @@ export function escapeHTML(str, ansi=false) {
         }[match]
     });
 }
+
+
+export const pagination = {
+    tableTag: "",
+    itemsPerPage: 10,
+    currentPage: 0,
+
+    items: Array(),
+    /** @property {Element | undefined} targetTableElem */
+    targetTableElem: undefined,
+
+    /**
+     * テーブルにページネーションを実装する
+     * @param {string} tableTag  
+     */
+    init(tableTag, itemsPerPage=10) {
+        this.tableTag = tableTag
+        this.itemsPerPage = itemsPerPage
+        this.currentPage = 0
+        
+        const content = document.querySelector(tableTag);
+        this.targetTableElem = content
+        this.items = Array.from(content.getElementsByTagName("tr")).filter(e=>{
+            return window.getComputedStyle(e).display !== "none"
+        }).slice(1)
+
+        this.createPageButton()
+        this.showPage()
+        this.updateButtonState()
+    },
+
+    /** ページ移動ボタンを追加する */
+    createPageButton() {
+        const totalPages = Math.ceil(this.items.length / this.itemsPerPage)
+        const paginationContainer = document.createElement("div")
+        this.targetTableElem.after(paginationContainer)
+        const paginationDiv = this.targetTableElem.nextElementSibling
+        paginationDiv?.classList.add("my-pagination")
+        for (let i=0; i<totalPages; i++) {
+            const pageButton = document.createElement("button")
+            pageButton.classList.add("btn", "btn-sm", "btn-outline-dark")
+            pageButton.textContent = String(i + 1)
+            pageButton.addEventListener("click", () => {
+                this.currentPage = i; 
+                this.showPage()
+                this.updateButtonState()
+            })
+            paginationDiv?.appendChild(pageButton)
+        }
+    },
+
+    /** currentPageを表示する */
+    showPage() {
+        const startIndex = this.currentPage * this.itemsPerPage
+        const endIndex = startIndex + this.itemsPerPage
+        this.items.forEach((item, idx) => {
+            item.classList.toggle("pgn-hidden", idx < startIndex || idx >= endIndex)
+        })
+    },
+
+    /** ページ移動ボタンの状態を変更する */
+    updateButtonState() {
+        const pageButtons = document.querySelectorAll(".my-pagination button")
+        pageButtons.forEach((btn, idx) => {
+            if (idx == this.currentPage) {
+                btn.classList.add("active")
+            }
+            else {
+                btn.classList.remove("active")
+            }
+        })
+    },
+
+    update() {
+        const paginationDiv = this.targetTableElem.nextElementSibling
+        if (paginationDiv != null && paginationDiv.classList.contains("my-pagination")) {
+            paginationDiv.remove()
+            const fullItems = Array.from(this.targetTableElem.querySelectorAll("tr")).slice(1)
+            fullItems.forEach(e => {
+                e.classList.remove("pgn-hidden")
+            })
+        }
+        this.init(this.tableTag, this.itemsPerPage)
+    }
+}
