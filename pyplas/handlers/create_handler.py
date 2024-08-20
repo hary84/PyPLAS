@@ -9,9 +9,7 @@ from pyplas.utils import get_logger, globals as g
 mylogger = get_logger(__name__)
 
 class ProblemCreateHandler(ApplicationHandler):
-    """
-    問題作成モード
-    """
+    """問題作成ハンドラ"""
     def prepare(self):
         mylogger.info(f"{self.request.method} {self.request.uri}")
         if not self.is_dev_mode:

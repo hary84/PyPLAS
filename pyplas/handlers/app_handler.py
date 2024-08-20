@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 import urllib
 from jsonschema import ValidationError
 
@@ -28,7 +28,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
         self.set_status(status_code, kwargs.get("reason", None))
         self.render("error.html", status_code=status_code)
     
-    def validate_JSON(self, keys:Union[list, dict]=None, schema:str=None) -> bool:
+    def validate_JSON(self, keys:Union[list, dict]=None, schema:Optional[str]=None) -> bool:
         """
         POSTやPUTから送られてきたJSONに対応するkeyがあるかどうか検証する
 
@@ -98,5 +98,3 @@ class ApplicationHandler(tornado.web.RequestHandler):
                 if isinstance(query, str):
                     query = urllib.parse.quote(query)
                 self.query[name] = query
-        else:
-            raise TypeError
