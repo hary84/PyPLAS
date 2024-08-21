@@ -80,8 +80,9 @@ export const pagination = {
     currentPage: 0,
 
     items: Array(),
-    /** @property {Element | undefined} targetTableElem */
-    targetTableElem: undefined,
+    /** @property {Element} targetTableElem */
+    targetTableElem: {},
+    controller: {},
 
     /**
      * テーブルにページネーションを実装する
@@ -93,6 +94,7 @@ export const pagination = {
         this.currentPage = 0
         
         const content = document.querySelector(tableTag);
+        if (content == null) {throw new Error("The specified table was not found.")}
         this.targetTableElem = content
         this.items = Array.from(content.getElementsByTagName("tr")).filter(e=>{
             return window.getComputedStyle(e).display !== "none"
@@ -100,11 +102,11 @@ export const pagination = {
 
         this.createPageButton()
         this.showPage()
-        this.updateButtonState()
     },
 
     /** ページ移動ボタンを追加する */
     createPageButton() {
+        this.controller = new AbortController()
         const totalPages = Math.ceil(this.items.length / this.itemsPerPage)
         const paginationContainer = document.createElement("div")
         this.targetTableElem.after(paginationContainer)
@@ -118,7 +120,7 @@ export const pagination = {
                 this.currentPage = i; 
                 this.showPage()
                 this.updateButtonState()
-            })
+            }, {signal: this.controller.signal})
             paginationDiv?.appendChild(pageButton)
         }
     },
@@ -148,6 +150,7 @@ export const pagination = {
     update() {
         const paginationDiv = this.targetTableElem.nextElementSibling
         if (paginationDiv != null && paginationDiv.classList.contains("my-pagination")) {
+            this.controller.abort()
             paginationDiv.remove()
             const fullItems = Array.from(this.targetTableElem.querySelectorAll("tr")).slice(1)
             fullItems.forEach(e => {

@@ -57,6 +57,7 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
                 } else {
                     await utils.registerProblem()
                 }
+                break;
         }
     } catch(e) {
         if (e instanceof error.ApplicationError) {
