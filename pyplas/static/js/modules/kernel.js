@@ -1,5 +1,5 @@
 //@ts-check
-import {myNode} from "./myclass.js"
+import {CodeNode} from "./myclass.js"
 import * as error from "./error.js"
 
 class KernelHandler {
@@ -180,14 +180,19 @@ class KernelHandler {
             return
         }
         const node_id = this.execute_task_q[0]
-        const node = myNode.code(node_id)
-        const r = node.element.querySelector(".return-box")
-        if (r) {r.innerHTML = ""}
-        const msg = JSON.stringify({
-            "code": node.editor.getValue(),
-            "node_id": node_id
-        })
-        this.ws.send(msg)
+        try {
+            const node = new CodeNode(node_id)
+            node.resetState()
+            const msg = JSON.stringify({
+                "code": node.editor.getValue(),
+                "node_id": node_id
+            })
+            this.ws.send(msg)
+        } catch (e) {
+            this.execute_task_q = []
+            this.running = false
+            throw e
+        }
         this.execute_counter  = this.execute_counter + 1
         console.log(`[KernelHandler] Executing code (node-id='${node_id}')`)
     }
@@ -220,10 +225,15 @@ class KernelHandler {
             throw new KernelError("Kernel interrupt timeout.")
         }
 
-        loc.querySelectorAll(":scope > .node.code").forEach(e => {
-            const node = myNode.code(e)
-            this.execute_task_q.push(node.nodeId)
-        })
+        try {
+            loc.querySelectorAll(":scope > .node.code").forEach(e => {
+                const node = new CodeNode(e)
+                this.execute_task_q.push(node.nodeId)
+            })
+        } catch (e) {
+            this.execute_task_q = []
+            throw e
+        }
 
         this._executeCode()
     }

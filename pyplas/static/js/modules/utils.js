@@ -40,7 +40,7 @@ export async function addMD(loc, pos, {
         const json = await res.json()
         const htmlString = json.html 
         loc.insertAdjacentHTML(pos, htmlString)
-        const explainNode = myNode.explain(node_id)
+        const explainNode = new myclass.ExplainNode(node_id)
         return explainNode
     }
     else {
@@ -83,7 +83,7 @@ export async function addCode(loc, pos, {
         const json = await res.json()
         const htmlString = json.html 
         loc.insertAdjacentHTML(pos, htmlString)
-        const codeNode = myNode.code(node_id)
+        const codeNode = new myclass.CodeNode(node_id)
         return codeNode
     }
     else {
@@ -116,7 +116,7 @@ export async function addQ(loc, pos, ptype) {
     if (res.ok) {
         const json = await res.json()
         loc.insertAdjacentHTML(pos, json.html)
-        const questionNode = myNode.question(node_id)
+        const questionNode = new myclass.QuestionNode(node_id)
         return questionNode
     }
     else {
@@ -130,7 +130,7 @@ export async function addQ(loc, pos, ptype) {
 export async function saveUserData() {
     const userInput = {}
     document.querySelectorAll(".question.node").forEach(e => {
-        const questionNode = myNode.question(e)
+        const questionNode = new myclass.QuestionNode(e)
         const params = questionNode.extractQuestionParams(0)
         userInput[params.q_id] = params.answers
     })
@@ -203,7 +203,7 @@ export async function registerProblem() {
     // 概要欄のSummary, Data Source, Environmentを取得
     const headers = []
     document.querySelectorAll("#summary .node.explain").forEach(e => {
-        const explainNode = myNode.explain(e)
+        const explainNode = new myclass.ExplainNode(e)
         headers.push(explainNode.editor.getValue())
     })
     // The Source CodeからNodeを取得
@@ -215,7 +215,7 @@ export async function registerProblem() {
         // Explain Node
         if (node instanceof myclass.ExplainNode) {
             body.push({
-                "type": "explain",
+                "type": myclass.nodeType.explain,
                 "content": node.editor.getValue()
             })
         }
@@ -223,7 +223,7 @@ export async function registerProblem() {
         else if (node instanceof myclass.CodeNode) {
             const params = node.extractCodeParams()
             body.push({
-                "type": "code",
+                "type": myclass.nodeType.code,
                 "content": params.content,
                 "readonly": params.readonly
             })
@@ -233,12 +233,12 @@ export async function registerProblem() {
             const params = node.extractQuestionParams(1)
             answers[`${q_id}`] = params.answers 
             body.push({
-                "type": "question",             // str
-                "q_id": String(q_id),           // str
-                "ptype": params.ptype,          // int
-                "conponent": params.conponent,  // dict
-                "question": params.question,    // str
-                "editable": params.editable,    // bool
+                "type": myclass.nodeType.question, // str
+                "q_id": String(q_id),              // str
+                "ptype": params.ptype,             // int
+                "conponent": params.conponent,     // dict
+                "question": params.question,       // str
+                "editable": params.editable,       // bool
             })
             q_id += 1
         }

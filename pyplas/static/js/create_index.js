@@ -8,10 +8,10 @@ observeForm()
 helper.pagination.init("#problemList", 10)
 
 document.addEventListener("click", async e => {
-    const btn = e.target.closest(".btn") 
+    const btn = e.target?.closest(".btn") 
     if (btn == null) {return} 
     if (btn.classList.contains("btn-delp")) {
-        const target = e.target.closest("tr").getAttribute("target")
+        const target = e.target?.closest("tr").getAttribute("target")
         await deleteProblem(target)
     }
     else if (btn.classList.contains("btn-updatep")) {
@@ -19,11 +19,11 @@ document.addEventListener("click", async e => {
     }
 })
 
-const categoryTag = Array.from(document.querySelectorAll(".category-tag"))
-categoryTag.forEach(btn=> {
+const categoryTags = Array.from(document.querySelectorAll(".category-tag"))
+categoryTags.forEach(btn=> {
     btn.addEventListener("click", (e) => {
         // radio button
-        categoryTag.forEach(tag=> {
+        categoryTags.forEach(tag=> {
             if (tag != btn) {
                 tag.classList.remove("active")
             }
@@ -82,9 +82,10 @@ async function updateProfiles() {
 function observeForm() {
     const initialFormValue = {}
     const tbl = document.querySelector("#problemList")
+    if (tbl == null)  {console.error("there is no table"); return}
     tbl.querySelectorAll("input, select").forEach(elem => {
-        const p_id = elem.closest("tr").getAttribute("target")
-        if (!(p_id in initialFormValue)) {
+        const p_id = elem.closest("tr")?.getAttribute("target")
+        if (typeof p_id === "string" && !(p_id in initialFormValue)) {
             initialFormValue[p_id] = {}
         }
         const tag = elem.getAttribute("for")
@@ -94,7 +95,7 @@ function observeForm() {
     tbl.querySelectorAll("input, select").forEach(elem => {
         elem.addEventListener("change", () => {
             const tr = elem.closest("tr")
-            const p_id = tr.getAttribute("target")
+            const p_id = tr?.getAttribute("target")
             const changed = {}
             tr.querySelectorAll("input, select").forEach(elem => {
                 const tag = elem.getAttribute("for")

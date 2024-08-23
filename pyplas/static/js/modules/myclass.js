@@ -14,18 +14,17 @@ export const myNode = {
     /** active node */
     activeNode: {
         /** current active node id */ 
-        node_id: emptyNodeId,
+        node_id: undefined,
         /** get current active node object */
         get() {
-            return myNode.get(this.node_id)
+            return myNode.get(this.node_id?? emptyNodeId)
         }
     },
     /**
      * node-idもしくはelementをうけとり、対応するNodeオブジェクトを返す. 
      * 
      * 対応するNodeオブジェクトが見つからない場合, nullを返す
-     * @param {string | Element | BaseNode | any} specifier 
-     * @returns {CodeNode | ExplainNode | QuestionNode | null}
+     * @param {string | Element | BaseNode} specifier 
      */
     get(specifier) {
         if (typeof specifier == "string") {
@@ -38,7 +37,7 @@ export const myNode = {
             return this._getNodeObjectByElem(specifier.element)
         }
         else {
-            return null
+            throw new TypeError("argument 'specifier' must be string or Element or BaseNode")
         }
     },
     /**
@@ -50,7 +49,7 @@ export const myNode = {
      */
     _getNodeObjectByNodeId(nodeId) {
         const e = BaseNode.getNodeElementByNodeId(nodeId)
-        if (!e) {return null}
+        if (e == null) {return null}
         return this._getNodeObjectByElem(e)
     },
     /**
@@ -61,69 +60,17 @@ export const myNode = {
      * @returns {CodeNode | ExplainNode | QuestionNode | null}
      */
     _getNodeObjectByElem(e) {
-        try {
-            if (e.classList.contains("code")) {
-                return new CodeNode(e)
-            }
-            else if (e.classList.contains("explain")) {
-                return new ExplainNode(e)
-            }
-            else if (e.classList.contains("question")) {
-                return new QuestionNode(e)
-            }
-            else {
-                return null
-            }
-        } catch {
+        if (e.classList.contains("code")) {
+            return new CodeNode(e)
+        }
+        else if (e.classList.contains("explain")) {
+            return new ExplainNode(e)
+        }
+        else if (e.classList.contains("question")) {
+            return new QuestionNode(e)
+        }
+        else {
             return null
-        }
-    },
-    /**
-     * specifierからcode nodeを明示して取得する. 
-     * 
-     * 対応していない場合NodeErrorを投げる
-     * @param {string | Element} specifier 
-     * @returns {CodeNode}
-     */
-    code(specifier) {
-        const n = this.get(specifier)
-        if (n instanceof CodeNode) {
-            return n
-        }
-        else {
-            throw new NodeError("can not get CodeNode from specifier.")
-        }
-    },
-    /**
-     * specifierからexplain nodeを明示して取得する. 
-     * 
-     * 対応していない場合NodeErrorを投げる
-     * @param {string | Element} specifier 
-     * @returns {ExplainNode}
-     */
-    explain(specifier) {
-        const n = this.get(specifier)
-        if (n instanceof ExplainNode) {
-            return n 
-        } 
-        else {
-            throw new NodeError("can not get Explain Node from specifier.")
-        }
-    },
-    /**
-     * specifierからquestion nodeを明示して取得する. 
-     * 
-     * 対応していない場合NodeErrorを投げる
-     * @param {string | Element} specifier 
-     * @returns {QuestionNode}
-     */
-    question(specifier) {
-        const n = this.get(specifier)
-        if (n instanceof QuestionNode) {
-            return n
-        }
-        else {
-            throw new NodeError("can not get Question Node from specifier.")
         }
     },
     /**
@@ -133,7 +80,7 @@ export const myNode = {
      * @param {BaseNode} nodeObj
      */
     prevNode(nodeObj) {
-        const e = nodeObj.prevNodeElement()
+        const e = nodeObj.prevNodeElement() ?? emptyNodeId
         return this.get(e)
     },
     /**
@@ -143,7 +90,7 @@ export const myNode = {
      * @param {BaseNode} nodeObj
      */
     nextNode(nodeObj) {
-        const e = nodeObj.nextNodeElement()
+        const e = nodeObj.nextNodeElement() ?? emptyNodeId
         return this.get(e)
     }
 }
@@ -239,7 +186,7 @@ export class QuestionNode extends BaseNode {
     constructor(specifier) {
         super(specifier)
         this.element.querySelectorAll(".node.code, .node.explain").forEach(e => {
-            new EditorNode(e)
+            myNode.get(e)
         })
         this.qId = this.element.getAttribute("q-id")
     }
@@ -294,7 +241,7 @@ export class QuestionNode extends BaseNode {
         // creator mode 
         if (mode == 1) {
             if (ptype == 0) {
-                const mdString = new ExplainNode(this.answerField.querySelector("explain[node-id]") ?? emptyNodeId).editor.getValue()
+                const mdString = new ExplainNode(this.answerField.querySelector(".explain[node-id]") ?? emptyNodeId).editor.getValue()
                 const mdDOM = parser.parseFromString(mdString, "text/html").querySelector("body")
                 mdDOM.querySelectorAll("input[ans], select[ans]").forEach(e => { // currect answers
                     answers.push(e.getAttribute("ans"))
@@ -357,7 +304,7 @@ export class QuestionNode extends BaseNode {
             const json = await res.json()
             console.log(`[scoring] ${json.DESCR}`)
             this.element.setAttribute("progress", json.progress)
-            this._renderToast(json.content)
+            this._showToast(json.content)
             const questionNav = document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`)
             questionNav?.setAttribute("progress", json.progress)
             this._hideProgressBar()
@@ -368,12 +315,17 @@ export class QuestionNode extends BaseNode {
             throw new error.FetchError(res.status, res.statusText)
         }
     }
-    _renderToast = (content) => {
+    _showToast = (content="") => {
         const toast = this.element.querySelector(".for-toast > .toast")
         const toastBody = this.element.querySelector(".for-toast > .toast > .toast-body")
         if (toastBody == null) {throw new NodeStructureError(this.type)}
         toastBody.innerHTML = content 
         toast?.classList.add("show")
+    }
+    _hideToast = () => {
+        const toast = this.element.querySelector(".for-toast > .toast")
+        if (toast == null) {throw new NodeStructureError(this.type)}
+        toast.classList.remove("show")
     }
     _showProgressBar = () => {
         const progressBar = this.element.querySelector(".progress")
@@ -412,6 +364,10 @@ export class QuestionNode extends BaseNode {
         }) 
         return nodeList
     }
+
+    allowDelete = () => {
+        return this.element.querySelector(".card-header [data-action='del-node']") != null
+    }
 }
 
 export class EditorNode extends BaseNode {
@@ -421,56 +377,12 @@ export class EditorNode extends BaseNode {
      */
     constructor(specifier) {
         super(specifier) 
-        const hasAce = this.element.querySelector(".ace_text-input") != null
-        if (!hasAce) {this.register()}
+        this.hasAce = this.element.querySelector(".ace_text-input") != null
     }
     get editor() {
-        return ace.edit(this.element.querySelector(".node-code, .node-mde"))
-    }
-    /** ace editorを有効化する */
-    register = () => {
-        if (this.element.classList.contains("code")) {
-            this._registerAcePythonEditor()
-        } 
-        else if (this.element.classList.contains("explain")) {
-            this._registerAceMDE()
-        }
-    }
-    _registerAcePythonEditor = () => {
-        const defaultLineNumbers = 5
-        const maxLines = 25
-        
-        const editableElem = this.element.querySelector(".node-code")
-        if (editableElem == null) {throw new NodeStructureError("CodeNode")}
-
-        const editor = ace.edit(editableElem, {
-            mode: "ace/mode/python",
-            theme: "ace/theme/cloud_editor_dark",
-            fontSize: "0.9rem",
-            showPrintMargin: false,
-            maxLines: maxLines,
-            // minLines: defaultLineNumbers,
-            readOnly: editableElem.classList.contains("readonly")
-        });
-        editor.container.childNodes[0].tabIndex = -1
-    }
-    _registerAceMDE = () => {
-        const defaultLineNumbers = 5
-        const maxLines = 40
-    
-        const editableElem = this.element.querySelector(".node-mde")
-        if (editableElem === null) {throw new NodeStructureError("ExplainNode")}
-    
-        const editor = ace.edit(editableElem, {
-            mode: "ace/mode/markdown",
-            theme: "ace/theme/sql_server",
-            fontSize: "1rem",
-            showGutter: false,
-            highlightActiveLine: false,
-            maxLines: maxLines,
-            minLines: defaultLineNumbers
-        })
-        editor.container.childNodes[0].tabIndex = -1
+        const AceInputElem = this.element.querySelector("div:has(>.ace_text-input)")
+        if (AceInputElem == null) {throw new NodeStructureError(this.type, "Ace Editor is not embeded.")}
+        return ace.edit(AceInputElem)
     }
     /**
      * EditorNodeがQuestionNodeの内部にある場合, そのQuestionNodeのオブジェクトを返す.
@@ -493,8 +405,28 @@ export class CodeNode extends EditorNode {
      */
     constructor(specifier) {
         super(specifier)
+        if (!this.hasAce) {
+            this._registerAcePythonEditor()
+        }
     }
+    _registerAcePythonEditor = () => {
+        const defaultLineNumbers = 5
+        const maxLines = 25
+        
+        const editableElem = this.element.querySelector(".code .node-code")
+        if (editableElem == null) {throw new NodeStructureError("CodeNode")}
 
+        const editor = ace.edit(editableElem, {
+            mode: "ace/mode/python",
+            theme: "ace/theme/cloud_editor_dark",
+            fontSize: "0.9rem",
+            showPrintMargin: false,
+            maxLines: maxLines,
+            // minLines: defaultLineNumbers,
+            readOnly: editableElem.classList.contains("readonly")
+        });
+        editor.container.childNodes[0].tabIndex = -1
+    }
     /**  Codeインスタンスのパラメータを返す */
     extractCodeParams = () => {
         const content = this.editor.getValue()
@@ -523,6 +455,27 @@ export class ExplainNode extends EditorNode {
      */
     constructor(specifier) {
         super(specifier)
+        if (!this.hasAce) {
+            this._registerAceMDE()
+        }
+    }
+    _registerAceMDE = () => {
+        const defaultLineNumbers = 5
+        const maxLines = 40
+    
+        const editableElem = this.element.querySelector(".explain .node-mde")
+        if (editableElem === null) {throw new NodeStructureError("ExplainNode")}
+    
+        const editor = ace.edit(editableElem, {
+            mode: "ace/mode/markdown",
+            theme: "ace/theme/sql_server",
+            fontSize: "1rem",
+            showGutter: false,
+            highlightActiveLine: false,
+            maxLines: maxLines,
+            minLines: defaultLineNumbers
+        })
+        editor.container.childNodes[0].tabIndex = -1
     }
     /** コードをhighlight.jsでハイライトする */
     highlighlting = () => {
