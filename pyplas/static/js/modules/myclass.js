@@ -136,7 +136,7 @@ export class BaseNode {
      * 次の.node[node-id]を持つ要素を返す
      * @returns {Element | null}
      */
-    nextNodeElement = () => {
+    nextNodeElement () {
         let sibling = this.element.nextElementSibling
         while (sibling) {
             if (sibling.getAttribute("node-id") && sibling.classList.contains("node")) {
@@ -150,7 +150,7 @@ export class BaseNode {
      * 前のNodeオブジェクトを返す
      * @returns {Element | null}
      */
-    prevNodeElement = () => {
+    prevNodeElement () {
         let sibling = this.element.previousElementSibling
         while (sibling) {
             if (sibling.getAttribute("node-id") && sibling.classList.contains("node")) {
@@ -161,12 +161,11 @@ export class BaseNode {
         return null
     }
     /** nodeが削除可能かを調べる*/
-    allowDelete = () => {
+    allowDelete () {
         return this.element.querySelector("[data-action='del-node']") != null
     }
     /** BaseNode.elementを削除する */
-    delme = () => {
-        if (!this.allowDelete()) { return }
+    delme() {
         const nodeControl = this.element.nextElementSibling
         if (nodeControl != null && nodeControl.classList.contains("node-control")) {
             nodeControl.remove()
@@ -206,7 +205,7 @@ export class QuestionNode extends BaseNode {
      * @param {number} mode 
      * @returns {object}
      */
-    extractQuestionParams = (mode) => {
+    extractQuestionParams (mode) {
         const node_id = this.nodeId
         const q_id = this.qId
         const ptype = Number(this.ptype)
@@ -365,23 +364,33 @@ export class QuestionNode extends BaseNode {
         return nodeList
     }
 
-    allowDelete = () => {
+    allowDelete () {
         return this.element.querySelector(".card-header [data-action='del-node']") != null
+    }
+    /** 内部のNodeを削除したうえで自身の要素を削除する  */
+    delme () {
+        this.element.querySelectorAll(".node[node-id]").forEach(e => {
+            if (e.classList.contains(nodeType.code)) {
+                new CodeNode(e).delme()
+            } else if (e.classList.contains(nodeType.explain)) {
+                new ExplainNode(e).delme()
+            }
+        })
+        super.delme()
     }
 }
 
+/** ExplainNode, CodeNodeの親クラス. このクラスは直接インスタンス化しない */
 export class EditorNode extends BaseNode {
-    /**
-     * ExplainNode, CodeNodeの親クラス
-     * @param {string | Element} specifier 
-     */
+    /** @param {string | Element} specifier */
     constructor(specifier) {
         super(specifier) 
         this.hasAce = this.element.querySelector(".ace_text-input") != null
     }
     get editor() {
         const AceInputElem = this.element.querySelector("div:has(>.ace_text-input)")
-        if (AceInputElem == null) {throw new NodeStructureError(this.type, "Ace Editor is not embeded.")}
+        if (AceInputElem == null) {throw new NodeStructureError(
+            this.type, "Ace Editor is not embeded.\n Use CodeNode or ExplainNode.")}
         return ace.edit(AceInputElem)
     }
     /**
@@ -395,7 +404,13 @@ export class EditorNode extends BaseNode {
         if (parent) {return new QuestionNode(parent)}
         return null
     } 
+    /** ace editorを解除し，自身のElementを削除する */
+    delme () {
+        this.editor.destroy()
+        super.delme()
+    }
 }
+/** pythonを記述するためのノード */
 export class CodeNode extends EditorNode {
     /**
      * ace editorを持ったCodeNodeオブジェクトを作成する 
@@ -426,6 +441,7 @@ export class CodeNode extends EditorNode {
             readOnly: editableElem.classList.contains("readonly")
         });
         editor.container.childNodes[0].tabIndex = -1
+        this.hasAce = true
     }
     /**  Codeインスタンスのパラメータを返す */
     extractCodeParams = () => {
@@ -445,7 +461,7 @@ export class CodeNode extends EditorNode {
         this.element.querySelector(".node-side")?.classList.remove("bg-success-subtle")
     }
 }
-
+/** markdownを記述するためのノード */
 export class ExplainNode extends EditorNode {
     /**
      * ace editorを持ったExplainNodeオブジェクトを作成する
@@ -476,6 +492,7 @@ export class ExplainNode extends EditorNode {
             minLines: defaultLineNumbers
         })
         editor.container.childNodes[0].tabIndex = -1
+        this.hasAce = true
     }
     /** コードをhighlight.jsでハイライトする */
     highlighlting = () => {
@@ -494,6 +511,7 @@ export class ExplainNode extends EditorNode {
         preview.innerHTML = html 
         mde.classList.add("preview-active")
     }
+    /** editorを表示する */
     showEditor = () => {
         const mde = this.element.querySelector(".mde")
         if (mde === null) {throw new NodeStructureError(this.type)}
