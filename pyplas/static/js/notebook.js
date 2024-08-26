@@ -14,7 +14,7 @@ document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e
 // markdown.js, highlight.jsの準備
 if (!helper.isCreateMode()) {
     document.querySelectorAll(".explain").forEach(elem => {
-        elem.innerHTML = marked.parse(elem.innerHTML)
+        elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML))
     })
 } else {
     document.querySelectorAll(".node.explain").forEach(e => 

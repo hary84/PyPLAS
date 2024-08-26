@@ -509,6 +509,7 @@ export class ExplainNode extends EditorNode {
             throw new NodeStructureError(this.type)
         }
         preview.innerHTML = html 
+        this.highlighlting()
         mde.classList.add("preview-active")
     }
     /** editorを表示する */

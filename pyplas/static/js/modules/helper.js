@@ -72,7 +72,16 @@ export function escapeHTML(str, ansi=false) {
         }[match]
     });
 }
-
+/** 
+ * エスケープ処理された文字をもとに戻す
+ * @param {string} str */
+export function unescapeHTML(str) {
+    return str.replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+}
 
 export const pagination = {
     tableTag: "",
