@@ -61,6 +61,7 @@ const reseter = {
         else {
             throw new myclass.NodeStructureError(node.type)
         }
+        console.log(`[reset-manager] reset node(node-id=${node.nodeId})`)
     },
 
     /** get origin nodes string  
@@ -89,6 +90,7 @@ const reseter = {
      */
     _getNodeIndex(nodeId) {
         const container = document.querySelector("#nodesContainer")
+        if (container == null) {throw new error.ApplicationError("can not find #nodesContainer Element")}
         const nodes = container.querySelectorAll(":scope > .code, :scope > .explain, :scope >.question")
         let idx = 0
         for (const n of nodes) {

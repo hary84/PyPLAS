@@ -22,6 +22,7 @@ class ApplicationHandler(tornado.web.RequestHandler):
     def get_template_namespace(self) -> Dict[str, Any]:
         namespace = super().get_template_namespace()
         namespace["current_url"] = self.request.uri
+        namespace["is_dev_mode"] = self.is_dev_mode
         return namespace
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:

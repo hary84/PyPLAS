@@ -24,7 +24,6 @@ class Code(UIModule):
         node_id: str
             random uuid4
         """
-
         if node_id is None:
             node_id = str(uuid.uuid4())
 
@@ -53,7 +52,6 @@ class Explain(UIModule):
         node_id: str 
             ramdom uuid4
         """
-
         if node_id is None:
             node_id = str(uuid.uuid4())
             
@@ -117,7 +115,9 @@ class Question(UIModule):
                     continue
 
             question = soup.prettify()
-        
+        elif ptype == 1:
+            answers = answers[0] if len(answers) > 0 else ""
+
         if node_id is None: 
             node_id = str(uuid.uuid4())
 

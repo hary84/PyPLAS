@@ -1,6 +1,5 @@
-//@ts-check
 // for /create/<p_id> or /problems/<p_id>
-
+//@ts-check
 import { myNode } from "./modules/myclass.js"
 import * as myclass from "./modules/myclass.js"
 import * as utils from "./modules/utils.js"
@@ -15,153 +14,165 @@ document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e
 // markdown.js, highlight.jsの準備
 if (!helper.isCreateMode()) {
     document.querySelectorAll(".explain").forEach(elem => {
-        elem.innerHTML = marked.parse(elem.innerHTML)
+        elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML))
     })
 } else {
     document.querySelectorAll(".node.explain").forEach(e => 
-        myNode.explain(e).showPreview()
+        new myclass.ExplainNode(e).showPreview()
     )
 }
-hljs.highlightAll()
+hljs.highlightAll();
 
-// カーネルの起動, wsの接続
+// start kernel and observe websocket
 await kh.setUpKernel()
 helper.watchValue(kh, "running", setExecuteAnimation)
 helper.watchValue(kh, "msg", renderMessage)
 
-// active node の監視
+// observe 'active node'
 helper.watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
 
-// ボタンイベントリスナー (左サイドバー)
+// left side bar button 
 document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
-    const target = e.target?.closest("a, button")
+    const target = e.target?.closest("a")
     if (target === null) {return}
+    const action = target.dataset.action
     target.classList.add("disabled")
     try {
-        // execute all ボタン ----- すべてのCode Nodeを実行する
-        if (target.classList.contains("btn-exec-all")) {
-            await kh.executeAll(document.querySelector("#nodesContainer"))
-        }
-        // kernel restart ボタン ----- kernelを再起動する
-        else if (target.classList.contains("btn-restart")) {
-            await kh.setUpKernel(true)
-            document.querySelectorAll(".node.code").forEach(e => {
-                myNode.code(e).resetState()
-            })
-        }
-        // kernel interrupt ボタン ----- 実行中のコードを中断する
-        else if (target.classList.contains("btn-interrupt")) {
-            await kh.kernelInterrupt()
-        } 
-        // problem save ボタン ----- 解答の保存もしくは問題の登録をおこなう
-        else if (target.classList.contains("btn-save")) {
-            if (!helper.isCreateMode()) {         // problemページの場合
-                await utils.saveUserData()
-            } else {
-                await utils.registerProblem()
-            }
+        switch (action) {
+            case "exec-all":
+                const nodesContainer = document.querySelector("#nodesContainer")
+                if (nodesContainer == null) {throw new Error()}
+                await kh.executeAll(nodesContainer)
+                break;
+            case "restart-kernel":
+                await kh.setUpKernel(true)
+                document.querySelectorAll(".node.code").forEach(e => {
+                    new myclass.CodeNode(e).resetState()
+                })
+                break;
+            case "interrupt-kernel":
+                await kh.kernelInterrupt()
+                break;
+            case "save":
+                if (!helper.isCreateMode()) {
+                    await utils.saveUserData()
+                } else {
+                    await utils.registerProblem()
+                }
+                break;
         }
     } catch(e) {
         if (e instanceof error.ApplicationError) {
             alert(e.message)
             console.error(e)
         }
-        else {console.error(e)}
+        else {
+            alert("Unexpected error")
+            console.error(e)
+        }
     } finally {
         target.classList.remove("disabled")
     }
 })
 
-// ボタンイベントリスナー (メイン)
+document.querySelector("main")?.addEventListener("click", e => {
+    try {
+        const node = myNode.get(e.target?.closest(".node") ?? myclass.emptyNodeId)
+        if (node != null) {
+            myNode.activeNode.node_id = node.nodeId
+        }
+    } catch {}
+})
+
+// main
 document.querySelector("main")?.addEventListener("click", async e => {
     const target = e.target?.closest("a, button")
     if (!target) {return}
-    const node = myNode.get(e.target?.closest(".node"))
+    const action = target.dataset.action
     target.classList.add("disabled")
     try {
-        // ============================== 
-        //    一般
-        // ============================== 
-        if (node != null && target.classList.contains("btn-delme")) {
-            node.delme()
+        const node = myNode.get(e.target.closest(".node") ?? myclass.emptyNodeId)
+        switch (action) {
+            case "add-MD":
+                e.stopPropagation()
+                const explainNode = await utils.addMD(target.closest(".node-control"), "afterend")
+                myNode.activeNode.node_id = explainNode.nodeId
+                return
+            case "add-Code":
+                e.stopPropagation()
+                const codeNode = await utils.addCode(target.closest(".node-control"), "afterend", {
+                    user: Number(helper.isCreateMode())
+                })
+                myNode.activeNode.node_id = codeNode.nodeId
+                return
+            case "add-Question":
+                e.stopPropagation()
+                const questionNode = await utils.addQ(target.closest(".node-control"), "afterend", 
+                    Number(target.dataset.ptype)
+                )
+                myNode.activeNode.node_id = questionNode.nodeId
+                return
+            case "del-node":
+                node?.delme()
+                return
+            case "reset-input":
+                if (node instanceof myclass.QuestionNode || node instanceof myclass.CodeNode) {
+                    reseter.resetNode(node)
+                }
+                return
         }
-        else if (node != null && target.classList.contains("btn-reset-input")) {
-            if (node instanceof myclass.QuestionNode || node instanceof myclass.CodeNode) {
-                reseter.resetNode(node)
+        if (node instanceof myclass.CodeNode) {
+            switch (action) {
+                case "exec":
+                    await kh.execute(node.nodeId)
+                    break;
+                case "interrupt-kernel":
+                    await kh.kernelInterrupt()
+                    break;
             }
         }
-        else if (target.classList.contains("btn-addMD")) {
-            e.stopPropagation()
-            const explainNode = await utils.addMD(target.closest(".node-control"), "afterend")
-            myNode.activeNode.node_id = explainNode.nodeId
-        } 
-        else if (target.classList.contains("btn-addCode")) {
-            e.stopPropagation()
-            const codeNode = await utils.addCode(target.closest(".node-control"), "afterend", {
-                user: Number(helper.isCreateMode())
-            })
-            myNode.activeNode.node_id = codeNode.nodeId
-        } 
-        else if (target.classList.contains("btn-addQ")) {
-            const questionNode = await utils.addQ(target.closest(".node-control"), "afterend", 
-                        Number(target.dataset.ptype))
-            myNode.activeNode.node_id = questionNode.nodeId
-        }
-        // ============================== 
-        //    Code Node
-        // ============================== 
-        else if  (node instanceof myclass.CodeNode) {
-            if (target.classList.contains("btn-exec")) { 
-                await kh.execute(node.nodeId)
-            } 
-            else if (target.classList.contains("btn-interrupt")) {
-                await kh.kernelInterrupt()
-            } 
-        }
-        // ============================== 
-        //    Question Node
-        // ============================== 
         else if (node instanceof myclass.QuestionNode) {
-            if (target.classList.contains("btn-testing")) { 
-                await node.scoring()
-            } 
-            else if (target.classList.contains("btn-cancel")) {
-                await node.canceling()
-            } 
-            else if (target.classList.contains("btn-load-ipynb")) {
-                const file = await helper.filePicker()
-                const loc = node.answerField
-                const user = helper.isCreateMode()? 1 : 0
-                await utils.loadIpynb(file, loc, user)
+            switch (action) {
+                case "test":
+                    await node.scoring()
+                    break;
+                case "cancel-test":
+                    await node.canceling()
+                    break;
+                case "load-ipynb":
+                    const file = await helper.filePicker()
+                    const loc = node.answerField
+                    const user = helper.isCreateMode()? 1 : 0
+                    await utils.loadIpynb(file, loc, user)
+                    break;
+                case "exec-all":
+                    await kh.executeAll(node.answerField)
+                    break;
             }
-            else if (target.classList.contains("btn-exec-all")) {
-                await kh.executeAll(node.answerField)
-            }  
         }
-        // ============================== 
-        //    Explain Node
-        // ============================== 
         else if (node instanceof myclass.ExplainNode) {
-            if (target.classList.contains("btn-bold")) {
-                node.embedBold()
-            }
-            else if (target.classList.contains("btn-italic")) {
-                node.embedItalic()
-            }
-            else if (target.classList.contains("btn-href")) {
-                node.embedLink()
-            }
-            else if (target.classList.contains("btn-img")) {
-                node.embedImg()
-            }
-            else if (target.classList.contains("btn-fib-p")) {{
-                node.addFillInBlankProblem()
-            }}
-            else if (target.classList.contains("btn-sellect-p")) {
-                node.addSelectionProblem()
-            }
-            else if (target.classList.contains("btn-preview")) {
-                node.showPreview()
+            switch (action) {
+                case "embed-bold":
+                    node.embedBold();
+                    break;
+                case "embed-italic":
+                    node.embedItalic();
+                    break;
+                case "embed-href":
+                    node.embedLink();
+                    break;
+                case "embed-img":
+                    node.embedImg();
+                    break;
+                case "embed-FIB":
+                    node.addFillInBlankProblem();
+                    break;
+                case "embed-select":
+                    node.addSelectionProblem();
+                    break;
+                case "show-preview":
+                    node.showPreview();
+                    break;
             }
         }
     }
@@ -169,22 +180,17 @@ document.querySelector("main")?.addEventListener("click", async e => {
         if (e instanceof error.ApplicationError) {
             alert(e.message)
         }
-        else {throw e}
+        else {
+            alert("Unexpected error")
+            console.error(e)
+        }
     }
     finally {
         target.classList.remove("disabled")
     }
 })
 
-// イベントリスナー (node, click)
-window.addEventListener("click", e => {
-    const target = myNode.get(e.target?.closest(".node"))
-    if (target != null) {
-        myNode.activeNode.node_id = target.nodeId
-    }
-})
-
-// イベントリスナー (Key down)
+// Event Listener (key down)
 window.addEventListener("keydown", async e => {
     const currentActiveNode = myNode.activeNode.get()
     // ============================== 
@@ -219,7 +225,7 @@ window.addEventListener("keydown", async e => {
         else if (currentActiveNode instanceof myclass.QuestionNode) {
             const answerNodes = currentActiveNode.childNodes
             if (answerNodes.length == 0) {
-                const nodeControl = currentActiveNode.element.querySelector(".answer-content .node-control")
+                const nodeControl = currentActiveNode.answerField.querySelector(".node-control")
                 if (nodeControl != null) {
                     const nextActiveNode = await utils.addCode(nodeControl, "afterend", {
                         user: Number(helper.isCreateMode())
@@ -241,14 +247,13 @@ window.addEventListener("keydown", async e => {
             if (e != null) {myNode.activeNode.node_id = e.nodeId}
         }
         else if (e.target?.tagName == "TEXTAREA") {
-            const targetNode = myNode.get(e.target?.closest(".node"))
+            const targetNode = myNode.get(e.target?.closest(".node") ?? myclass.emptyNodeId)
             if (targetNode instanceof myclass.EditorNode) {targetNode.editor.blur()}
         }
         else {
             e.target?.blur()
             if (currentActiveNode instanceof myclass.QuestionNode) {
-                const toast = currentActiveNode.element.querySelector(".for-toast > .toast")
-                toast?.classList.remove("show")
+                currentActiveNode._hideToast()
             }
         }
     }
@@ -268,7 +273,7 @@ window.addEventListener("keydown", async e => {
     //    J or K
     // ============================== 
     else if ((e.key == "j" || e.key == "k") && e.target?.tagName == "BODY") {
-        if (!currentActiveNode) {return}
+        if (currentActiveNode == null) {return}
         const nextActiveNode = (e.key == "j") ? 
             myNode.nextNode(currentActiveNode) : myNode.prevNode(currentActiveNode)
         if (nextActiveNode != null) {
@@ -302,9 +307,10 @@ window.addEventListener("keydown", async e => {
         }
     }
     // ============================== 
-    //    D
+    //    Ctrl + D
     // ============================== 
-    else if (e.key == "d" && e.target?.tagName == "BODY") {
+    else if (e.ctrlKey && e.key == "d" && e.target?.tagName == "BODY") {
+        e.preventDefault()
         if (currentActiveNode == null) {return}
         try {
             if (currentActiveNode.allowDelete()) {
@@ -315,9 +321,7 @@ window.addEventListener("keydown", async e => {
                 currentActiveNode.delme()
                 myNode.activeNode.node_id = nextNode.nodeId
             }
-        } catch (e) {
-            console.error(e)
-        }
+        } catch (e) {}
                 
     }
 })
@@ -325,19 +329,27 @@ window.addEventListener("keydown", async e => {
 window.addEventListener("dblclick", e => {
     const target = e.target?.closest(".node.explain")
     if (target != null) {
-        myNode.explain(target).showEditor()
+        new myclass.ExplainNode(target).showEditor()
     }
 })
 
 document.querySelector("input#ipynbForm")?.addEventListener("change", async e => {
     const file = e.target?.files[0]
     const loc = document.querySelector("#nodesContainer")
+    if (loc == null) {
+        alert("unexpected error")
+        return
+    }
     const user = helper.isCreateMode() ? 1 : 0
     await utils.loadIpynb(file, loc, user)
 
 })
 
-
+const runState = {
+    idle: "idle",
+    running: "running",
+    suspending: "suspending"
+}
 
 /**
  * KernelHandler classのrunningパラメータが変化した際に起動する関数
@@ -348,11 +360,11 @@ function setExecuteAnimation(kh, oldValue, newValue) {
     // コード実行中(kh.running == true)の時
     if (newValue) {
         try {
-            const runningNode = myNode.code(kh.execute_task_q[0])
-            runningNode.element.setAttribute("run-state", "running")
+            const runningNode = new myclass.CodeNode(kh.execute_task_q[0])
+            runningNode.element.setAttribute("run-state", runState.running)
             runningNode.element.querySelector(".node-side")?.classList.add("bg-success-subtle")
             kh.execute_task_q.slice(1, ).forEach(id => {
-                myNode.code(id).element.setAttribute("run-state", "suspending")
+                new myclass.CodeNode(id).element.setAttribute("run-state", runState.suspending)
             })
         } catch(e) {
             if (e instanceof myclass.NodeError) {}
@@ -361,7 +373,7 @@ function setExecuteAnimation(kh, oldValue, newValue) {
     // 非コード実行中(kh.running == false)の時
     } else {
         document.querySelectorAll(".code").forEach(elem => {
-            elem.setAttribute("run-state", "idle")
+            elem.setAttribute("run-state", runState.idle)
         })
     }
 }
@@ -374,7 +386,7 @@ function renderMessage(kh, oldValue, newValue) {
     if (newValue) {
         try {
             const content = newValue.content
-            const return_form = myNode.code(newValue.node_id).element.querySelector(".return-box")
+            const return_form = new myclass.CodeNode(newValue.node_id).element.querySelector(".return-box")
             switch (newValue.msg_type) {
                 case "execute_result":
                     renderResult(content["data"]["text/plain"], return_form)
@@ -417,12 +429,12 @@ function renderResult(res, form, type="text") {
 /**
  * activeNodeがnode_idを変更した際の処理を行う関数
  * @param {Object} activeNode 
- * @param {String} oldNodeId 
+ * @param {String | undefined} oldNodeId 
  * @param {String} newNodeId 
  */
 function setActiveNodePointer(activeNode, oldNodeId, newNodeId) {
-    const oldNode = myNode.get(oldNodeId)
-    const newNode = myNode.get(newNodeId)
+    const oldNode = myNode.get(oldNodeId ?? myclass.emptyNodeId)
+    const newNode = myNode.get(newNodeId ?? myclass.emptyNodeId)
     if (oldNode) {oldNode.element.classList.remove("active-node")}
     if (newNode) {newNode.element.classList.add("active-node")}
 }
