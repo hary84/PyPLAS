@@ -7,7 +7,7 @@
 .mde {
     border: solid 0.6px rgb(168, 168, 168);
     border-radius: 5px;
-    padding: 1px 0px;
+    padding: 1px;
     .toolbar {
         height: 1.5rem;
         background-color: #ececed;
@@ -44,7 +44,7 @@
 .mde.preview-active {
     border: none;
     &:hover {
-        border: solid 0.6px rgb(168, 168, 168);
+        border: solid 1px rgb(168, 168, 168);
         border-radius: 5px;
         padding: 0px;
     }
