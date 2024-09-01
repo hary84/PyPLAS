@@ -24,7 +24,9 @@ class ProblemCreateHandler(ApplicationHandler):
         """
         # GET /create
         if p_id is None and action is None:
-            sql = r"""SELECT p_id, title, category, status FROM pages"""
+            sql = r"""SELECT p_id, title, category, status 
+            FROM pages
+            ORDER BY order_index ASC, register_at ASC"""
             problems = g.db.get_from_db(sql)
             sql = r"""SELECT * FROM categories"""
             cates = g.db.get_from_db(sql)

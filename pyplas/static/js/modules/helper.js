@@ -82,6 +82,18 @@ export function unescapeHTML(str) {
               .replace(/&quot;/g, '"')
               .replace(/&#39;/g, "'")
 }
+/** 配列が厳密に等しいか調べる */
+export function arraysAreEqual(arr1, arr2) {
+    if (arr1.length !== arr2.length) {
+        return false;
+    }
+    for (let i = 0; i < arr1.length; i++) {
+        if (arr1[i] !== arr2[i]) {
+            return false;
+        }
+    }
+    return true;
+}
 
 export const pagination = {
     tableTag: "",
@@ -109,8 +121,13 @@ export const pagination = {
             return window.getComputedStyle(e).display !== "none"
         }).slice(1)
 
+        if (this.itemsPerPage < 1) {
+            this.itemsPerPage = this.items.length
+        }
+
         this.createPageButton()
         this.showPage()
+        this.updateButtonState()
     },
 
     /** ページ移動ボタンを追加する */
@@ -155,8 +172,10 @@ export const pagination = {
             }
         })
     },
-
-    update() {
+    /** ページネーションを更新する
+     * @param {number | null} itemsPerPage 
+     */
+    update(itemsPerPage=null) {
         const paginationDiv = this.targetTableElem.nextElementSibling
         if (paginationDiv != null && paginationDiv.classList.contains("my-pagination")) {
             this.controller.abort()
@@ -166,6 +185,6 @@ export const pagination = {
                 e.classList.remove("pgn-hidden")
             })
         }
-        this.init(this.tableTag, this.itemsPerPage)
+        this.init(this.tableTag, itemsPerPage??this.itemsPerPage)
     }
 }

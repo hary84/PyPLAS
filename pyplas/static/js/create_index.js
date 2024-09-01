@@ -2,11 +2,58 @@
 import * as error from "./modules/error.js"
 import * as helper from "./modules/helper.js"
 
+// formの監視を開始
 const changedParams = {}
-
 observeForm()
-helper.pagination.init("#problemList", 10)
 
+// paginationを埋め込む
+const itemsPerPage = 10
+helper.pagination.init("#problemList", itemsPerPage)
+
+// Sortable.jsを有効化
+const tableBody = document.querySelector("#problemList tbody")
+const tableOrderSwitch = document.querySelector("input#activateOrderChange")
+const sortable = Sortable.create(tableBody, {
+    handle: ".handle",
+    chosenClass: "chosen",
+    animation: 200,
+    dataIdAttr: "data-sort-id",
+    onUpdate: (evt) => {
+        const target = evt.item 
+        target.closest("tr").classList.add("table-warning")
+    } 
+})
+let initialOrder = sortable.toArray()
+
+// order change switch の有効化
+tableOrderSwitch?.addEventListener("change", function() {
+    if (!this.checked && !helper.arraysAreEqual(initialOrder, sortable.toArray())) {
+        const agree = confirm("Your changes are not saved.\nDo you want to revert to the previous state?")
+        if (agree) {
+            sortable.sort(initialOrder, true)
+            resetOrderChangeMarker()
+        }
+        else { 
+            this.checked = true
+            return
+         }
+    }
+    categoryTags.forEach(btn => {
+        btn.classList.toggle("disabled", this.checked)
+    })
+    document.querySelectorAll("th[for='table-row-header']").forEach(elem => {
+        elem.classList.toggle("active-order-change-btn", this.checked)
+    })
+    const updateBtn = document.querySelector(".btn-update")
+    if (updateBtn == null) {console.error(); return}
+    updateBtn.dataset.action = 
+        this.checked ? "update-order" : "update-profiles"
+    updateBtn.textContent = 
+        this.checked ? " Update Order" : " Update Profiles"
+    helper.pagination.update(this.checked ? -1 : itemsPerPage)
+})
+
+// ボタンイベントリスナーの設定
 document.addEventListener("click", async e => {
     const btn = e.target?.closest(".btn") 
     if (btn == null) {return} 
@@ -14,11 +61,19 @@ document.addEventListener("click", async e => {
         const target = e.target?.closest("tr").getAttribute("target")
         await deleteProblem(target)
     }
-    else if (btn.classList.contains("btn-updatep")) {
-        await updateProfiles()
+    else if (btn.classList.contains("btn-update")) {
+        switch (btn.dataset.action) {
+            case "update-order":
+                await changeProblemOrder()
+                break;
+            case "update-profiles":
+                await updateProfiles()
+                break;
+        }
     }
 })
 
+// カテゴリーフィルターの有効化
 const categoryTags = Array.from(document.querySelectorAll(".category-tag"))
 categoryTags.forEach(btn=> {
     btn.addEventListener("click", (e) => {
@@ -28,17 +83,33 @@ categoryTags.forEach(btn=> {
                 tag.classList.remove("active")
             }
         })
+        document.querySelector("#orderChangeSwitch")?.classList.toggle(
+            "d-none", !btn.classList.contains("active")
+        )
         const category = e.target.dataset.category
-        const trList = Array.from(document.querySelectorAll("#problemList tr")).slice(1)
-        trList.forEach(e => {
+        tableBody?.querySelectorAll("tr").forEach(e => {
             const registeredCat = e.querySelector("select.select-category")?.value
-            e.classList.toggle("d-none", registeredCat != category && btn.classList.contains("active"))
+            if (registeredCat == "" && !btn.classList.contains("active")) {e.classList.remove("d-none")}
+            else if (registeredCat == category && btn.classList.contains("active")) {
+                e.classList.remove("d-none")
+            }
+            else {
+                e.classList.add("d-none")
+            }
         })
         helper.pagination.update()
     })
-
 })
 
+function resetOrderChangeMarker() {
+    tableBody?.querySelectorAll("tr").forEach(e => {
+        e.classList.remove("table-warning")
+    })
+}
+function getVisibleTableRow() {
+    return Array.from(tableBody.getElementsByTagName("tr")).filter(e=>{
+        return window.getComputedStyle(e).display !== "none"})
+}
 /**
  * 問題の削除を要請する
  */
@@ -57,6 +128,32 @@ async function deleteProblem(p_id) {
         throw new error.FetchError(res.status, res.statusText)
     }
 }
+/**
+ * 問題の順番を入れ替える
+ */
+async function changeProblemOrder() {
+    const trList = getVisibleTableRow()
+    const order = trList.map((tr) => tr.getAttribute("target"))
+    // const res = await fetch(`${window.location.origin}/create/profile`, {
+    //     method: "POST",
+    //     headers: {"Content-Type": "application/json"},
+    //     body: JSON.stringify({"order": order})
+    // })
+    // if (res.ok) {
+    //     const json = await res.json()
+    //     console.log(`[changeProblemOrder] ${json.DESCR}`)
+    //     resetOrderChangeMarker()
+    //     initialOrder = sortable.toArray()
+    // } else {
+    //     throw new error.FetchError(res.status, res.statusText)
+    // }
+    console.log(order)
+    resetOrderChangeMarker()
+    initialOrder = sortable.toArray()
+    tableOrderSwitch.checked = false 
+    tableOrderSwitch?.dispatchEvent(new Event("change"))
+}
+
 /**
  * pageのstatus, category, titleを変更する
  */
