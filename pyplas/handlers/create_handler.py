@@ -3,6 +3,8 @@ import sqlite3
 from typing import Optional
 import uuid
 
+from tornado.web import MissingArgumentError
+
 from .app_handler import ApplicationHandler, InvalidJSONError
 from pyplas.utils import get_logger, globals as g
 
@@ -21,30 +23,44 @@ class ProblemCreateHandler(ApplicationHandler):
             * /create/              :問題リスト
             * /create/new           :新規問題作成ページ
             * /create/<p_id(uuid)>  :問題編集ページ
+            * /create/order?category=<cat_name>
         """
-        # GET /create
-        if p_id is None and action is None:
-            sql = r"""SELECT p_id, title, category, status FROM pages"""
-            problems = g.db.get_from_db(sql)
-            sql = r"""SELECT * FROM categories"""
-            cates = g.db.get_from_db(sql)
-            problems = [r for r in problems] 
-            cates = [r for r in cates]
-            try:
-                self.render("create_index.html", problem_list=problems, categories=cates)
-            except Exception as e: 
-                mylogger.error(e, exc_info=True)
-                self.write_error(500, reason="Error occurred during rendering page")
-            
-        # GET /create/<p_id>
-        elif p_id is not None and action is None:
-            self.render_edit(p_id=p_id)
+        try:
+            # GET /create
+            if p_id is None and action is None:
+                self.render_problem_list()
+                
+            # GET /create/<p_id>
+            elif p_id is not None and action is None:
+                if p_id == "order":
+                    self.load_url_queries(["category"])
+                    self.render_order_change_page(self.query["category"])
+                else:
+                    self.render_problem_edit_page(p_id=p_id)
 
-        # GET /create/<p_id>/<action>
-        elif p_id is not None and action is not None:
-            self.write_error(404)
+            # GET /create/<p_id>/<action>
+            elif p_id is not None and action is not None:
+                self.write_error(404)
+        except (AssertionError, MissingArgumentError) as e:
+            mylogger.error(e)
+            self.write_error(404, reason=str(e))
+        except Exception as e:
+            mylogger.error(e, exc_info=True)
+            self.write_error(500, reason="Intenal Server Error")
 
-    def render_edit(self, p_id:str) -> None:
+    def render_problem_list(self):
+        """
+        問題一覧ページを表示
+        """
+        sql = r"""SELECT p_id, title, category, status 
+            FROM pages
+            ORDER BY category ASC, order_index ASC, register_at ASC"""
+        problems = g.db.get_from_db(sql)
+        sql = r"""SELECT * FROM categories"""
+        cates = g.db.get_from_db(sql)
+        self.render("create_index.html", problem_list=problems, categories=cates)
+
+    def render_problem_edit_page(self, p_id:str) -> None:
         """
         問題編集ページを表示
         """
@@ -64,22 +80,27 @@ class ProblemCreateHandler(ApplicationHandler):
             LEFT OUTER JOIN categories AS cat ON category = cat.cat_id 
             WHERE p_id = :p_id"""
             page = g.db.get_from_db(sql, p_id=p_id)
-            try:
-                assert len(page) != 0
-            except AssertionError:
-                self.redirect("/create")
-            else:
-                page = page[0]
-                try:
-                    self.render("create.html",
-                                title=page["title"],
-                                page=json.loads(page["page"]),
-                                answers=json.loads(page["answers"]),
-                                is_new=False,
-                                category=page["cat_name"])
-                except Exception as e:
-                    mylogger.error(e, exc_info=True)
-                    self.write_error(500, reason="Error occurred during rendering page")
+            assert len(page) != 0, f"problem({p_id}) is not found in DB"
+            page = page[0]
+            self.render("create.html",
+                        title=page["title"],
+                        page=json.loads(page["page"]),
+                        answers=json.loads(page["answers"]),
+                        is_new=False,
+                        category=page["cat_name"])
+
+    def render_order_change_page(self, cat_id: str):
+        """
+        問題順序変更ページを表示
+        """
+        sql = r"""SELECT p_id, title, cat.cat_name AS cat_name, status, register_at
+            FROM pages
+            LEFT OUTER JOIN categories AS cat ON category = cat.cat_id
+            WHERE category = :category
+            ORDER BY order_index ASC, register_at ASC"""
+        problems = g.db.get_from_db(sql, category=cat_id)
+        assert len(problems) != 0, "category_id: {cat_id} is not found in DB"
+        self.render("order_change.html", problems=problems)
 
     def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -99,6 +120,9 @@ class ProblemCreateHandler(ApplicationHandler):
                 if p_id == "profile":
                     self.load_json(validate=True, schema="profile.json")
                     self.update_profile()
+                elif p_id == "order":
+                    self.load_json(validate=True, schema="order_change.json")
+                    self.update_problem_order()
                 else:
                     self.set_status(404, reason=f"{self.request.uri} is not Found.")
                     self.finish()
@@ -161,6 +185,16 @@ class ProblemCreateHandler(ApplicationHandler):
         g.db.write_to_db_many(sql, params)
         self.write({"profile": json.dumps(self.json),
                     "DESCR": "problem profile is successfully updated."})
+    
+    def update_problem_order(self) -> None:
+        """
+        問題の順序を変更する
+        """
+        sql = r"""UPDATE pages SET order_index=:order
+        WHERE p_id=:p_id"""
+        params = [{"p_id": p_id, "order": i} for i, p_id in enumerate(self.json["order"])]
+        g.db.write_to_db_many(sql, params)
+        self.write({"DESCR": "problem order is successfully updated."})
 
     def delete(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """

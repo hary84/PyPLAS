@@ -65,7 +65,8 @@ class ProblemHandler(ApplicationHandler):
             FROM pages 
             LEFT OUTER JOIN categories ON category = categories.cat_id
             LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
-            WHERE pages.p_id=:p_id AND (status=1 OR :is_dev)"""
+            WHERE pages.p_id=:p_id AND (status=1 OR :is_dev)
+            ORDER BY pages.order_index ASC, pages.register_at ASC"""
         try:
             page = g.db.get_from_db(sql, p_id=p_id, is_dev=self.is_dev_mode)
             assert len(page) != 0, f"p_id='{p_id}' does not exist in DB."

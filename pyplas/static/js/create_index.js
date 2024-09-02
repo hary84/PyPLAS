@@ -2,46 +2,118 @@
 import * as error from "./modules/error.js"
 import * as helper from "./modules/helper.js"
 
+const itemsPerPage = 10
+const nullCategory = ""
+
+const tableBody = document.querySelector("#problemList tbody")
+const queries = helper.getUrlQuery()
+
 const changedParams = {}
+let subWindow = null
 
+// formの監視を開始
 observeForm()
-helper.pagination.init("#problemList", 10)
 
+// paginationを埋め込む
+helper.pagination.init("#problemList", itemsPerPage)
+
+// ボタンイベントリスナーの設定
 document.addEventListener("click", async e => {
     const btn = e.target?.closest(".btn") 
     if (btn == null) {return} 
-    if (btn.classList.contains("btn-delp")) {
-        const target = e.target?.closest("tr").getAttribute("target")
-        await deleteProblem(target)
-    }
-    else if (btn.classList.contains("btn-updatep")) {
-        await updateProfiles()
+    btn.classList.add("disabled")
+    try {
+        switch (btn.dataset.action) {
+            case "open-order-window":
+                subWindow = openOrderChangeWindow()
+                break;
+            case "del-problem":
+                const target = e.target?.closest("tr").getAttribute("target")
+                await deleteProblem(target)
+                break;
+            case "update-profiles":
+                await updateProfiles()
+                break;
+        }
+    } catch (e) {
+        alert(e)
+    } 
+    finally{
+        btn.classList.remove("disabled")
     }
 })
 
+// カテゴリーフィルターの有効化
 const categoryTags = Array.from(document.querySelectorAll(".category-tag"))
 categoryTags.forEach(btn=> {
     btn.addEventListener("click", (e) => {
-        // radio button
-        categoryTags.forEach(tag=> {
+        const category = e.target.dataset.category
+        categoryTags.forEach(tag=> { // radio button
             if (tag != btn) {
                 tag.classList.remove("active")
             }
         })
-        const category = e.target.dataset.category
-        const trList = Array.from(document.querySelectorAll("#problemList tr")).slice(1)
-        trList.forEach(e => {
+        document.querySelector("#categoryActions")?.classList.toggle(
+            "d-none", !btn.classList.contains("active")
+        )
+        if (btn.classList.contains("active")) {
+            helper.addQueryParam("category", category)
+        } else {
+            helper.removeQueryParam("category")
+        }
+        tableBody?.querySelectorAll("tr").forEach(e => {
             const registeredCat = e.querySelector("select.select-category")?.value
-            e.classList.toggle("d-none", registeredCat != category && btn.classList.contains("active"))
+            if (registeredCat == nullCategory) {
+                e.classList.toggle("d-none", btn.classList.contains("active"))
+            }
+            else if (registeredCat == category) {
+                e.classList.toggle("d-none", !btn.classList.contains("active"))
+            }
+            else {
+                e.classList.add("d-none")
+            }
         })
         helper.pagination.update()
     })
-
 })
 
-/**
- * 問題の削除を要請する
- */
+// URLクエリーにcategoryがあるならば，指定されたカテゴリフィルターを有効にする
+if (queries.category !== undefined) {
+    const activeBtn = document.querySelector(
+        `#cateogoryFilterContainer > .btn[data-category='${queries.category}']`)
+    if (activeBtn == null) {}
+    else {
+        activeBtn.dispatchEvent(new Event("click"))
+    }
+}
+
+// 他ページに遷移時に問題順序変更用のサブウィンドウを閉じる．
+window.addEventListener("beforeunload", e => {
+    if (subWindow != null && !subWindow.closed) {
+        subWindow.close()
+    }
+})
+
+/** 問題順番変更用のウィンドウを開く */
+function openOrderChangeWindow() {
+    const categoryId = helper.getUrlQuery().category
+    if (categoryId === undefined) {
+        throw new Error("Unexpected Error")
+    }
+    const subWindow = window.open(
+        `${window.location.origin}/create/order?category=${categoryId}`,
+        "_blank",
+        "menubar=0,width=700,height=700,top=100,left=100")
+    window.addEventListener("message", (e) => {
+        if (e.data === "processCompleted") {
+            subWindow?.close()
+            location.reload()
+        }
+    })
+    return subWindow
+}
+
+/** 問題の削除を要請する */
 async function deleteProblem(p_id) {
     const agree = confirm("本当に削除しますか？")
     if (!agree) {return}
@@ -57,9 +129,8 @@ async function deleteProblem(p_id) {
         throw new error.FetchError(res.status, res.statusText)
     }
 }
-/**
- * pageのstatus, category, titleを変更する
- */
+
+/** pageのstatus, category, titleを変更する */
 async function updateProfiles() {
     const res = await fetch(`${window.location.origin}/create/profile`, {
         method: "POST",

@@ -23,26 +23,29 @@
 
 {% block main %}
 <div class="" id="progress">
-    <p class="fs-3 border-bottom border-dark">Create Problems</p>
+    <p class="fs-3 border-bottom border-dark mt-3">Create Problems</p>
     <div id="cateogoryFilterContainer">
       {% for cat_d in categories %}
         <button class="category-tag btn btn-sm btn-outline-info" data-category="{{cat_d['cat_id']}}" data-bs-toggle="button"># {{ cat_d['cat_name'] }}</button>
       {% end %}
     </div>
-    <table class="table table-hover table-responsive ms-3" id="problemList">
+    <div class="d-flex justify-content-end d-none" id="categoryActions">
+      <button class="btn btn-sm btn-warning" data-action="open-order-window"><i class="bi bi-list-ol"></i> Change Problem Order</button>
+    </div>
+    <table class="table table-hover table-responsive px-1" id="problemList">
         <thead>
           <tr>
-            <th scope="col" style="width: 10%;">#</th>
-            <th scope="col" style="width: 30%;">title</th>
-            <th scope="col" style="width: 25%;">category</th>
-            <th scope="col" style="width: 25%;">status</th>
+            <th scope="col" style="width: 7%;">#</th>
+            <th scope="col" style="width: 45%;">title</th>
+            <th scope="col" style="width: 18%;">category</th>
+            <th scope="col" style="width: 20%;">status</th>
             <th scope="col" style="width: 10%;">ops</th>
           </tr>
         </thead>
         <tbody>
         {% for i, d in enumerate(problem_list) %}
-          <tr target="{{ d['p_id'] }}">
-            <th scope="row">{{ i }}</th>
+          <tr class="{{'d-none' if d['category'] is not None else ''}}" target="{{ d['p_id'] }}" data-sort-id="{{i}}">
+            <th scope="row"><span>{{i}}</span></th>
             <td><input type="text" class="title-form form-control form-control-sm" for="title" value="{{ d['title'] }}"></td>
             <td>
               <select class="select-category form-select form-select-sm" for="category">
@@ -59,7 +62,7 @@
               </select>
             </td>
             <td class="d-flex mx-auto">
-              <button class="btn btn-sm btn-delp"><i class="bi bi-trash3 text-danger"></i></button>
+              <button class="btn btn-sm" data-action="del-problem"><i class="bi bi-trash3 text-danger"></i></button>
               <div class="vr"></div>
               <button class="btn btn-sm" onclick="location.href='/create/{{ d['p_id'] }}'"><i class="bi bi-pencil-square"></i></button>
             </td>
@@ -69,7 +72,7 @@
       </table>
 </div>
 <div class="text-center">
-  <button class="btn btn-primary btn-updatep"><i class="bi bi-arrow-clockwise"></i>  Update</button>
+  <button class="btn btn-primary btn-update" data-action="update-profiles"><i class="bi bi-arrow-clockwise"></i>  Update Profiles</button>
   <button class="btn btn-success" onclick="location.href='/create/new'"><i class="bi bi-plus-circle"></i>  New</button>
 </div>
 {% end %}

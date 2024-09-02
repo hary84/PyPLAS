@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>Pyplas - Order Change</title>
+<link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src="{{ static_url('js/order_change.js') }}" type="module"></script>
+{% end %}
+
+{% block head-nav-li %}
+{% end %}
+
+
+{% block side-content %}
+{% end %}
+
+{% block main %}
+<div class="" id="orderChangeContainer">
+    <p class="fs-3 border-bottom border-dark mt-3">Problem Order Change</p>
+    <table class="table table-hover table-responsive px-1" id="problemList">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 10%;">#</th>
+            <th scope="col" style="width: 45%;">title</th>
+            <th scope="col" style="width: 20%;">category</th>
+            <th scope="col" style="width: 15%;">status</th>
+            <th scope="col" style="width: 10%;">registered_at</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for i, d in enumerate(problems) %}
+          <tr target="{{ d['p_id'] }}" data-sort-id="{{i}}">
+            <th scope="row"><i class="bi bi-arrows-move handle"> </i><span>{{i}}</span></th>
+            <td>{{ d['title'] }}</td>
+            <td>{{ d['cat_name'] }}</td>
+            <td>{{ "公開中" if d['status'] == 1 else "非公開" }}</td>
+            <td class="d-flex mx-auto">{{ d['register_at'].split(" ")[0] }}</td>
+          </tr>
+        {% end %}
+        </tbody>
+      </table>
+</div>
+<div class="text-center">
+  <button class="btn btn-primary" data-action="update-order">
+    <i class="bi bi-arrow-clockwise"></i>  Update Order
+  </button>
+  <button class="btn btn-danger" data-action="reset-order">
+    Reset Order
+  </button>
+</div>
+{% end %}
+
+{% block side-content-r %}
+{% end %}
+

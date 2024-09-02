@@ -5,6 +5,7 @@ CREATE TABLE pages(
     category INT, 
     status INT DEFAULT 0,
     answers TEXT NOT NULL,
+    order_index INT DEFAULT 9223372036854775807,
     register_at DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category) REFERENCES categories(cat_id) ON DELETE SET NULL,
     CHECK (JSON_VALID(page)=1 AND JSON_TYPE(page)='object'),

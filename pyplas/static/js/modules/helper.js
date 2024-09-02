@@ -82,7 +82,36 @@ export function unescapeHTML(str) {
               .replace(/&quot;/g, '"')
               .replace(/&#39;/g, "'")
 }
+/** オブジェクト化したクエリ文字列を返す */
+export function getUrlQuery() {
+    const queryStr = window.location.search.slice(1)
+    const queries = {}
 
+    if (!queryStr) {return queries}
+
+    queryStr.split("&").forEach(str => {
+        const queryArray = str.split("=")
+        queries[queryArray[0]] = queryArray[1]
+    })
+    return queries
+}
+/** 
+ * 現在のURLにクエリパラメータを追加する
+ * @param {string} key
+ * @param {string} value  */
+export function addQueryParam(key, value) {
+    const url = new URL(window.location.href)
+    url.searchParams.set(key, value)
+    history.pushState(null, "", url)
+}
+/** 現在のURLのクエリパラメータを削除する
+ * @param {string} key */
+export function removeQueryParam(key) {
+    const url = new URL(window.location.href)
+    url.searchParams.delete(key)
+    history.replaceState(null, "", url)
+}
+/** ページネーションオブジェクト */
 export const pagination = {
     tableTag: "",
     itemsPerPage: 10,
@@ -109,8 +138,13 @@ export const pagination = {
             return window.getComputedStyle(e).display !== "none"
         }).slice(1)
 
+        if (this.itemsPerPage < 1) {
+            this.itemsPerPage = this.items.length
+        }
+
         this.createPageButton()
         this.showPage()
+        this.updateButtonState()
     },
 
     /** ページ移動ボタンを追加する */
@@ -155,8 +189,10 @@ export const pagination = {
             }
         })
     },
-
-    update() {
+    /** ページネーションを更新する
+     * @param {number | null} itemsPerPage 
+     */
+    update(itemsPerPage=null) {
         const paginationDiv = this.targetTableElem.nextElementSibling
         if (paginationDiv != null && paginationDiv.classList.contains("my-pagination")) {
             this.controller.abort()
@@ -166,6 +202,6 @@ export const pagination = {
                 e.classList.remove("pgn-hidden")
             })
         }
-        this.init(this.tableTag, this.itemsPerPage)
+        this.init(this.tableTag, itemsPerPage??this.itemsPerPage)
     }
 }
