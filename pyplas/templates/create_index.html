@@ -3,18 +3,7 @@
 {% block head %}
 <title>Pyplas - Create</title>
 <link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script src="{{ static_url('js/create_index.js') }}" type="module"></script>
-
-<style>
-  th[for='table-row-header'] {
-    i { display: none;}
-  }
-  th[for='table-row-header'].active-order-change-btn {
-    span {display: none;}
-    i { display: inline;}
-  }
-</style>
 {% end %}
 
 {% block head-nav-li %}
@@ -40,26 +29,23 @@
         <button class="category-tag btn btn-sm btn-outline-info" data-category="{{cat_d['cat_id']}}" data-bs-toggle="button"># {{ cat_d['cat_name'] }}</button>
       {% end %}
     </div>
-    <div class="d-flex justify-content-end">
-      <div class="form-check form-switch d-none" id="orderChangeSwitch">
-        <input class="form-check-input" type="checkbox" role="switch" id="activateOrderChange">
-        <label class="form-check-label" for="activateOrderChange">change problem order</label>
-      </div>
+    <div class="d-flex justify-content-end d-none" id="categoryActions">
+      <button class="btn btn-sm btn-warning" data-action="open-order-window"><i class="bi bi-list-ol"></i> Change Problem Order</button>
     </div>
     <table class="table table-hover table-responsive px-1" id="problemList">
         <thead>
           <tr>
-            <th scope="col" style="width: 10%;">#</th>
-            <th scope="col" style="width: 30%;">title</th>
-            <th scope="col" style="width: 25%;">category</th>
-            <th scope="col" style="width: 25%;">status</th>
+            <th scope="col" style="width: 7%;">#</th>
+            <th scope="col" style="width: 45%;">title</th>
+            <th scope="col" style="width: 18%;">category</th>
+            <th scope="col" style="width: 20%;">status</th>
             <th scope="col" style="width: 10%;">ops</th>
           </tr>
         </thead>
         <tbody>
         {% for i, d in enumerate(problem_list) %}
           <tr class="{{'d-none' if d['category'] is not None else ''}}" target="{{ d['p_id'] }}" data-sort-id="{{i}}">
-            <th scope="row" for="table-row-header"><i class="bi bi-arrows-move handle">  </i><span>{{i}}</span></th>
+            <th scope="row"><span>{{i}}</span></th>
             <td><input type="text" class="title-form form-control form-control-sm" for="title" value="{{ d['title'] }}"></td>
             <td>
               <select class="select-category form-select form-select-sm" for="category">
@@ -76,7 +62,7 @@
               </select>
             </td>
             <td class="d-flex mx-auto">
-              <button class="btn btn-sm btn-delp"><i class="bi bi-trash3 text-danger"></i></button>
+              <button class="btn btn-sm" data-action="del-problem"><i class="bi bi-trash3 text-danger"></i></button>
               <div class="vr"></div>
               <button class="btn btn-sm" onclick="location.href='/create/{{ d['p_id'] }}'"><i class="bi bi-pencil-square"></i></button>
             </td>

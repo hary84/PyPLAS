@@ -1,0 +1,11 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Saving User Input Validate",
+    "type": "object",
+    "properties": {
+        "order": {
+            "type": "array",
+            "items": {"type": "string"}
+        }
+    }
+}

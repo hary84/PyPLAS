@@ -82,19 +82,36 @@ export function unescapeHTML(str) {
               .replace(/&quot;/g, '"')
               .replace(/&#39;/g, "'")
 }
-/** 配列が厳密に等しいか調べる */
-export function arraysAreEqual(arr1, arr2) {
-    if (arr1.length !== arr2.length) {
-        return false;
-    }
-    for (let i = 0; i < arr1.length; i++) {
-        if (arr1[i] !== arr2[i]) {
-            return false;
-        }
-    }
-    return true;
-}
+/** オブジェクト化したクエリ文字列を返す */
+export function getUrlQuery() {
+    const queryStr = window.location.search.slice(1)
+    const queries = {}
 
+    if (!queryStr) {return queries}
+
+    queryStr.split("&").forEach(str => {
+        const queryArray = str.split("=")
+        queries[queryArray[0]] = queryArray[1]
+    })
+    return queries
+}
+/** 
+ * 現在のURLにクエリパラメータを追加する
+ * @param {string} key
+ * @param {string} value  */
+export function addQueryParam(key, value) {
+    const url = new URL(window.location.href)
+    url.searchParams.set(key, value)
+    history.pushState(null, "", url)
+}
+/** 現在のURLのクエリパラメータを削除する
+ * @param {string} key */
+export function removeQueryParam(key) {
+    const url = new URL(window.location.href)
+    url.searchParams.delete(key)
+    history.replaceState(null, "", url)
+}
+/** ページネーションオブジェクト */
 export const pagination = {
     tableTag: "",
     itemsPerPage: 10,
