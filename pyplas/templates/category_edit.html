@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>Pyplas - Create</title>
+<script src="" type="module"></script>
+{% end %}
+
+{% block head-nav-li %}
+<li class="nav-item align-self-center">
+  <a href="/" class="nav-link text-light"><i class="bi bi-house"></i> Home</a>
+</li>
+<li class="nav-item align-self-center">
+  <a href="/create" class="nav-link text-light text-decoration-underline">Create</a>
+</li>
+{% end %}
+
+
+{% block side-content %}
+<p class="fs-4 text-secondary border-bottom border-dark">User's Guide</p>
+<ul class="list-group">
+    <li class="list-group-item">An item</li>
+    <li class="list-group-item">A second item</li>
+    <li class="list-group-item">A third item</li>
+    <li class="list-group-item">A fourth item</li>
+    <li class="list-group-item">And a fifth one</li>
+</ul>
+{% end %}
+
+{% block main %}
+<div class="" id="CategoryEditContainer">
+    <p class="fs-3 border-bottom border-dark mt-3">Edit Category</p>
+    <div id="categoryList" class="w-100">
+      <table class="table table-hover table-responsive px-1" id="problemList">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 10%;">Image</th>
+            <th scope="col" style="width: 15%;">Category Id</th>
+            <th scope="col" style="width: 15%;">Category Name</th>
+            <th scope="col" style="width: 70%;">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for i, d in enumerate(categories) %}
+        {% set default_url = static_url('img/logo/logo.jpg') %}
+          <tr>
+            <th scope="row"><img src="{{d['logo_url'] if d['logo_url'] is not None else default_url}}" style="width: 4rem;height: 4rem;"
+              class="logo-img object-fit-cover border "
+              onerror="this.src='{{default_url}}" alt="logo"></th>
+            <td>{{ d['cat_id'] }}</td>
+            <td>{{ d['cat_name'] }}</td>
+            <td>
+              <div style="max-height: 4rem; overflow-y: auto;">{{ d['description'] }}</div>
+            </td>
+          </tr>
+        {% end %}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-center">
+      <button class="btn btn-success"><i class="bi bi-plus-circle"></i>  New</button>
+    </div>
+</div>
+{% end %}
+
+{% block side-content-r %}
+{% end %}
+
