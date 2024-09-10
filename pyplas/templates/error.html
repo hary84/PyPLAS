@@ -21,7 +21,7 @@
 
 {% block main %}
 <div class="card border-0 my-3">
-    <img src="{{ static_url('img/error/default-error.jpg') }}" height=300px width=100% class="card-img-top" alt="{{status_code}} error img" style="object-fit: cover;">
+    <img src="{{ static_url('img/error/default-error.webp') }}" height=300px width=100% class="card-img-top" alt="{{status_code}} error img" style="object-fit: cover;">
     <div class="card-body text-center">
         {% if status_code == 403 %}
             <h2 class="card-title text-danger border-bottom border-danger text-center">403 Forbidden </h2>

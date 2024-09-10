@@ -13,7 +13,8 @@ class CategoryHandler(ApplicationHandler):
     def get(self, cat_id: Optional[str]=None):
         """
         PATH
-            * /category → カテゴリ一覧の表示
+            * /category           :カテゴリ一覧の表示
+            * /category/<cat_id>  :<cat_id>のcat_id, cat_name, logo_url, descriptionを返す
         """
         try:
             if cat_id is None:
@@ -21,10 +22,22 @@ class CategoryHandler(ApplicationHandler):
                 categories = g.db.get_from_db(sql)
                 self.render("category_edit.html", categories=categories)
             else:
-                self.redirect("/category", permanent=True)
+                self.get_cate_info(cat_id)
+        except AssertionError as e:
+            logger.error(e)
+            self.write_error(404, reason=str(e))
         except Exception as e:
             logger.error(e)
             self.write_error(500)
+
+    def get_cate_info(self, cat_id: str):
+        """
+        DBから,指定したcat_idの全属性を返す
+        """
+        sql = r"""SELECT * FROM categories WHERE cat_id = :cat_id"""
+        cate_info = g.db.get_from_db(sql, cat_id=cat_id)
+        assert len(cate_info) != 0, f"There is no category(cat_id={cat_id})"
+        self.write(cate_info[0])
 
     def post(self, cat_id: Optional[str]=None):
         """
