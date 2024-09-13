@@ -1,9 +1,11 @@
+import os
 import sqlite3
 from typing import Optional
 from .app_handler import ApplicationHandler, InvalidJSONError
 from pyplas.utils import get_logger , globals as g
 
 logger = get_logger(__name__)
+IMAGE_ALLOWED = ["jpg", "jpeg", "png", "webp"]
 
 class CategoryHandler(ApplicationHandler):
     
@@ -13,14 +15,12 @@ class CategoryHandler(ApplicationHandler):
     def get(self, cat_id: Optional[str]=None):
         """
         PATH
-            * /category           :カテゴリ一覧の表示
-            * /category/<cat_id>  :<cat_id>のcat_id, cat_name, logo_url, descriptionを返す
+            * create/category           :カテゴリ一覧の表示
+            * create/category/<cat_id>  :<cat_id>のcat_id, cat_name, logo_url, descriptionを返す
         """
         try:
             if cat_id is None:
-                sql = r"""SELECT * FROM categories"""
-                categories = g.db.get_from_db(sql)
-                self.render("category_edit.html", categories=categories)
+                self.get_cate_list()
             else:
                 self.get_cate_info(cat_id)
         except AssertionError as e:
@@ -29,6 +29,27 @@ class CategoryHandler(ApplicationHandler):
         except Exception as e:
             logger.error(e)
             self.write_error(500)
+
+    def get_cate_list(self):
+        """
+        すべてのcategoryの一覧を表示
+        """
+        sql = r"""SELECT * FROM categories"""
+        cates = g.db.get_from_db(sql)
+        image_names = self.get_logo_paths()
+        self.render("category_edit.html", categories=cates, images=image_names)
+
+    def get_logo_paths(self) -> list:
+        """
+        /static/img/logo/ 以下にある画像ファイルのパスのリストを返す
+        """
+        paths = []
+        logo_path = os.path.join(self.settings["static_path"], "img", "logo") 
+        for filename in os.listdir(logo_path):
+            extension = filename.lower().split(".")[-1]
+            if extension in IMAGE_ALLOWED:
+                paths.append(os.path.join("/", "static", "img", "logo", filename))
+        return paths
 
     def get_cate_info(self, cat_id: str):
         """
@@ -42,8 +63,8 @@ class CategoryHandler(ApplicationHandler):
     def post(self, cat_id: Optional[str]=None):
         """
         PATH
-            * /category/new
-            * /category/<cat_id>
+            * create/category/new
+            * create/category/<cat_id>
         """
         if cat_id == None:
             self.set_status(404, reason=f"{self.request.uri} is not found.")
@@ -96,7 +117,7 @@ class CategoryHandler(ApplicationHandler):
     def delete(self, cat_id: Optional[str]=None):
         """
         PATH
-            * /category/<cat_id>
+            * create/category/<cat_id>
         """
         if cat_id is None:
             self.set_status(404, reason=f"{self.request.uri} is not found.")
@@ -110,7 +131,9 @@ class CategoryHandler(ApplicationHandler):
                 self.finish()
     
     def del_category(self, cat_id:str):
-        """指定されたcat_idのカテゴリを削除する"""
+        """
+        指定されたcat_idのカテゴリを削除する
+        """
         sql = r"""DELETE FROM categories WHERE cat_id = :cat_id"""
         g.db.write_to_db(sql, cat_id=cat_id)
         self.write({"DESCR": f"category(cat_id={cat_id}) is successfully deleted."})
