@@ -25,18 +25,23 @@ logger = get_logger(__name__)
 def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
+
         (r"/problems/?", ProblemHandler),
         (r"/problems/(?P<p_id>[\w-]+)/?", ProblemHandler),
         (r"/problems/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemHandler),
+
         (r'/ws/([\w-]+)/?', ExecutionHandler),
+
         (r"/kernel/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/?", KernelHandler),
         (r"/kernel/(?P<k_id>[\w-]+)/(?P<action>[\w]+)/?", KernelHandler),
+
+        (r"/create/category/?", CategoryHandler),
+        (r"/create/category/(?P<cat_id>[\w-]+)/?", CategoryHandler),
         (r"/create/?", ProblemCreateHandler),
         (r"/create/(?P<p_id>[\w-]*)/?", ProblemCreateHandler),
         (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
-        (r"/category/?", CategoryHandler),
-        (r"/category/(?P<cat_id>[\w-]+)/?", CategoryHandler),
+
         (r"/api/render/?", RenderHTMLModuleHandler),
     ],
     default_handler_class=ErrorHandler,

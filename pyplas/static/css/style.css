@@ -3,7 +3,8 @@
   --z-index-code-config: calc(var(--z-index-base) + 10);
   --z-index-toast: calc(var(--z-index-base) + 20);
   --z-index-header: calc(var(--z-index-base) + 30);
-  --z-index-offcanvas: calc(var(--z-index-base) + 100) /** max **/
+  --z-index-offcanvas: calc(var(--z-index-base) + 40) 
+  /** max z-index is 1055 **/
 }
 
 .only-inq {

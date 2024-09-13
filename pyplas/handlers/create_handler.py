@@ -1,6 +1,6 @@
 import json
 import sqlite3
-from typing import Optional
+from typing import Optional, Union
 import uuid
 
 from tornado.web import MissingArgumentError
@@ -11,7 +11,7 @@ from pyplas.utils import get_logger, globals as g
 mylogger = get_logger(__name__)
 
 class ProblemCreateHandler(ApplicationHandler):
-    """問題作成ハンドラ"""
+    """問題作成/編集ハンドラ"""
     def prepare(self):
         mylogger.info(f"{self.request.method} {self.request.uri}")
         if not self.is_dev_mode:
@@ -20,10 +20,10 @@ class ProblemCreateHandler(ApplicationHandler):
     def get(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
         PATH
-            * /create/              :問題リスト
-            * /create/new           :新規問題作成ページ
-            * /create/<p_id(uuid)>  :問題編集ページ
-            * /create/order?category=<cat_name>
+            * /create/                          :問題リスト
+            * /create/new                       :新規問題作成ページ
+            * /create/<p_id(uuid)>              :問題編集ページ
+            * /create/order?category=<cat_name> :順序変更ページ
         """
         try:
             # GET /create
@@ -33,7 +33,7 @@ class ProblemCreateHandler(ApplicationHandler):
             # GET /create/<p_id>
             elif p_id is not None and action is None:
                 if p_id == "order":
-                    self.load_url_queries(["category"])
+                    self.load_url_queries({"category": None})
                     self.render_order_change_page(self.query["category"])
                 else:
                     self.render_problem_edit_page(p_id=p_id)
@@ -89,17 +89,20 @@ class ProblemCreateHandler(ApplicationHandler):
                         is_new=False,
                         category=page["cat_name"])
 
-    def render_order_change_page(self, cat_id: str):
+    def render_order_change_page(self, cat_id: Union[str, None]):
         """
         問題順序変更ページを表示
         """
-        sql = r"""SELECT p_id, title, cat.cat_name AS cat_name, status, register_at
+        if cat_id is None:
+            condition = r"category IS NULL"
+        else:
+            condition = r"category = :category"
+        sql = fr"""SELECT p_id, title, cat.cat_name AS cat_name, status, register_at
             FROM pages
             LEFT OUTER JOIN categories AS cat ON category = cat.cat_id
-            WHERE category = :category
+            WHERE {condition}
             ORDER BY order_index ASC, register_at ASC"""
         problems = g.db.get_from_db(sql, category=cat_id)
-        assert len(problems) != 0, "category_id: {cat_id} is not found in DB"
         self.render("order_change.html", problems=problems)
 
     def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:

@@ -18,3 +18,9 @@ export class FetchError extends ApplicationError {
         this.statusText = statusText
     }
 }
+/** 要素が見つからないと発生するエラー */
+export class ElementNotFoundError extends ApplicationError {
+    constructor(msg="Can Not Find Element.") {
+        super(msg)
+    }
+}

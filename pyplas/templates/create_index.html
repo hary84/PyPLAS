@@ -28,6 +28,7 @@
       {% for cat_d in categories %}
         <button class="category-tag btn btn-sm btn-outline-info" data-category="{{cat_d['cat_id']}}" data-bs-toggle="button"># {{ cat_d['cat_name'] }}</button>
       {% end %}
+      <a href="/create/category" class="text-info fw-bold"> ... +</a>
     </div>
     <div class="d-flex justify-content-end d-none" id="categoryActions">
       <button class="btn btn-sm btn-warning" data-action="open-order-window"><i class="bi bi-list-ol"></i> Change Problem Order</button>

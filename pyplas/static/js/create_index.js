@@ -108,6 +108,8 @@ function openOrderChangeWindow() {
         if (e.data === "processCompleted") {
             subWindow?.close()
             location.reload()
+        } else if (e.data === "processAborted") {
+            subWindow?.close()
         }
     })
     return subWindow
