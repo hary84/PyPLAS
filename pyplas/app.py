@@ -1,28 +1,18 @@
-import argparse
 import asyncio
 import signal
 
 from jupyter_client.utils import run_sync
 import tornado
 
-from pyplas.utils import get_logger, globals as g
+from pyplas.utils import globals as g
 from . import uimodules
 from . import config as cfg
 from pyplas.handlers import *
 
+def make_app(develop: bool):
+    # setup global variables
+    g.db.setup(dev_mode=develop)
 
-# parse command-line argment
-parser = argparse.ArgumentParser(description="PyPLAS server options")
-parser.add_argument("-p", "--port", default=8888, type=str, help="Port number to run the server on")
-parser.add_argument("-d", "--develop", action="store_true", help="Run the server in developer mode")
-args = parser.parse_args()
-
-# setup global variables
-g.db.setup(dev_mode=args.develop)
-
-logger = get_logger(__name__)
-
-def make_app():
     return tornado.web.Application([
         (r"/", MainHandler),
 
@@ -47,28 +37,31 @@ def make_app():
     default_handler_class=ErrorHandler,
     template_path=cfg.TEMPLATE_DIR,
     static_path=cfg.STATIC_DIR,
-    debug=True,
+    debug=develop,
     ui_modules=uimodules,
-    develop=args.develop,
+    develop=develop,
     )
 
-async def main():
-    app = make_app()
-    app.listen(args.port)
+async def starter(port: int, develop: bool):
+    """
+    サーバーの起動
+    """
+    app = make_app(develop)
+    app.listen(port)
     shutdown_event = asyncio.Event()
 
     def shutdown_server(signum, frame):
-        print()
-        for p in  ProblemHandler.execute_pool.values():
-            p.kill()
-        logger.info(f"[Server Stop] All Subprocess are killed")
-
-        run_sync(g.km._async_shutdown_all)()
-        logger.info("[Server Stop] All Ipykernel are successfully shutteddown.")
-        g.db.close()
-        logger.info("[Server Stop] DB is successfully closed.")
+        clean_up()
         shutdown_event.set()
 
     signal.signal(signal.SIGTERM, shutdown_server)
     signal.signal(signal.SIGINT, shutdown_server)
     await shutdown_event.wait()
+
+def clean_up():
+    """
+    サーバー停止時の処理
+    """
+    ProblemHandler.kill_all_subprocess()
+    run_sync(g.km._async_shutdown_all)()
+    g.db.close()

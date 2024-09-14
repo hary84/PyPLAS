@@ -1,3 +1,6 @@
+# ==============================
+#  PATH
+# ==============================
 
 ### sqlite database path 
 PROBLEM_DB_PATH = "pyplas/database/pyplas.db"

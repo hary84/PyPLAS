@@ -69,12 +69,12 @@ class DBHandler:
     DBに関わる処理を行うクラス
     """
     def __init__(self):
-        self.page_path = cfg.PROBLEM_DB_PATH
         self.conn:Optional[sqlite3.Connection] = None
         self.logger: Logger = get_logger(self.__class__.__name__)
 
     def setup(self, dev_mode:bool=False):
         """ユーザDBへのパスを設定し, 問題DBに接続する."""
+        self.page_path = cfg.PROBLEM_DB_PATH
         self.dev_mode = dev_mode
         if self.dev_mode:
             self.user_path = cfg.DEV_USER_DB_PATH
@@ -201,8 +201,9 @@ class DBHandler:
 
     def close(self) -> None:
         """
-        DBとの接続を切る. dev_modeがtrueの時, user DBをクリーンアップする.
+        DBとの接続を切る. dev_modeがtrueの時, 開発用ユーザDBを削除する.
         """
         self.conn.close()
         if self.dev_mode:
             self._clean_up()
+        self.logger.warning('DB is successfully closed.')

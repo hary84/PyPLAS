@@ -19,6 +19,14 @@ mylogger = get_logger(__name__)
 class ProblemHandler(ApplicationHandler):
 
     execute_pool = {}
+
+    @classmethod 
+    def kill_all_subprocess(cls):
+        """実行中のすべてのサブプロセスをkillする"""
+        for p in cls.execute_pool.values():
+            p.kill()
+        mylogger.warning("All Subprocess are killed")
+
     def prepare(self):
         mylogger.info(f"{self.request.method} {self.request.uri}")
 
