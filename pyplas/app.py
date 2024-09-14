@@ -7,34 +7,34 @@ import tornado
 from pyplas.utils import globals as g
 from . import uimodules
 from . import config as cfg
-from pyplas.handlers import *
+from pyplas import handlers as hd
 
 def make_app(develop: bool):
     # setup global variables
     g.db.setup(dev_mode=develop)
 
     return tornado.web.Application([
-        (r"/", MainHandler),
+        (r"/", hd.MainHandler),
 
-        (r"/problems/?", ProblemHandler),
-        (r"/problems/(?P<p_id>[\w-]+)/?", ProblemHandler),
-        (r"/problems/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemHandler),
+        (r"/problems/?", hd.ProblemHandler),
+        (r"/problems/(?P<p_id>[\w-]+)/?", hd.ProblemHandler),
+        (r"/problems/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", hd.ProblemHandler),
 
-        (r'/ws/([\w-]+)/?', ExecutionHandler),
+        (r'/ws/([\w-]+)/?', hd.ExecutionHandler),
 
-        (r"/kernel/?", KernelHandler),
-        (r"/kernel/(?P<k_id>[\w-]+)/?", KernelHandler),
-        (r"/kernel/(?P<k_id>[\w-]+)/(?P<action>[\w]+)/?", KernelHandler),
+        (r"/kernel/?", hd.KernelHandler),
+        (r"/kernel/(?P<k_id>[\w-]+)/?", hd.KernelHandler),
+        (r"/kernel/(?P<k_id>[\w-]+)/(?P<action>[\w]+)/?", hd.KernelHandler),
 
-        (r"/create/category/?", CategoryHandler),
-        (r"/create/category/(?P<cat_id>[\w-]+)/?", CategoryHandler),
-        (r"/create/?", ProblemCreateHandler),
-        (r"/create/(?P<p_id>[\w-]*)/?", ProblemCreateHandler),
-        (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", ProblemCreateHandler),
+        (r"/create/category/?", hd.CategoryHandler),
+        (r"/create/category/(?P<cat_id>[\w-]+)/?", hd.CategoryHandler),
+        (r"/create/?", hd.ProblemCreateHandler),
+        (r"/create/(?P<p_id>[\w-]*)/?", hd.ProblemCreateHandler),
+        (r"/create/(?P<p_id>[\w-]+)/(?P<action>[\w]+)/?", hd.ProblemCreateHandler),
 
-        (r"/api/render/?", RenderHTMLModuleHandler),
+        (r"/api/render/?", hd.RenderHTMLModuleHandler),
     ],
-    default_handler_class=ErrorHandler,
+    default_handler_class=hd.ErrorHandler,
     template_path=cfg.TEMPLATE_DIR,
     static_path=cfg.STATIC_DIR,
     debug=develop,
@@ -62,6 +62,6 @@ def clean_up():
     """
     サーバー停止時の処理
     """
-    ProblemHandler.kill_all_subprocess()
+    hd.ProblemHandler.kill_all_subprocess()
     run_sync(g.km._async_shutdown_all)()
     g.db.close()

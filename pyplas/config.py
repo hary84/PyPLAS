@@ -1,11 +1,11 @@
 # ==============================
 #  PATH
 # ==============================
-
 ### sqlite database path 
-PROBLEM_DB_PATH = "pyplas/database/pyplas.db"
-USER_DB_PATH = "pyplas/database/user.db"
-DEV_USER_DB_PATH = "pyplas/database/dev-user.db"
+DB_DIR = "pyplas/database/"
+PROBLEM_DB_PATH =  DB_DIR + "pyplas.db"
+USER_DB_PATH =  DB_DIR + "user.db"
+DEV_USER_DB_PATH = DB_DIR + "dev-user.db"
 
 ### sqlite table schema dir path
 SCHEMA_PATH = "pyplas/models/schema"

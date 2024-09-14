@@ -1,5 +1,6 @@
 from logging import Logger
 import os 
+import signal
 import sqlite3
 from typing import Optional, Union
 
@@ -11,7 +12,8 @@ class InvalidDBSchema(Exception):
 
 
 def create_problem_db(path: str):
-    """空の問題DBを作成する. 
+    """
+    スキーマ定義ファイルに基づいて, 空の問題DBを作成する. 
     
     Parameters
     ----------
@@ -30,7 +32,8 @@ def create_problem_db(path: str):
         conn.commit()
 
 def create_user_db(path: str):
-    """空のユーザDBを作成する
+    """
+    スキーマ定義ファイルに基づいて, 空のユーザDBを作成する. 
     
     Parameters
     ----------
@@ -49,19 +52,20 @@ def create_user_db(path: str):
         conn.commit()
 
 def check_db_schema(db_path: str, table_name: list[str]):
-    """DBのschemaが正しいかをチェックする. 正しくない場合, 
-    InvalidDBSchemaエラーを発生させる. """
-
+    """
+    DBのschemaが正しいかをチェックする. 正しくない場合, 
+    InvalidDBSchemaエラーを発生させる. 
+    """
     for tname in table_name:
         with sqlite3.connect(db_path) as conn:
             cur = conn.execute(r"SELECT sql FROM sqlite_master WHERE name = :name",
                         {"name": tname})
-            actual = cur.fetchone()[0]
+            actual: Optional[tuple] = cur.fetchone()
             
         with open(os.path.join(cfg.SCHEMA_PATH, f"{tname}.sql"), "r", encoding="utf-8") as f:
             correct = f.read(-1)
 
-        if actual != correct:
+        if (actual is None) or (actual[0] != correct):
             raise InvalidDBSchema
 
 class DBHandler:
@@ -80,6 +84,7 @@ class DBHandler:
             self.user_path = cfg.DEV_USER_DB_PATH
         else:            
             self.user_path = cfg.USER_DB_PATH
+        self.logger.debug("DB set up")
         self._connect()
 
     def _connect(self) -> sqlite3.Connection:
@@ -89,18 +94,32 @@ class DBHandler:
 
         このメソッドは直接呼び出さない.
         """
-        if not os.path.exists(self.page_path):
-            create_problem_db(self.page_path)
-            self.logger.info(f"create problem DB ({self.page_path})")
-        else:
-            check_db_schema(self.page_path, ["categories", "pages"])
+        try:
+            current_path = self.page_path
+            if not os.path.exists(self.page_path):
+                create_problem_db(self.page_path)
+                self.logger.info(f"create problem DB ({self.page_path})")
+            else:
+                check_db_schema(self.page_path, ["categories", "pages"])
 
-        if not os.path.exists(self.user_path):
-            create_user_db(self.user_path)
-            self.logger.info(f"create user DB ({self.user_path})")
-
-        else:
-            check_db_schema(self.user_path, ["logs", "progress"])
+            current_path = self.user_path
+            if not os.path.exists(self.user_path):
+                create_user_db(self.user_path)
+                self.logger.info(f"create user DB ({self.user_path})")
+            else:
+                check_db_schema(self.user_path, ["logs", "progress"])
+        except (InvalidDBSchema, FileNotFoundError) as e:
+            self.logger.critical("\n".join([
+                e.__class__.__name__,
+                f"This DB({current_path}) cannot be used in this app.",
+                f"Please remove it from {cfg.DB_DIR} and start again."
+                ]))
+            os.kill(os.getpid(), signal.SIGTERM)
+            return
+        except Exception as e:
+            self.logger.critical(e.__class__.__name__)
+            os.kill(os.getpid(), signal.SIGTERM)
+            return
 
         self.conn = sqlite3.connect(self.page_path)
         self.conn.row_factory = self._dict_factory
@@ -108,7 +127,7 @@ class DBHandler:
                           {"user_path": self.user_path})
         self.conn.execute(r"PRAGMA foreign_keys=ON")
         self.conn.commit()
-        self.logger.debug(f"connect with DB({self.page_path})")
+        self.logger.info(f"connect with DB({self.page_path} and {self.user_path})")
 
     def _dict_factory(self, cursor, row):
         """
@@ -150,7 +169,6 @@ class DBHandler:
             for q in sqls:
                 self.conn.execute(q, (kwargs))
         except sqlite3.Error as e:
-            self.logger.error(e, exc_info=True)
             self.conn.rollback()
             raise
         else:
@@ -171,7 +189,6 @@ class DBHandler:
         try:
             self.conn.executemany(sql, params)
         except sqlite3.Error as e:
-            self.logger.error(e)
             self.conn.rollback()
             raise 
         else:
@@ -180,7 +197,7 @@ class DBHandler:
 
     def check_connect(self) -> bool:
         """
-        self.connがDBと接続されているかをチェックする.
+        DBと接続されているかをチェックする.
         """
         try:
             self.conn.cursor()
@@ -190,13 +207,13 @@ class DBHandler:
 
     def _clean_up(self) -> None:
         """
-        self.user_pathのuser DBを削除する. 
+        user DBを削除する. 
         
         このメソッドは直接呼び出さない.
         """
         if os.path.exists(self.user_path):
             if self.check_connect():
-                self.logger.warn(f"Before delete db file, please disconnect from the database({self.page_path})")
+                self.logger.warning(f"Before delete db file, please disconnect from the database({self.page_path})")
             os.remove(self.user_path)
 
     def close(self) -> None:

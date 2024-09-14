@@ -14,7 +14,7 @@ class KernelHandler(ApplicationHandler):
 
     def prepare(self) -> None:
         g.km.updated.clear()
-        mylogger.info(f"{self.request.method} {self.request.uri}")
+        mylogger.debug(f"{self.request.method} {self.request.uri}")
 
     async def get(self, k_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -96,9 +96,9 @@ class KernelHandler(ApplicationHandler):
         except DuplicateKernelError as e:
             raise
         else:
-            mylogger.debug(f"kernel(kernel_id={kernel_id}) is started.")
             self.finish({"kernel_id": self.kernel_id,
                          "DESCR": "Kernel is successfully started."})
+            mylogger.info(f"kernel(kernel_id={kernel_id}) is started.")
 
     async def kernel_restart(self, kernel_id:str) -> None:
         """
@@ -110,9 +110,9 @@ class KernelHandler(ApplicationHandler):
         except KeyError as e:
             raise
         else:
-            mylogger.debug(f"kernel(kernel_id={kernel_id}) is restarted.")
             self.finish({"kernel_id": kernel_id,
                          "DESCR": "Kernel is successfully restarted."})
+            mylogger.info(f"kernel(kernel_id={kernel_id}) is restarted.")
 
     async def kernel_interrupt(self, kernel_id:str) -> None:
         """
@@ -124,9 +124,9 @@ class KernelHandler(ApplicationHandler):
         except KeyError as e:
             raise
         else:
-            mylogger.debug(f"kernel(kernel_id={kernel_id}) is interrupted.")
             self.finish({"kernel_id": kernel_id,
                          "DESCR": "Kernel is successfully interrupted."})
+            mylogger.info(f"kernel(kernel_id={kernel_id}) is interrupted.")
 
     async def delete(self, k_id:Optional[str]=None, action:Optional[str]=None):
         """

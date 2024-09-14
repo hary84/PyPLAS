@@ -6,7 +6,7 @@ mylogger = get_logger(__name__)
 
 class RenderHTMLModuleHandler(ApplicationHandler):
     def prepare(self):
-        mylogger.info(f"{self.request.method} {self.request.uri}")
+        mylogger.debug(f"{self.request.method} {self.request.uri}")
         self.load_url_queries({"action": None})
 
     def post(self):
