@@ -11,6 +11,8 @@ class CategoryHandler(ApplicationHandler):
     
     def prepare(self):
         logger.debug(f"{self.request.method} {self.request.uri}")
+        if not self.is_dev_mode:
+            self.write_error(403, reason="server is not developer mode.")
 
     def get(self, cat_id: Optional[str]=None):
         """
@@ -102,6 +104,11 @@ class CategoryHandler(ApplicationHandler):
 
     def edit_category(self, cat_id: str):
         """受け取ったJSONから既存のカテゴリを編集する"""
+        if not exist_cat_id(cat_id):
+            self.set_status(404, reason=f"There is no category(cat_id={cat_id}) in DB")
+            self.finish()
+            return 
+        
         sql = r"""UPDATE categories SET cat_name=:cat_name,
         logo_url = CASE 
             WHEN :logo_url = "" THEN NULL
@@ -136,8 +143,22 @@ class CategoryHandler(ApplicationHandler):
         """
         指定されたcat_idのカテゴリを削除する
         """
+        if (not exist_cat_id(cat_id)):
+            self.set_status(404, reason=f"There is no category(cat_id={cat_id}) in DB.")
+            self.finish()
+            return 
+        
         sql = r"""DELETE FROM categories WHERE cat_id = :cat_id"""
         g.db.write_to_db(sql, cat_id=cat_id)
         self.write({"DESCR": f"category(cat_id={cat_id}) is successfully deleted."})
         logger.info(f"Category(cat_id={cat_id}) is deleted.")
+
+
+def exist_cat_id(cat_id:str) -> bool:
+    """categoriesテーブルに指定したcat_idがあるかどうかを確認する"""
+    sql_check_cat_id_exist = r"""SELECT * FROM categories WHERE cat_id=:cat_id"""
+    res = g.db.get_from_db(sql_check_cat_id_exist, cat_id=cat_id)
+    return len(res) != 0
+
+
 
