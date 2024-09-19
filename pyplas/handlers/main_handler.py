@@ -6,7 +6,7 @@ logger = get_logger(__name__)
 class MainHandler(ApplicationHandler):
     
     def prepare(self):
-        logger.info(f"{self.request.method} {self.request.uri}")
+        logger.debug(f"{self.request.method} {self.request.uri}")
         self.load_url_queries({"category": None})
 
     def get(self):

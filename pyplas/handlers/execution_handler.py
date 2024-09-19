@@ -21,7 +21,7 @@ class ExecutionHandler(WebSocketHandler):
         self.kc: AsyncKernelClient = self.km.client()
         if not self.kc.channels_running:
             self.kc.start_channels()
-        mylogger.info(f"WS OPEN {self.request.uri}")
+        mylogger.debug(f"WS OPEN {self.request.uri}")
 
     async def on_message(self, received_msg: dict):
         """
@@ -35,7 +35,7 @@ class ExecutionHandler(WebSocketHandler):
         """
         await self.kc.wait_for_ready()
         received_msg = json.loads(received_msg)
-        mylogger.info(f"WS RECEIVE {self.request.uri}")
+        mylogger.debug(f"WS RECEIVE {self.request.uri}")
         _code = received_msg.get("code", "")
         self.node_id = received_msg.get("node_id", "unknown")
         self.kc.execute(_code)
@@ -60,7 +60,7 @@ class ExecutionHandler(WebSocketHandler):
                 break
 
     def on_close(self):
-        mylogger.info(f"WS CLOSE({self.close_code}) {self.request.uri} ")
+        mylogger.debug(f"WS CLOSE({self.close_code}) {self.request.uri} ")
         if self.close_code == 1000: # when restarting kernel
             pass 
         elif self.close_code == 1001: # when closing page

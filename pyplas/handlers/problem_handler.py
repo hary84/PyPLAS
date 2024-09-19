@@ -19,8 +19,16 @@ mylogger = get_logger(__name__)
 class ProblemHandler(ApplicationHandler):
 
     execute_pool = {}
+
+    @classmethod 
+    def kill_all_subprocess(cls):
+        """実行中のすべてのサブプロセスをkillする"""
+        for p in cls.execute_pool.values():
+            p.kill()
+        mylogger.warning("All Subprocess are killed")
+
     def prepare(self):
-        mylogger.info(f"{self.request.method} {self.request.uri}")
+        mylogger.debug(f"{self.request.method} {self.request.uri}")
 
     def get(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -185,6 +193,7 @@ class ProblemHandler(ApplicationHandler):
                         q_content=json.dumps(self.json["q_content"]))
         self.finish({"body": json.dumps(self.json["q_content"]),
                     "DESCR": "data is successfully saved."})
+        mylogger.info("User's Answer is saved.")
 
     async def scoring(self, p_id:str) -> None:
         """
@@ -229,6 +238,7 @@ class ProblemHandler(ApplicationHandler):
             self.finish({"content": content,
                         "progress": q_status,
                         "DESCR": "Scoring complete."})
+            mylogger.info("Scoring user's answer")
 
     def canceling(self, p_id:Optional[str]=None) -> None:
         """
@@ -284,7 +294,6 @@ class ProblemHandler(ApplicationHandler):
         """
         code = "\n".join(self.json["answers"] + self.target_answers)
         with tempfile.NamedTemporaryFile(delete=True, dir=cfg.PYTHON_TEMP_DIR, suffix=".py") as tmp:
-            mylogger.debug(f"create temporary file: {tmp.name}")
             file_path = os.path.join(cfg.PYTHON_TEMP_DIR, tmp.name)
             with open(file_path, "w") as f:
                 f.write(code)

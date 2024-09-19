@@ -10,7 +10,7 @@ IMAGE_ALLOWED = ["jpg", "jpeg", "png", "webp"]
 class CategoryHandler(ApplicationHandler):
     
     def prepare(self):
-        logger.info(f"{self.request.method} {self.request.uri}")
+        logger.debug(f"{self.request.method} {self.request.uri}")
 
     def get(self, cat_id: Optional[str]=None):
         """
@@ -98,6 +98,7 @@ class CategoryHandler(ApplicationHandler):
         )"""
         g.db.write_to_db(sql, **self.json)
         self.write(self.json | {"DESCR": f"new category \"{self.json['cat_name']}\" is successfully added."})
+        logger.info(f"New Category `{self.json['cat_name']}` is added.")
 
     def edit_category(self, cat_id: str):
         """受け取ったJSONから既存のカテゴリを編集する"""
@@ -113,6 +114,7 @@ class CategoryHandler(ApplicationHandler):
         WHERE cat_id = :cat_id"""
         g.db.write_to_db(sql, cat_id=cat_id, **self.json)
         self.write(self.json | {"DESCR": f"category \"{self.json['cat_name']}\" is successfully edited."})
+        logger.info(f"Category(cat_id={cat_id}) is updated.")
 
     def delete(self, cat_id: Optional[str]=None):
         """
@@ -137,4 +139,5 @@ class CategoryHandler(ApplicationHandler):
         sql = r"""DELETE FROM categories WHERE cat_id = :cat_id"""
         g.db.write_to_db(sql, cat_id=cat_id)
         self.write({"DESCR": f"category(cat_id={cat_id}) is successfully deleted."})
+        logger.info(f"Category(cat_id={cat_id}) is deleted.")
 

@@ -13,7 +13,7 @@ mylogger = get_logger(__name__)
 class ProblemCreateHandler(ApplicationHandler):
     """問題作成/編集ハンドラ"""
     def prepare(self):
-        mylogger.info(f"{self.request.method} {self.request.uri}")
+        mylogger.debug(f"{self.request.method} {self.request.uri}")
         if not self.is_dev_mode:
             self.write_error(403, reason="server is not developer mode.")
             
@@ -163,6 +163,7 @@ class ProblemCreateHandler(ApplicationHandler):
                                    answers=json.dumps(self.json["answers"]))
             self.finish({"p_id": self.p_id,
                          "DESCR": "New Problem is successfully registered."})
+            mylogger.info(f"New Problem(p_id={self.p_id}) is added.")
         # edit exist problem
         else: 
             sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers 
@@ -172,6 +173,7 @@ class ProblemCreateHandler(ApplicationHandler):
                             answers=json.dumps(self.json["answers"]))
             self.finish({"p_id": p_id,
                          "DESCR": f"Problem({p_id}) is successfully saved."})
+            mylogger.info(f"Problem(p_id={p_id}) is updated.")
 
     def update_profile(self) -> None:
         """
@@ -188,6 +190,7 @@ class ProblemCreateHandler(ApplicationHandler):
         g.db.write_to_db_many(sql, params)
         self.write({"profile": json.dumps(self.json),
                     "DESCR": "problem profile is successfully updated."})
+        mylogger.info(f"Problem profiles is updated.")
     
     def update_problem_order(self) -> None:
         """
@@ -198,6 +201,7 @@ class ProblemCreateHandler(ApplicationHandler):
         params = [{"p_id": p_id, "order": i} for i, p_id in enumerate(self.json["order"])]
         g.db.write_to_db_many(sql, params)
         self.write({"DESCR": "problem order is successfully updated."})
+        mylogger.info(f"Problem order is updated.")
 
     def delete(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """
@@ -215,6 +219,7 @@ class ProblemCreateHandler(ApplicationHandler):
             g.db.write_to_db(sql, p_id=p_id)
             self.finish({"p_id": p_id,
                          "DESCR": f"Problem({p_id}) is successfully deleted."})
+            mylogger.info(f"Problem(p_id={p_id}) is deleted.")
                 
         # DELETE /create/<p_id>/<action>
         elif p_id is not None and action is not None:

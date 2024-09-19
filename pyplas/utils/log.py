@@ -31,9 +31,11 @@ class CustomFormatter(logging.Formatter):
             return formatter.format(record)
 
 def get_logger(name: str, use_color:bool=True):
+
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
+    # create console handler
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(CustomFormatter(use_color))
