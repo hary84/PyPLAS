@@ -28,7 +28,9 @@ export const myNode = {
      */
     get(specifier) {
         if (typeof specifier == "string") {
-            return this._getNodeObjectByNodeId(specifier)
+            const e = BaseNode.getNodeElementByNodeId(specifier)
+            if (e === null) {return null}
+            return this._getNodeObjectByElem(e)
         }
         else if (specifier instanceof Element) {
             return this._getNodeObjectByElem(specifier)
@@ -39,18 +41,6 @@ export const myNode = {
         else {
             throw new TypeError("argument 'specifier' must be string or Element or BaseNode")
         }
-    },
-    /**
-     * node-idからNodeオブジェクトを取得する
-     * 
-     * 対応するNodeがない場合, nullを返す
-     * @param {string} nodeId
-     * @returns {CodeNode | ExplainNode | QuestionNode | null}
-     */
-    _getNodeObjectByNodeId(nodeId) {
-        const e = BaseNode.getNodeElementByNodeId(nodeId)
-        if (e == null) {return null}
-        return this._getNodeObjectByElem(e)
     },
     /**
      * elementからNodeオブジェクトを取得する
@@ -98,11 +88,11 @@ export const myNode = {
 /** Nodeオブジェクトの基底クラス */
 export class BaseNode {
     /**
-     * .node[node-id]要素を指定する. 
+     * .node[node-id]要素をメンバ変数elementにもつオブジェクトnodeを作成する. 
      * nodeはnode-idとElementの両方から指定できる
      * 
      * 指定された要素がない場合NodeStructureErrorを投げる
-     * @param {string | Element | any} specifier
+     * @param {string | Element} specifier
      */
     constructor(specifier) {
         this.type = this.constructor.name
@@ -420,6 +410,9 @@ export class CodeNode extends EditorNode {
      */
     constructor(specifier) {
         super(specifier)
+        if (!this.element.classList.contains("code")) {
+            throw new NodeStructureError("CodeNode")
+        }
         if (!this.hasAce) {
             this._registerAcePythonEditor()
         }
@@ -434,7 +427,7 @@ export class CodeNode extends EditorNode {
         const editor = ace.edit(editableElem, {
             mode: "ace/mode/python",
             theme: "ace/theme/cloud_editor_dark",
-            fontSize: "0.9rem",
+            fontSize: "0.8rem",
             showPrintMargin: false,
             maxLines: maxLines,
             // minLines: defaultLineNumbers,
@@ -471,6 +464,9 @@ export class ExplainNode extends EditorNode {
      */
     constructor(specifier) {
         super(specifier)
+        if (!this.element.classList.contains("explain")) {
+            throw new NodeStructureError("ExplainNode")
+        }
         if (!this.hasAce) {
             this._registerAceMDE()
         }
