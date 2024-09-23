@@ -23,6 +23,13 @@ if (!helper.isCreateMode()) {
 }
 hljs.highlightAll();
 
+const nodesContainer = document.querySelector("#nodesContainer")
+const rightSideBarScrollField = document.querySelector("#rightSideBarScrollField")
+
+if (nodesContainer !== null && rightSideBarScrollField !== null) {
+    helper.addInnerLink(nodesContainer, rightSideBarScrollField,"beforeend")
+}
+
 // start kernel and observe websocket
 await kh.setUpKernel()
 helper.watchValue(kh, "running", setExecuteAnimation)
@@ -40,7 +47,6 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
     try {
         switch (action) {
             case "exec-all":
-                const nodesContainer = document.querySelector("#nodesContainer")
                 if (nodesContainer == null) {throw new Error()}
                 await kh.executeAll(nodesContainer)
                 break;
@@ -335,7 +341,7 @@ window.addEventListener("dblclick", e => {
 
 document.querySelector("input#ipynbForm")?.addEventListener("change", async e => {
     const file = e.target?.files[0]
-    const loc = document.querySelector("#nodesContainer")
+    const loc = nodesContainer
     if (loc == null) {
         alert("unexpected error")
         return
@@ -389,7 +395,11 @@ function renderMessage(kh, oldValue, newValue) {
             const return_form = new myclass.CodeNode(newValue.node_id).element.querySelector(".return-box")
             switch (newValue.msg_type) {
                 case "execute_result":
-                    renderResult(content["data"]["text/plain"], return_form)
+                    if (content["data"]["text/html"]) {
+                        renderResult(content["data"]["text/html"], return_form, "html")
+                    } else {
+                        renderResult(content["data"]["text/plain"], return_form)
+                    }
                     break;
                 case "stream":
                     renderResult(content["text"], return_form)
@@ -414,6 +424,9 @@ function renderResult(res, form, type="text") {
         case "text":
             const escapedt = helper.escapeHTML(res)
             form.insertAdjacentHTML("beforeend", `<p class="exec-res">${escapedt}</p>`)
+            break;
+        case "html":
+            form.insertAdjacentHTML("beforeend", res)
             break;
         case "img":
             form.insertAdjacentHTML("beforeend",`<img class="exec-res ms-2" src="data:image/png;base64,${res}" style="max-width: 95%;"/>`)

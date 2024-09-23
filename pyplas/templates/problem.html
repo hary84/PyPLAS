@@ -68,21 +68,23 @@
 {% end %}
 
 {% block side-content-r %}
-<h4>Category: </h4>
-<h4 class="mb-4"><span class="badge bg-info" id="problemCategory">{{ category }}</span></h4>
-<h4>Questions</h4>
-<nav id="question-nav" class="h-100 flex-column align-items-stretch pe-4">
-    <nav class="nav nav-pills flex-column">
-        {% set i = 1%}
-        {% for d in page["body"] %}
-            {% if d["type"] == "question" %}
-                <a class="nav-link position-relative" href="#q-id-{{ d['q_id'] }}" progress="{{ q_status.get(str(d['q_id']), 0) }}">
-                    Q. {{ i }}
-                    <span class="progress-badge badge position-absolute" style="right: 5%;"> </span>
-                </a>
-                {% set i = i + 1%}
-            {% end%}
-        {% end %}
+<div style="max-height: 70vh; overflow-y: auto;" id="rightSideBarScrollField">
+    <h4>Category: </h4>
+    <h4 class="mb-4"><span class="badge bg-info" id="problemCategory">{{ category }}</span></h4>
+    <h4>Questions</h4>
+    <nav id="question-nav" class="h-100 flex-column align-items-stretch pe-4 mb-4">
+        <nav class="nav nav-pills flex-column">
+            {% set i = 1%}
+            {% for d in page["body"] %}
+                {% if d["type"] == "question" %}
+                    <a class="nav-link position-relative" href="#q-id-{{ d['q_id'] }}" progress="{{ q_status.get(str(d['q_id']), 0) }}">
+                        Q. {{ i }}
+                        <span class="progress-badge badge position-absolute" style="right: 5%;"> </span>
+                    </a>
+                    {% set i = i + 1%}
+                {% end%}
+            {% end %}
+        </nav>
     </nav>
-</nav>
+</div>
 {% end %}

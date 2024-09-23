@@ -1,16 +1,16 @@
-<div class="node question card my-2 mx-2 position-relative {{'editable' if editable else ''}}" node-id="{{ node_id }}"
+<div class="node question card my-2 mx-2 position-relative {{'editable' if editable else ''}} accordion" node-id="{{ node_id }}"
 			id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
 	<div class="for-toast">
 		{% module Template("modules/toast.html") %}
 	</div>
-
 	<div class="card-header bg-success-subtle d-flex">
-		Question
-		<span class="ms-2 fw-bold text-secondary">{{"HTML" if ptype==0 else "Code Test"}}</span>
+		<button class="accordion-button collapsed bg-success-subtle" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{q_id}}" style="padding: 0;">
+			Question <span class="ms-2 fw-bold text-secondary">{{"HTML" if ptype==0 else "Code Test"}}</span>
+		</button>
 		{% if user == 0 %}
-			<span class="progress-badge badge rounded-pill ms-auto"> </span>
+			<span class="progress-badge badge rounded-pill ms-3"> </span>
 		{% elif user == 1 %}
-			<div class="ms-auto d-flex">
+			<div class="ms-3 d-flex">
 				{% if ptype == 1 %}
 					<div class="form-check form-switch">
 						<input class="form-check-input editable-flag" type="checkbox" role="switch" {{'checked' if editable else "" }}>
@@ -49,7 +49,7 @@
 			{% end %}
 		</div>
 
-		<div class="answer-content mx-1 p-2 {{ 'dynamic-nodes-container' if ptype==1 else '' }}">
+		<div class="answer-content mx-1 p-2 {{ 'dynamic-nodes-container' if ptype==1 else '' }} collapse" id="collapse-{{q_id}}">
 			{% if ptype == 0 %} 
 				{% module Explain(editor=user, content=question, allow_del=False) %}
 

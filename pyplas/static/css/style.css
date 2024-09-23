@@ -2,9 +2,10 @@
   --z-index-base: 1000;
   --z-index-code-config: calc(var(--z-index-base) + 10);
   --z-index-toast: calc(var(--z-index-base) + 20);
+  --z-index-offcanvas-off: calc(var(--z-index-base) + 25);
   --z-index-header: calc(var(--z-index-base) + 30);
-  --z-index-offcanvas: calc(var(--z-index-base) + 40) 
-  /** max z-index is 1055 **/
+  --z-index-offcanvas-on: calc(var(--z-index-base) + 45);
+  /** max z-index is 1055 (modal) **/
 }
 
 .only-inq {
@@ -26,6 +27,9 @@
   padding-left: 1px !important;
 }
 
+/* ==============================
+ left sidebar offcanvas  
+ ================================*/
 /* when offcanvas show (larger than lg) */
 @media (min-width: 993px) { 
   .sidebar {
@@ -34,6 +38,12 @@
     overflow-y: auto;
     max-height: calc(100vh);
   }
+}
+.sidebar.offcanvas-lg {
+  z-index: var(--z-index-offcanvas-off);
+}
+.sidebar.offcanvas-lg.show {
+  z-index: var(--z-index-offcanvas-on);
 }
 
 /* ==============================
@@ -196,6 +206,33 @@
               white-space: pre-wrap;
               font-size: 0.85rem;
           }
+          div:has(.dataframe) {
+            padding: .5rem 1rem;
+          }
+          .dataframe {
+            all: unset !important;
+            margin-left: .5rem;
+            margin-top: .25rem;
+            th, td {
+              border: solid 1px var(--bs-dark-border-subtle);
+              border-collapse: collapse;
+            }
+            thead th {
+              padding: .25rem;
+              background-color: var(--bs-dark);
+              color: white;
+            }
+            tbody {
+              text-align: right;
+              tr, th, td {
+                padding-left: .25rem;
+                padding-right: .25rem;
+              }
+              tr:nth-child(even) {
+                background-color: var(--bs-secondary-bg-subtle);
+              }
+            }
+          }
       }
   }
 }
@@ -233,7 +270,7 @@
     }
   }
   .card-body {
-    .mde  .toolbar  .only-inq { display: block; } 
+    .only-inq { display: block !important;} 
     .node-control .toggle-addQ {display: none !important;}
     .question-info {
       .dropdown.question-options {
