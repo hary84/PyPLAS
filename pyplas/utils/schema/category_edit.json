@@ -6,5 +6,7 @@
         "cat_name": {"type": "string"},
         "logo_url": {"type": "string"},
         "description": {"type": "string"}
-    }
+    },
+    "required": ["cat_name", "logo_url", "description"],
+    "additionalProperties": false
 }
