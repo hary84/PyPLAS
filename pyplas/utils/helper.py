@@ -30,3 +30,14 @@ def validate_json(js, schema_name):
         json_schema = json.load(j)
 
     validate(js, json_schema)
+
+def add_PYTHONPATH(path: str) -> dict:
+    """
+    環境変数PYTHONPATHにpathを追加した環境変数のdictを返す
+    """
+
+    # add path to PYTHONPATH
+    python_path = os.pathsep.join([os.environ.get("PYTHONPATH", ""), path])
+
+    env = os.environ.copy()
+    return env | {"PYTHONPATH": python_path}
