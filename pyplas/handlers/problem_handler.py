@@ -5,6 +5,7 @@ import sqlite3
 import subprocess
 import tempfile
 from typing import Optional, Union, Tuple
+import urllib.parse
 
 import pandas as pd 
 from tornado.ioloop import IOLoop
@@ -39,29 +40,33 @@ class ProblemHandler(ApplicationHandler):
             * /problems/<p_id>/ifno     : 問題の基礎情報を取得
             * /problems/log/download    : logをcsvファイルとしてダウンロードする
         """
-        # GET /problems
-        if p_id is None and action is None: 
-            self.redirect("/", permanent=True)
-            return 
-        
-        # GET /problems/<p_id>
-        elif p_id is not None and action is None: 
-            self.render_problem(p_id=p_id)
+        try:
+            # GET /problems
+            if p_id is None and action is None: 
+                self.redirect("/", permanent=True)
+                return 
+            
+            # GET /problems/<p_id>
+            elif p_id is not None and action is None: 
+                self.render_problem(p_id=p_id)
 
-        # GET /problems/<p_id>/<action>    
-        elif p_id is not None and action is not None: 
-            if p_id == "log" and action == "download":
-                try:
-                    self.load_url_queries(["cat", "name", "num"])
-                except tornado.web.MissingArgumentError:
-                    self.set_status(400, reason="Invalid url query. Please set 'cat', 'name', 'num'.")
-                    self.finish()
-                else:
-                    self.log_downdload(**self.query)
-            elif action == "info":
-                self.get_problem_info(p_id=p_id)
-            else:    
-                self.write_error(404)
+            # GET /problems/<p_id>/<action>    
+            elif p_id is not None and action is not None: 
+                if p_id == "log" and action == "download":
+                    try:
+                        self.load_url_queries(["cat"])
+                    except tornado.web.MissingArgumentError:
+                        self.write_error(400, reason="Invalid url query. Please set 'cat'.")
+                    else:
+                        self.log_downdload(**self.query)
+                elif action == "info":
+                    self.get_problem_info(p_id=p_id)
+                else:    
+                    self.write_error(404)
+        except Exception as e:
+            mylogger.error(e, exc_info=True)
+            self.write_error(500, reason=str(e))
+            self.finish()
 
 
     def render_problem(self, p_id:str):
@@ -95,7 +100,7 @@ class ProblemHandler(ApplicationHandler):
                 self.write_error(500)
 
 
-    def log_downdload(self,  cat:str, name:str, num:Union[int, str], **kwargs) -> list[dict]:
+    def log_downdload(self,  cat:str, **kwargs) -> list[dict]:
         """
         user.dbのlogsテーブルからあるカテゴリcat_nameに属するログをdictのlistとして返す.
         """
@@ -106,10 +111,7 @@ class ProblemHandler(ApplicationHandler):
         logs_string = StringIO(json.dumps(logs))
         df = pd.read_json(logs_string)
         csv_bin = df.to_csv(header=True, index=False).encode("utf-8")
-
         self.set_header("Content-Type", "text/csv")
-        self.set_header("Content-Disposition", 
-                        f'attachment; filename="{num}_{name}_{cat}.csv"')
         self.set_header("Content-Length", len(csv_bin))
         self.write(csv_bin)
 
@@ -296,19 +298,24 @@ class ProblemHandler(ApplicationHandler):
         code = "\n".join(self.json["answers"] + self.target_answers)
         env = add_PYTHONPATH(os.getcwd())
 
-        with tempfile.NamedTemporaryFile(delete=True, dir=cfg.PYTHON_TEMP_DIR, suffix=".py") as tmp:
-            file_path = os.path.join(cfg.PYTHON_TEMP_DIR, tmp.name)
-            with open(file_path, "w") as f:
-                f.write(code)
-
+        try: 
+            tmp_file = tempfile.NamedTemporaryFile(delete=False, 
+                                                   dir=cfg.PYTHON_TEMP_DIR, 
+                                                   mode="w+t",
+                                                   suffix=".py")
+            file_path = os.path.join(cfg.PYTHON_TEMP_DIR, tmp_file.name)
+            tmp_file.write(code)
+            tmp_file.close()
             process = subprocess.Popen(["python", file_path],
-                                       stdout=subprocess.PIPE, 
+                                       stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE,
                                        env=env)
-            ProblemHandler.execute_pool[self.json["kernel_id"]] = process
+            ProblemHandler.execute_pool[self.json["kernel_id"]] = process 
             future = IOLoop.current().run_in_executor(None, process.communicate)
             stdout, stderr = await future 
             returncode = process.returncode
+        finally: 
+            os.remove(file_path)
 
         decoded_stdout = stdout.decode()
         decoded_stderr = stderr.decode()
