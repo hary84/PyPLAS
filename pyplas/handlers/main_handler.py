@@ -30,7 +30,8 @@ class MainHandler(ApplicationHandler):
             FROM pages 
             LEFT OUTER JOIN categories AS cat ON pages.category = cat.cat_id
             LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
-            WHERE (cat.cat_name = :cat_name OR cat.cat_name is :cat_name) AND pages.status = 1"""
+            WHERE (cat.cat_name = :cat_name OR cat.cat_name is :cat_name) AND pages.status = 1
+            ORDER BY order_index ASC, register_at ASC"""
             p_list = g.db.get_from_db(sql, cat_name=cat_name)
             p_list = [r for r in p_list]
             cat = []

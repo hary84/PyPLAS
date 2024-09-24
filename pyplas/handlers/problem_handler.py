@@ -12,6 +12,7 @@ import tornado
 
 from .app_handler import ApplicationHandler, InvalidJSONError
 from pyplas.utils import get_logger, globals as g
+from pyplas.utils.helper import add_PYTHONPATH
 import pyplas.config as cfg
 
 mylogger = get_logger(__name__)
@@ -293,6 +294,8 @@ class ProblemHandler(ApplicationHandler):
             toastに表示される文字列
         """
         code = "\n".join(self.json["answers"] + self.target_answers)
+        env = add_PYTHONPATH(os.getcwd())
+
         with tempfile.NamedTemporaryFile(delete=True, dir=cfg.PYTHON_TEMP_DIR, suffix=".py") as tmp:
             file_path = os.path.join(cfg.PYTHON_TEMP_DIR, tmp.name)
             with open(file_path, "w") as f:
@@ -300,7 +303,8 @@ class ProblemHandler(ApplicationHandler):
 
             process = subprocess.Popen(["python", file_path],
                                        stdout=subprocess.PIPE, 
-                                       stderr=subprocess.PIPE)
+                                       stderr=subprocess.PIPE,
+                                       env=env)
             ProblemHandler.execute_pool[self.json["kernel_id"]] = process
             future = IOLoop.current().run_in_executor(None, process.communicate)
             stdout, stderr = await future 
