@@ -3,3 +3,15 @@
 __pycache__/
 
 /pyplas/database/*.db
+
+/pyplas/static/img/**
+!/pyplas/static/img/error/
+!/pyplas/static/img/error/**
+!/pyplas/static/img/logo/
+!/pyplas/static/img/logo/logo.webp
+
+/pyplas/temp/**
+!/pyplas/temp/.gitkeep
+
+/share/**
+!/share/.gitkeep
