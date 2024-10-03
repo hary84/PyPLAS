@@ -1,4 +1,5 @@
 import asyncio
+import os
 import signal
 
 from jupyter_client.utils import run_sync
@@ -37,7 +38,7 @@ def make_app(develop: bool):
     default_handler_class=hd.ErrorHandler,
     template_path=cfg.TEMPLATE_DIR,
     static_path=cfg.STATIC_DIR,
-    debug=develop,
+    debug=develop if os.name == "posix" else False,
     ui_modules=uimodules,
     develop=develop,
     )

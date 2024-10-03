@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from typing import Optional
+
 from .app_handler import ApplicationHandler, InvalidJSONError
 from pyplas.utils import get_logger , globals as g
 
@@ -50,7 +51,7 @@ class CategoryHandler(ApplicationHandler):
         for filename in os.listdir(logo_path):
             extension = filename.lower().split(".")[-1]
             if extension in IMAGE_ALLOWED:
-                paths.append(os.path.join("/", "static", "img", "logo", filename))
+                paths.append(f"/static/img/logo/{filename}")
         return paths
 
     def get_cate_info(self, cat_id: str):

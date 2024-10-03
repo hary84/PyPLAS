@@ -1,8 +1,7 @@
 import json
 from typing import Any, Dict, Optional, Union
-import urllib
-from jsonschema import ValidationError
 
+from jsonschema import ValidationError
 import tornado
 from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
@@ -92,10 +91,10 @@ class ApplicationHandler(tornado.web.RequestHandler):
         self.query = {}
         if isinstance(names, list):
             for name in names:
-                self.query[name] = urllib.parse.quote(self.get_query_argument(name))
+                self.query[name] = self.get_query_argument(name)
         elif isinstance(names, dict):
             for name, default in names.items():
                 query = self.get_query_argument(name, default)
                 if isinstance(query, str):
-                    query = urllib.parse.quote(query)
+                    query = self.get_query_argument(name, default)
                 self.query[name] = query
