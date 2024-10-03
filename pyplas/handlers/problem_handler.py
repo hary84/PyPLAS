@@ -3,9 +3,9 @@ import json
 import os
 import sqlite3
 import subprocess
+import sys
 import tempfile
-from typing import Optional, Union, Tuple
-import urllib.parse
+from typing import Optional, Tuple
 
 import pandas as pd 
 from tornado.ioloop import IOLoop
@@ -280,7 +280,7 @@ class ProblemHandler(ApplicationHandler):
         else:
             for i, ans in enumerate(self.json["answers"]):
                 result.append(ans == self.target_answers[i])
-                content += f"<p class='mb-0'>[{'o' if result[i] else 'x'}] {ans}</p>"
+                content += f"<p class='mb-0'>[{i+1}] {'o' if result[i] else 'x'}</p>"
 
         return (result, content)
     
@@ -302,11 +302,12 @@ class ProblemHandler(ApplicationHandler):
             tmp_file = tempfile.NamedTemporaryFile(delete=False, 
                                                    dir=cfg.PYTHON_TEMP_DIR, 
                                                    mode="w+t",
-                                                   suffix=".py")
+                                                   suffix=".py",
+                                                   encoding="utf-8")
             file_path = os.path.join(cfg.PYTHON_TEMP_DIR, tmp_file.name)
             tmp_file.write(code)
             tmp_file.close()
-            process = subprocess.Popen(["python", file_path],
+            process = subprocess.Popen([sys.executable, file_path],
                                        stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE,
                                        env=env)
