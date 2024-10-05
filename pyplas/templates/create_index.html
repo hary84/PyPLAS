@@ -47,7 +47,7 @@
         {% for i, d in enumerate(problem_list) %}
           <tr class="{{'d-none' if d['category'] is not None else ''}}" target="{{ d['p_id'] }}" data-sort-id="{{i}}">
             <th scope="row"><span>{{i}}</span></th>
-            <td><input type="text" class="title-form form-control form-control-sm" for="title" value="{{ d['title'] }}"></td>
+            <td><input type="text" class="title-form form-control form-control-sm" for="title" value="{{ d['title'] }}" autocomplete="off"></td>
             <td>
               <select class="select-category form-select form-select-sm" for="category">
                 <option value="" {{"selected" if d['category'] is None else "" }}>None</option>
