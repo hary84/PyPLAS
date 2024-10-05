@@ -1,10 +1,24 @@
 .explain.static, .mde-container > .for-preview {
+    word-break: break-all;
+    p {
+        margin-bottom: .5rem;
+        text-indent: 1rem;
+    }
     img {
         display: block;
         margin: auto;
         max-width: 100%;
     }
     pre:has(code) {
-        margin: 0, .25rem, 0, .25rem
+        margin-left: 1rem;
+        margin-bottom: .5rem;
+    }
+    pre > code {
+        display: block;
+        padding: .5rem !important;
+    }
+
+    details {
+        margin-bottom: .5rem;
     }
 }
