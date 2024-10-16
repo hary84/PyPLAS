@@ -254,6 +254,11 @@
         }
       }
     }
+    .progress-badge:hover + .for-toast {
+      .toast {
+        display: block;
+      }
+    }
   }
   .card-body {
     .only-inq { display: block !important;} 

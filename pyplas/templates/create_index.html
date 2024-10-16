@@ -4,6 +4,15 @@
 <title>Pyplas - Create</title>
 <link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
 <script src="{{ static_url('js/create_index.js') }}" type="module"></script>
+<style>
+  #problemList  {
+    tr:has(select[for="status"] > option[value="0"]:checked) {
+        th, td {
+            background-color: #4a1b2052;
+        }
+    }
+   }
+</style>
 {% end %}
 
 {% block head-nav-li %}

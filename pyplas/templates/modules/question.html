@@ -1,26 +1,27 @@
 <div class="node question card my-2 mx-2 position-relative {{'editable' if editable else ''}} accordion" node-id="{{ node_id }}"
-			id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
-	<div class="for-toast">
-		{% module Template("modules/toast.html") %}
-	</div>
+			id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}"
+			data-saved-answers='{{ "aaa" if ptype==0 and user==0 else "" }}'>
 	<div class="card-header bg-success-subtle d-flex">
 		<button class="accordion-button collapsed bg-success-subtle" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{q_id}}" style="padding: 0;">
 			Question <span class="ms-2 fw-bold text-secondary">{{"Word Test" if ptype==0 else "Code Test"}}</span>
 		</button>
 		{% if user == 0 %}
-			<span class="progress-badge badge rounded-pill ms-3"> </span>
+		<span class="progress-badge badge rounded-pill ms-3"> </span>
 		{% elif user == 1 %}
-			<div class="ms-3 d-flex">
-				{% if ptype == 1 %}
-					<div class="form-check form-switch">
-						<input class="form-check-input editable-flag" type="checkbox" role="switch" {{'checked' if editable else "" }}>
-						<label class="form-check-label" >Editable</label>
-					</div>
-				{% end %}
-				<div class="vr mx-2 my-1"></div>
-				<button type="button" class="btn btn-danger" data-action="del-node"><i class="bi bi-trash"></i></button>
+		<div class="ms-3 d-flex">
+			{% if ptype == 1 %}
+			<div class="form-check form-switch">
+				<input class="form-check-input editable-flag" type="checkbox" role="switch" {{'checked' if editable else "" }}>
+				<label class="form-check-label" >Editable</label>
 			</div>
+			{% end %}
+			<div class="vr mx-2 my-1"></div>
+			<button type="button" class="btn btn-danger" data-action="del-node"><i class="bi bi-trash"></i></button>
+		</div>	
 		{% end %}
+		<div class="for-toast">
+			{% module Template("modules/toast.html") %}
+		</div>
 	</div>
 
 	<div class="card-body py-2 position-relative pt-2">

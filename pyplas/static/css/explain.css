@@ -1,8 +1,17 @@
 .explain.static, .mde-container > .for-preview {
-    word-break: break-all;
+    word-break: break-word;
     p {
-        margin-bottom: .5rem;
-        text-indent: 1rem;
+        margin-bottom: 1rem;
+        margin-left: .5rem;
+    }
+    h1, h2 {
+        padding-bottom: .25rem;
+        margin-top: 2rem;
+        margin-bottom: .75rem;
+        border-bottom: solid 1px var(--bs-border-color);
+    }
+    & > *:not(h1, h2) {
+        margin-left: .5rem;
     }
     img {
         display: block;
@@ -10,8 +19,22 @@
         max-width: 100%;
     }
     pre:has(code) {
-        margin-left: 1rem;
-        margin-bottom: .5rem;
+        margin: .5rem .25rem .5rem 1rem;
+        border-radius: 10px;
+        position: relative;
+        ::before {
+            content: "CODE";
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 0 .5rem;
+            font-family: revert;
+            font-weight: bold;
+            color: black;
+            background-color: var(--bs-secondary-bg-subtle);
+            border-top-right-radius: 10px;
+            border-bottom-left-radius: 10px;
+        }
     }
     pre > code {
         display: block;
@@ -20,5 +43,53 @@
 
     details {
         margin-bottom: .5rem;
+        padding-bottom: .25rem;
+        border-bottom: solid;
+        border-radius: 1rem;
+        background-color: beige;
+        summary {
+            padding-left: .75rem;
+            font-weight: bold;
+            background-color: wheat;
+        }
+    }
+    details[open] {
+        summary {
+            margin-bottom: .5rem;
+        }
+    }
+}
+
+/* questionNodeの問題フィールド */
+.node.question[ptype] {counter-reset: number;}
+.node.question[ptype] :is(.explain.static, .for-preview) {
+    div.question-form {
+        padding-top: .5rem;
+        padding-bottom: .5rem;
+        margin-top: .5rem;
+        margin-bottom: .5rem;
+        border-bottom: 1px solid var(--bs-border-color);
+
+        text-indent: -1rem;
+        padding-left: 1rem;
+    }
+    div.question-form::before {
+        counter-increment: number 1;
+        content: counter(number);
+        background-color: var(--bs-success);
+        color: white;
+        padding-left: .75rem;
+        padding-right: .75rem;
+        border-radius: 20%;
+        margin-right: .5rem;
+    }
+    div.question-form > * {
+        text-indent: 0;
+    }
+    select, input {
+        margin-top: .5rem;
+        margin-bottom: .5rem;
+        margin-left: auto;
+        width: 95%;
     }
 }
