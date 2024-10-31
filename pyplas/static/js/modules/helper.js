@@ -119,6 +119,9 @@ export function removeQueryParam(key) {
  */
 export function addInnerLink(linksContainer, ankerLoc, position) {
     const rank = {
+        "H1": 0,
+        "H2": 0,
+        "H3": 1,
         "H4": 1,
         "H5": 2,
         "H6": 3
@@ -129,6 +132,7 @@ export function addInnerLink(linksContainer, ankerLoc, position) {
     details.insertAdjacentHTML("afterbegin", "<summary class='fs-4 fw-bold'>Inner Link</summary>")
 
     const ul = document.createElement("ul")
+    ul.style.fontSize = "0.9rem"
     ul.classList.add("list-unstyled")
 
     linksContainer.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach(e => {
@@ -137,7 +141,6 @@ export function addInnerLink(linksContainer, ankerLoc, position) {
         li.innerHTML = `<a href="#${e.id}" class='text-decoration-none link-secondary'> ${e.textContent} </a>`
         li.style.marginLeft = `${1 * rank[e.tagName]}rem`
         ul.appendChild(li)
-        console.log(`${8 * rank[e.tagName]}px`)
     })
     details.appendChild(ul)
     ankerLoc.insertAdjacentElement(position, details)

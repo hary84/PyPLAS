@@ -36,7 +36,6 @@
     .for-preview {
         display: none;
         padding: 0.25rem;
-        word-break: break-all;
         min-height: 1.5rem;
     }
 }

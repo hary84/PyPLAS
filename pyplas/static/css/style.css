@@ -145,20 +145,6 @@
   box-sizing: content-box;
 }
 
-/* ===========
-  Explain Node
-============== */
-.explain {
-  p {
-    margin-bottom: 0.5rem;
-  }
-  pre {margin-bottom: 0.5rem;}
-  pre > code {
-    display: block;
-    padding: 0.5rem !important;
-  }
-}
-
 
 /* ==========
   Code Node
@@ -266,6 +252,11 @@
         &::before {
           display: block;
         }
+      }
+    }
+    .progress-badge:hover + .for-toast {
+      .toast {
+        display: block;
       }
     }
   }
