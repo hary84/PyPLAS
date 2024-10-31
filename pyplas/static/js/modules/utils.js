@@ -264,7 +264,9 @@ export async function registerProblem() {
         const json = await res.json()
         console.log(`[register] ${json.DESCR}`)
         alert("the problem is saved in DB.")
-        window.location.href = `/create/${json.p_id}`
+        if (problem_meta.p_id === "new") {
+            window.location.href = `/create/${json.p_id}`
+        }
     }
     else {
         throw new error.FetchError(res.status, res.statusText)
