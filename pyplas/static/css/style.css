@@ -254,6 +254,13 @@
         }
       }
     }
+    .toast {
+      max-width: 35rem;
+      width: 80%;
+      .toast-body {
+        max-height: 20rem;
+      }
+    }
     .progress-badge:hover + .for-toast {
       .toast {
         display: block;
