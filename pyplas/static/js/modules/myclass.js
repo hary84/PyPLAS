@@ -353,6 +353,25 @@ export class QuestionNode extends BaseNode {
         }) 
         return nodeList
     }
+    /**
+     * ユーザー解答を補完する
+     * @param {string[]} answers 
+     */
+    answerCompletion = (answers) => {
+        this.answerField.querySelectorAll("select, input").forEach((e, idx) => {
+            if (e.tagName == "SELECT") {
+                const optionValues = Array.from(e.options).map(op=>op.value)
+                const optionIdx = optionValues.indexOf(answers[idx])
+                e.selectedIndex = (optionIdx >= 0) ? optionIdx : 0
+            } else {
+                if (answers[idx] !== undefined) {
+                    e.value = answers[idx]
+                } else {
+                    e.value = ""
+                }
+            }
+        })
+    }
 
     allowDelete () {
         return this.element.querySelector(".card-header [data-action='del-node']") != null
@@ -481,11 +500,12 @@ export class ExplainNode extends EditorNode {
         const editor = ace.edit(editableElem, {
             mode: "ace/mode/markdown",
             theme: "ace/theme/sql_server",
-            fontSize: "1rem",
+            fontSize: "0.9rem",
             showGutter: false,
             highlightActiveLine: false,
             maxLines: maxLines,
-            minLines: defaultLineNumbers
+            minLines: defaultLineNumbers,
+            wrap: "free"
         })
         editor.container.childNodes[0].tabIndex = -1
         this.hasAce = true
@@ -493,7 +513,7 @@ export class ExplainNode extends EditorNode {
     /** コードをhighlight.jsでハイライトする */
     highlighlting = () => {
         this.element.querySelectorAll("pre code").forEach(e => {
-            hljs.highlightBlock(e)
+            hljs.highlightElement(e)
         })
     }
     /** previewを表示する */
@@ -505,6 +525,9 @@ export class ExplainNode extends EditorNode {
             throw new NodeStructureError(this.type)
         }
         preview.innerHTML = html 
+        // const html_escaped = html.replace(/(<pre[\s\S]*?>[\s\S]*?<\/pre>)|\n/g, match => {
+        //     return match.startsWith("<pre") ? match : ""
+        // })
         this.highlighlting()
         mde.classList.add("preview-active")
     }
@@ -528,17 +551,27 @@ export class ExplainNode extends EditorNode {
     }
     addFillInBlankProblem = () => {
         const tag = [
-            '<input type="text" class="form-control" placeholder="answer" ans=?????>',
+            `<div class="question-form">`,
+            `  ...Please enter a question text...`,
+            `   <input type="text" class="form-control" placeholder="answer" ans="?????">`,
+            `</div>`,
+            ``
         ].join("\n")
         this.editor.insert(tag)
     }
     addSelectionProblem = () => {
         const tag = [
-        '<select class="form-select" ans=?????>',
-        '  <option> Open this select menu</option>',
-        '  <option value="1">?????</option>',
-        '  <option value="2">?????</option>',
-        '</select>'
+        `<div class="question-form">`,
+        `  ...Please enter a question text...`,
+        `  <select class="form-select" ans="???">`,
+        `    <option> Open this select menu</option>`,
+        `    <option value="1">???</option>`,
+        `    <option value="2">???</option>`,
+        `    <option value="3">???</option>`,
+        `    <option value="4">???</option>`,
+        `  </select>`,
+        `</div>`,
+        ``
         ].join("\n")
         this.editor.insert(tag)
     }
