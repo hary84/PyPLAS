@@ -29,6 +29,9 @@ const rightSideBarScrollField = document.querySelector("#rightSideBarScrollField
 if (nodesContainer !== null && rightSideBarScrollField !== null) {
     helper.addInnerLink(nodesContainer, rightSideBarScrollField,"beforeend")
 }
+if (!helper.isCreateMode()) {
+    await userAnswerCompletion()
+}
 
 // start kernel and observe websocket
 await kh.setUpKernel()
@@ -62,7 +65,8 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
             case "save":
                 if (!helper.isCreateMode()) {
                     await utils.saveUserData()
-                } else {
+                } 
+                else {
                     await utils.registerProblem()
                 }
                 break;
@@ -355,6 +359,29 @@ const runState = {
     idle: "idle",
     running: "running",
     suspending: "suspending"
+}
+
+async function userAnswerCompletion() {
+    const res = await fetch(`${window.location.origin}/problems/${helper.problem_meta.p_id}/save`, {
+        method: "GET"
+    })
+    if (res.ok) {
+        const json = await res.json()
+        console.log(json)
+
+        const savedAnswers = JSON.parse(json.savedAnswers)
+        nodesContainer?.querySelectorAll(".node.question").forEach(e => {
+            const questionNode = new myclass.QuestionNode(e)
+            if (questionNode.ptype == "0" && questionNode.qId !== null) {
+                if (savedAnswers[questionNode.qId] !== undefined) {
+                    questionNode.answerCompletion(savedAnswers[questionNode.qId])
+                }
+            }
+        })
+    } 
+    else {
+        throw new error.FetchError(res.status, res.statusText)
+    }
 }
 
 /**

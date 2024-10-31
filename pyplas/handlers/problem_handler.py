@@ -61,6 +61,8 @@ class ProblemHandler(ApplicationHandler):
                         self.log_downdload(**self.query)
                 elif action == "info":
                     self.get_problem_info(p_id=p_id)
+                elif action == "save":
+                    self.get_saved_answers(p_id=p_id)
                 else:    
                     self.write_error(404)
         except Exception as e:
@@ -115,7 +117,7 @@ class ProblemHandler(ApplicationHandler):
         self.set_header("Content-Length", len(csv_bin))
         self.write(csv_bin)
 
-    def get_problem_info(self, p_id: str) -> dict[str, str]:
+    def get_problem_info(self, p_id: str):
         """
         pyplas.dbから問題の基礎情報(p_id, title, category, page)を取得し, dictとして返す. 
         """
@@ -130,6 +132,19 @@ class ProblemHandler(ApplicationHandler):
             self.set_status(404, reason=f"problem({p_id}) is not found.")
             self.finish()
 
+    def get_saved_answers(self, p_id: str) -> None:
+        """
+        user.dbからq_contentを取得し, dictとして返す 
+        """
+        sql = r"""SELECT q_content FROM user.progress
+        WHERE p_id=:p_id"""
+        saved_answers = g.db.get_from_db(sql, p_id=p_id)
+        answers = saved_answers[0]["q_content"] if len(saved_answers) else '{}'
+        self.write({
+            "p_id": p_id,
+            "savedAnswers": answers,
+            "DESCR": "get saved answers."
+        })
 
     async def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """

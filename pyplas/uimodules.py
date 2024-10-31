@@ -1,9 +1,13 @@
+import re
 from typing import Optional
 import uuid
 
-from bs4 import BeautifulSoup
 from tornado.web import UIModule 
 from tornado.escape import to_unicode
+
+from pyplas.utils import get_logger
+
+mylogger = get_logger(__name__)
 
 class Code(UIModule):
     def render(self, content:str="", readonly:bool=False, user:int=0, 
@@ -38,7 +42,7 @@ class Code(UIModule):
 
 class Explain(UIModule):
     def render(self, editor:bool=False, content:str="", 
-               allow_del:bool=False, node_id:Optional[str]=None, **kwargs) -> str:
+               allow_del:bool=False, node_id:Optional[str]=None, **kwargs) -> bytes:
         """
         Parameters 
         ----------
@@ -67,7 +71,7 @@ class Explain(UIModule):
 class Question(UIModule):
     def render(self, q_id:str, ptype:int=0, user:int=0, conponent:list=[], question:str="",
                answers:list=[], saved_answers:list=[], 
-               editable:bool=False, progress:int=0, node_id:Optional[str]=None, **kwargs) -> str:
+               editable:bool=False, progress:int=0, node_id:Optional[str]=None, **kwargs) -> bytes:
         """
         Parameters
         ----------
@@ -102,21 +106,10 @@ class Question(UIModule):
             ramdom uuid4
         """
         if ptype == 0 and user == 0:
-            soup = BeautifulSoup(question, "html.parser")
-            elems = soup.find_all(["select", "input"], attrs={"ans", True})
-            for i, e in enumerate(elems):
-                del e.attrs["ans"]
-                try:
-                    if e.name == "input":
-                        e["value"] = saved_answers[i]
-                    elif e.name == "select":
-                        e.find("option", {"value": saved_answers[i]})["selected"] = ""
-                except (IndexError, AttributeError, TypeError):
-                    continue
-
-            question = soup.prettify()
-        elif ptype == 1:
-            answers = answers[0] if len(answers) > 0 else ""
+            try:
+                question = self.ans_attr_deleted_html(question)
+            except Exception as e:
+                mylogger.error(e)
 
         if node_id is None: 
             node_id = str(uuid.uuid4())
@@ -131,6 +124,14 @@ class Question(UIModule):
                                   progress=progress,
                                   node_id=node_id
                                   )
+    
+    def ans_attr_deleted_html(self, string: str) -> str:
+        """input, selectタグ内のans属性が削除されたhtml文字列を返す"""
+        return re.sub(r"(<(input|select)([^>]*?)?>)", self._del_ans_attr, string)
+
+    def _del_ans_attr(self, match: re.Match) -> str:
+        """渡されたselect, inputタグを含む文字列からans属性を削除する"""
+        return re.sub(r"ans=((\"([^\"]*?)\"|\'([^\']*?)\'))", "", match[0])
     
 class NodeControl(UIModule):
     def render(self, code:bool=True, explain:bool=True, question:bool=True, **kwargs):
