@@ -18,7 +18,6 @@ class MainHandler(ApplicationHandler):
         if self.query["category"] is None: # カテゴリ一覧を表示
             sql = r"""SELECT cat_name, logo_url FROM categories"""
             cat = g.db.get_from_db(sql)
-            cat.append({"cat_name": "None", "logo_url": '/static/img/logo/logo.webp'})
             p_list = []
         else: # あるカテゴリに属する問題一覧を表示
             if self.query["category"] == "None":
