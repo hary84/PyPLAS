@@ -1,6 +1,5 @@
 import json 
 import os 
-import urllib.parse
 
 from jsonschema import validate
 
@@ -23,7 +22,7 @@ def validate_json(js, schema_name):
         検証の対象となるjson
     schema_name: str
         検証に使いたいjsonファイルの名前. 
-        ファイル名のみを記述する. 
+        ファイル名のみを記述する.   
         e.g.) schema.json
     """
     path = get_schema_path(schema_name)
