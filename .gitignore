@@ -9,6 +9,8 @@ __pycache__/
 !/pyplas/static/img/error/**
 !/pyplas/static/img/logo/
 !/pyplas/static/img/logo/logo.webp
+/pyplas/static/data/**
+!/pyplas/static/data/demo_employee_data.csv
 
 /pyplas/temp/**
 !/pyplas/temp/.gitkeep
