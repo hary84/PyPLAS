@@ -1,0 +1,11 @@
+EmployeeID,Name,Department,Salary,Remote_Work
+1001,John,Sales,70000,TRUE
+1002,Emily,HR,68000,FALSE
+1003,Anna,IT,75000,TRUE
+1004,Mike,Sales,,FALSE
+1005,Sophia,HR,72000,TRUE
+1006,James,IT,71000,TRUE
+1007,David,Sales,73000,
+1008,Eva,,69500,FALSE
+1009,Chris,IT,76000,TRUE
+1010,Lucy,HR,,FALSE

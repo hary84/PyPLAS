@@ -3,10 +3,13 @@ import locale
 # ==============================
 #  PATH
 # ==============================
+### docker bind mount dir path 
+SHARE_DIR = "share/"
+
 ### sqlite database path 
 DB_DIR = "pyplas/database/"
 PROBLEM_DB_PATH =  DB_DIR + "pyplas.db"
-USER_DB_PATH =  DB_DIR + "user.db"
+USER_DB_PATH =  SHARE_DIR + "user.db"
 DEV_USER_DB_PATH = DB_DIR + "dev-user.db"
 
 ### sqlite table schema dir path

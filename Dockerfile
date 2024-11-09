@@ -16,10 +16,6 @@ RUN apt-get update && \
     apt-get autoremove -y && \
     apt-get clean
 
-# Verify installations
-RUN python --version && \
-    sqlite3 --version
-
 # Set the working directory
 WORKDIR /app
 
@@ -35,4 +31,4 @@ EXPOSE 8888
 
 # # Run app.py when the container launches
 ENTRYPOINT ["python", "run.py"]
-CMD []
+CMD ["--port", "8888"]
