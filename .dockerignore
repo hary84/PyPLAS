@@ -1,0 +1,14 @@
+
+# python関係
+__pycache__
+**/__pycache__
+venv
+
+# バージョン管理
+.git 
+.gitignore
+.python-version
+
+# その他
+tests
+
