@@ -1,3 +1,5 @@
+import locale
+
 # ==============================
 #  PATH
 # ==============================
@@ -20,3 +22,13 @@ JSON_SCHEMA_PATH = "pyplas/utils/schema"
 ### tmpfile save path
 PYTHON_TEMP_DIR = "pyplas/temp"
 
+
+# ==============================
+#  ENCODING
+# ==============================
+### Enocoding when writing files
+### Used to output the results of code scoring problems.
+### default
+### Windows -> cp932 (jp)
+### linux   -> utf-8
+PREFERRED_ENCODING = locale.getpreferredencoding()
