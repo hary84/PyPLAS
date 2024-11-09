@@ -333,8 +333,8 @@ class ProblemHandler(ApplicationHandler):
         finally: 
             os.remove(file_path)
 
-        decoded_stdout = stdout.decode()
-        decoded_stderr = stderr.decode()
+        decoded_stdout = stdout.decode(cfg.PREFERRED_ENCODING)
+        decoded_stderr = stderr.decode(cfg.PREFERRED_ENCODING)
         mylogger.debug(f"subprocess returncode is {returncode}")
 
         if returncode == -9:
