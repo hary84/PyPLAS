@@ -215,12 +215,13 @@ class DBHandler:
             if self.check_connect():
                 self.logger.warning(f"Before delete db file, please disconnect from the database({self.page_path})")
             os.remove(self.user_path)
+            self.logger.warning(f'Test user DB({self.user_path}) is succesfully removed.')
 
     def close(self) -> None:
         """
         DBとの接続を切る. dev_modeがtrueの時, 開発用ユーザDBを削除する.
         """
         self.conn.close()
+        self.logger.warning('DB is successfully closed.')
         if self.dev_mode:
             self._clean_up()
-        self.logger.warning('DB is successfully closed.')
