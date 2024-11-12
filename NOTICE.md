@@ -1,4 +1,4 @@
-# LICENSE
+# NOTICE
 
 This Project includes open-source software components that are distributed under the following licenses:
 
