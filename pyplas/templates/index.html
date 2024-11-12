@@ -16,20 +16,19 @@
           <a href="/create" class="btn btn-danger mx-1">Go to create page</a>
       </div>
   {% end %}
-  <p class="fs-4 text-secondary border-bottom border-dark">User's Guide</p>
-  <ul class="list-group">
-      <li class="list-group-item">An item</li>
-      <li class="list-group-item">A second item</li>
-      <li class="list-group-item">A third item</li>
-      <li class="list-group-item">A fourth item</li>
-      <li class="list-group-item">And a fifth one</li>
-  </ul>
+  {% module Template("modules/sidebar-documentation.html") %}
 {% end %}
 
 {% block main %}
   {% if category is None %}
-  <div class="px-2 mt-3">
-    <p class="fs-3 border-bottom border-dark fw-bold">  Categories</p>
+  <div class="px-2 mt-3" id="category">
+    <p class="fs-3 border-bottom border-dark fw-bold"> About PyPLAS</p>
+    <p class="lh-lg" style="text-indent: 1rem;">
+      <b>PyPLAS</b>はweb上でPythonについて学ぶことができるプログラミング学習支援システムです. 
+      内部に対話型実行環境を実装することで, コードの実行と出力の確認を繰り返し行いながらPythonについて学ぶことができます. 
+      また, コード記述問題と選択問題, 空欄補充問題の組み合わせによって, 学習の進捗を確認することが可能です.
+    </p>
+    <p class="fs-3 border-bottom border-dark fw-bold mt-3">  Categories</p>
     <div id="catContainer" class="d-flex justify-content-center" style="flex-wrap: wrap;">
       {% if len(category_list) == 0 %}
         {% module Template("modules/in-preparation.html",
