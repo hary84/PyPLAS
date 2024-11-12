@@ -2,7 +2,7 @@ import asyncio
 import os
 import signal
 
-from jupyter_client.utils import run_sync
+from jupyter_core.utils import run_sync
 import tornado
 
 from pyplas.utils import globals as g

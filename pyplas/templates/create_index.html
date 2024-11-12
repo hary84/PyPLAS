@@ -20,14 +20,7 @@
 
 
 {% block side-content %}
-<p class="fs-4 text-secondary border-bottom border-dark">User's Guide</p>
-<ul class="list-group">
-    <li class="list-group-item">An item</li>
-    <li class="list-group-item">A second item</li>
-    <li class="list-group-item">A third item</li>
-    <li class="list-group-item">A fourth item</li>
-    <li class="list-group-item">And a fifth one</li>
-</ul>
+{% module Template("modules/sidebar-documentation.html") %}
 {% end %}
 
 {% block main %}
