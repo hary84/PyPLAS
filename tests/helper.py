@@ -97,16 +97,23 @@ def make_dummy_page(length):
 
 class DummyRecord:
     """ダミーレコード生成の基底クラス"""
+    null = "__null"
+
     @property
     def params(self) -> dict:
         return self.__dict__
+    
+    def default_if_null(self, value, default):
+        if value == DummyRecord.null:
+            return default 
+        return value
 
 class CategoryDummyRecord(DummyRecord):
     def __init__(
             self,
             cat_name: Optional[str] = None,
-            logo_url: Optional[str] = None,
-            description: Optional[str] = None,
+            logo_url: Optional[str] = DummyRecord.null,
+            description: Optional[str] = DummyRecord.null,
             ):
         """
         categoriesテーブル用ダミーレコード  
@@ -114,8 +121,8 @@ class CategoryDummyRecord(DummyRecord):
         引数として与えられていないパラメータはランダムに生成される
         """
         self.cat_name = default_if_none(cat_name, fakegen.unique.country())
-        self.logo_url = default_if_none(logo_url, fakegen.url())
-        self.description = default_if_none(description, fakegen.text())
+        self.logo_url = self.default_if_null(logo_url, fakegen.url())
+        self.description = self.default_if_null(description, fakegen.text())
 
 class PagesDummyRecord(DummyRecord):
     def __init__(
