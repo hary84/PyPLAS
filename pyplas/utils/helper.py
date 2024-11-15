@@ -12,7 +12,7 @@ def get_schema_path(schema_name) -> str:
     return os.path.join(cfg.JSON_SCHEMA_PATH, schema_name)
 
 
-def validate_json(js, schema_name):
+def validate_json(js: dict, schema_name: str):
     """
     与えられたjsonをjson schemaによって検証する
 

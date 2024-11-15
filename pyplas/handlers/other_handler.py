@@ -11,17 +11,17 @@ class RenderHTMLModuleHandler(ApplicationHandler):
 
     def post(self):
         if self.query["action"] == "addMD":
-            self.load_json(validate=False)
+            self.load_json()
             self.write({"html": self._gen_node_string(node="Explain", **self.json)})
         elif self.query["action"] == "addCode":
-            self.load_json(validate=False)
+            self.load_json()
             self.write({"html": self._gen_node_string(node="Code", **self.json)
                         })
         elif self.query["action"] == "addQ":
-            self.load_json(validate=False)
+            self.load_json()
             self.write({"html": self._gen_node_string(node="Question", **self.json)})
         else:
-            self.write_error()
+            self.write_error(404, reason=f"404 Not Found")
 
     def _gen_node_string(self, node:str="Explain", **kwargs):
         if node == "Explain":
