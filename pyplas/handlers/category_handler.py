@@ -13,7 +13,7 @@ class CategoryHandler(ApplicationHandler):
     def prepare(self):
         logger.debug(f"{self.request.method} {self.request.uri}")
         if not self.is_dev_mode:
-            self.write_error(403, reason="server is not developer mode.")
+            self.write_error(403, reason="server is NOT developer mode.")
 
     def get(self, cat_id: Optional[str]=None):
         """
@@ -56,7 +56,9 @@ class CategoryHandler(ApplicationHandler):
 
     def get_cate_info(self, cat_id: str):
         """
-        DBから,指定したcat_idの全属性を返す
+        DBから指定したcat_idの全属性を返す
+
+        cat_idがDBにない場合, `AssertionError`を投げる
         """
         sql = r"""SELECT * FROM categories WHERE cat_id = :cat_id"""
         cate_info = g.db.get_from_db(sql, cat_id=cat_id)
@@ -82,47 +84,35 @@ class CategoryHandler(ApplicationHandler):
                     self.load_json(validate="category_edit.json")
                     self.edit_category(cat_id=cat_id)
             except (InvalidJSONError, sqlite3.Error) as e:
-                logger.error(e, exc_info=True)
+                logger.error(f"[{e.__class__.__name__}] {e}")
                 self.set_status(400, reason="Invalid request body")
                 self.finish()
 
     def add_category(self):
-        """受け取ったJSONから新たなカテゴリを追加する"""
+        """
+        受け取ったJSONから新たなカテゴリを追加する
+        """
         sql = r"""INSERT INTO categories(cat_name, logo_url, description) VALUES(
-        :cat_name,
-        CASE 
-            WHEN :logo_url = "" THEN NULL 
-            ELSE :logo_url
-        END,
-        CASE 
-            WHEN :description = "" THEN NULL
-            ELSE :description
-        END
-        )"""
+            :cat_name, :logo_url, :description)"""
         g.db.write_to_db(sql, **self.json)
-        self.write(self.json | {"DESCR": f"new category \"{self.json['cat_name']}\" is successfully added."})
-        logger.info(f"New Category `{self.json['cat_name']}` is added.")
+        self.write(self.json | {"DESCR": f"Create new category"})
+        logger.info(f"Create new Category \"{self.json['cat_name']}\"")
 
     def edit_category(self, cat_id: str):
-        """受け取ったJSONから既存のカテゴリを編集する"""
+        """
+        受け取ったJSONから既存のカテゴリを編集する
+        """
         if not exist_cat_id(cat_id):
             self.set_status(404, reason=f"There is no category(cat_id={cat_id}) in DB")
             self.finish()
             return 
         
         sql = r"""UPDATE categories SET cat_name=:cat_name,
-        logo_url = CASE 
-            WHEN :logo_url = "" THEN NULL
-            ELSE :logo_url
-        END,
-        description = CASE
-            WHEN :description = "" THEN NULL
-            ELSE :description
-        END
-        WHERE cat_id = :cat_id"""
+            logo_url = :logo_url, description = :description
+            WHERE cat_id = :cat_id"""
         g.db.write_to_db(sql, cat_id=cat_id, **self.json)
         self.write(self.json | {"DESCR": f"category \"{self.json['cat_name']}\" is successfully edited."})
-        logger.info(f"Category(cat_id={cat_id}) is updated.")
+        logger.info(f"Edit Category(cat_id={cat_id}")
 
     def delete(self, cat_id: Optional[str]=None):
         """
@@ -136,7 +126,7 @@ class CategoryHandler(ApplicationHandler):
             try:
                 self.del_category(cat_id=cat_id)
             except sqlite3.Error as e:
-                logger.error(e, exc_info=True)
+                logger.error(f"[{e.__class__.__name__}] {e}")
                 self.set_status(400, reason="Invalid request body")
                 self.finish()
     
@@ -145,14 +135,19 @@ class CategoryHandler(ApplicationHandler):
         指定されたcat_idのカテゴリを削除する
         """
         if (not exist_cat_id(cat_id)):
-            self.set_status(404, reason=f"There is no category(cat_id={cat_id}) in DB.")
+            self.set_status(404, 
+                            reason=f"The category(cat_id={cat_id}) does not exist in DB.")
             self.finish()
             return 
         
         sql = r"""DELETE FROM categories WHERE cat_id = :cat_id"""
         g.db.write_to_db(sql, cat_id=cat_id)
-        self.write({"DESCR": f"category(cat_id={cat_id}) is successfully deleted."})
-        logger.info(f"Category(cat_id={cat_id}) is deleted.")
+
+        self.write({
+            "cat_id": int(cat_id),
+            "DESCR": f"Category(cat_id={cat_id}) is successfully deleted."
+        })
+        logger.info(f"Delete Category(cat_id={cat_id})")
 
 
 def exist_cat_id(cat_id:str) -> bool:
