@@ -121,10 +121,10 @@ class ProblemCreateHandler(ApplicationHandler):
             # POST /create/<p_id>
             elif p_id is not None and action is None:
                 if p_id == "profile":
-                    self.load_json(validate=True, schema="profile.json")
+                    self.load_json(validate="profile.json")
                     self.update_profile()
                 elif p_id == "order":
-                    self.load_json(validate=True, schema="order_change.json")
+                    self.load_json(validate="order_change.json")
                     self.update_problem_order()
                 else:
                     self.set_status(404, reason=f"{self.request.uri} is not Found.")
@@ -133,7 +133,7 @@ class ProblemCreateHandler(ApplicationHandler):
             # POST /create/<p_id>/<action>
             elif p_id is not None and action is not None:
                 if action == "register":
-                    self.load_json(validate=True, schema="register.json")
+                    self.load_json(validate="register.json")
                     self.register(p_id=p_id)
                 else:
                     self.set_status(404, reason=f"{self.request.uri} is not Found.")

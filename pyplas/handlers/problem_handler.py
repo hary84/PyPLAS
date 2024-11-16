@@ -167,10 +167,10 @@ class ProblemHandler(ApplicationHandler):
             # POST /problems/<p_id>/<action>
             elif p_id is not None and action is not None:
                 if action == "save":
-                    self.load_json(validate=True, schema="save_user_data.json")
+                    self.load_json(validate="save_user_data.json")
                     self.saving(p_id)
                 elif action == "scoring":
-                    self.load_json(validate=True, schema="scoring.json")
+                    self.load_json(validate="scoring.json")
                     if self.json["kernel_id"] in ProblemHandler.execute_pool.keys():
                         self.set_status(202, reason=f"This question is currently being scored.")
                         self.finish()

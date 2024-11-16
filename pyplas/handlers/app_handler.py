@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, Optional, Union
 
-from jsonschema import ValidationError
+import jsonschema.exceptions
 import tornado
 from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
@@ -15,7 +15,8 @@ class ApplicationHandler(tornado.web.RequestHandler):
 
     def __init__(self, application: Application, request: HTTPServerRequest, **kwargs) -> None:
         super().__init__(application, request, **kwargs)
-        self.json: dict = None
+        self.json = {}
+        self.query = {}
         self.is_dev_mode: bool = self.settings["develop"]
 
     def get_template_namespace(self) -> Dict[str, Any]:
@@ -25,70 +26,42 @@ class ApplicationHandler(tornado.web.RequestHandler):
         return namespace
 
     def write_error(self, status_code: int, **kwargs: Any) -> None:
+        """エラー時に表示するデフォルトの画面を設定する"""
         self.set_status(status_code, kwargs.get("reason", None))
         self.render("error.html", status_code=status_code)
-    
-    def validate_JSON(self, keys:Union[list, dict]=None, schema:Optional[str]=None) -> bool:
-        """
-        POSTやPUTから送られてきたJSONに対応するkeyがあるかどうか検証する
-
-        Parameters
-        ----------
-        key: list or dict 
-            検証の対象となるキーのリストまたは{key: type}のdict
-        schema: str 
-            検証に使いたいjsonファイルのファイル名(拡張子込)
-        """
-        if self.json is None:
-            raise InvalidJSONError
-        
-        if schema is not None:
-            try:
-                validate_json(self.json, schema)
-            except ValidationError :
-                raise InvalidJSONError   
-        elif isinstance(keys, list):
-            try:
-                for key in keys:
-                    self.json[key]
-            except:
-                raise InvalidJSONError
-        elif isinstance(keys, dict):
-            try:
-                for key, value in keys.items():
-                    assert isinstance(self.json[key], value)
-            except:
-                raise InvalidJSONError
             
             
-    def load_json(self, validate:bool=False, **kwargs) -> Union[None, bool]:
+    def load_json(self, validate: Optional[str]=None):
         """
-        POSTやPUTから送られてきたJSONをpythonのdictに変換する
+        リクエストボディをPythonの`dict`に変換し, `self.json`に格納する
         
         Parameters
         ----------
-        validate: bool, default False
-            キーやタイプについて検証するか否か
-        kwargs: 
-            validate_json関数に渡す引数
+        validate: str or None, default None
+            キーやタイプについて検証するか否か  
+            - `None`の場合, 検証を行わない.  
+            - `str`型の場合, `config.SCHEMA_PATH`内のjsonschemaファイルを参照してjsonの検証を行う
         """
         if self.request.headers.get("Content-Type", None) == "application/json":
             self.json = json.loads(self.request.body)
-            if validate:
-                self.validate_JSON(**kwargs)
+            if validate is not None:
+                try:
+                    validate_json(self.json, schema_name=validate)
+                except jsonschema.exceptions.ValidationError:
+                    raise InvalidJSONError
         else:
             raise InvalidJSONError
             
     def load_url_queries(self, names: Union[list[str], dict[str, Any]]):
         """
-        URL queryをself.queryに格納する
+        URL queryを`self.query`に格納する
 
         Parameters
         ----------
         names: list or dict
-            queryの名前を指定する. dictの場合、keyがquery名, valueがデフォルトの値
+            queryの名前を指定する.
+            - dictの場合、keyがquery名, valueがデフォルトの値
         """
-        self.query = {}
         if isinstance(names, list):
             for name in names:
                 self.query[name] = self.get_query_argument(name)

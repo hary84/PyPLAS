@@ -76,10 +76,10 @@ class CategoryHandler(ApplicationHandler):
         else:
             try:
                 if cat_id == "new":
-                    self.load_json(validate=True, schema="category_edit.json")
+                    self.load_json(validate="category_edit.json")
                     self.add_category()
                 else:
-                    self.load_json(validate=True, schema="category_edit.json")
+                    self.load_json(validate="category_edit.json")
                     self.edit_category(cat_id=cat_id)
             except (InvalidJSONError, sqlite3.Error) as e:
                 logger.error(e, exc_info=True)

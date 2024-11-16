@@ -1,4 +1,4 @@
-from jupyter_client import AsyncMultiKernelManager
+from jupyter_client.multikernelmanager import AsyncMultiKernelManager
 import tornado
 
 from pyplas.models import DBHandler
