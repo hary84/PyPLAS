@@ -2,7 +2,7 @@ from logging import Logger
 import os 
 import signal
 import sqlite3
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
 from pyplas.utils.log import get_logger
 from .. import config as cfg
@@ -28,7 +28,7 @@ def create_problem_db(path: str):
 
     with sqlite3.connect(path) as conn:
         conn.executescript(categories)
-        conn.execute(pages)
+        conn.executescript(pages)
         conn.commit()
 
 def create_user_db(path: str):
@@ -51,10 +51,12 @@ def create_user_db(path: str):
         conn.executescript(progress)
         conn.commit()
 
-def check_db_schema(db_path: str, table_name: list[str]):
+def check_db_schema(
+        db_path: str, 
+        table_name: list[Literal["categories", "pages", "progress", "logs"]]
+    ):
     """
-    DBのschemaが正しいかをチェックする. 正しくない場合, 
-    InvalidDBSchemaエラーを発生させる. 
+    DBのschemaが正しいかをチェックする. 正しくない場合, `InvalidDBSchema`エラーを発生させる. 
     """
     for tname in table_name:
         with sqlite3.connect(db_path) as conn:
@@ -78,42 +80,50 @@ class DBHandler:
 
     def setup(self, dev_mode:bool=False):
         """ユーザDBへのパスを設定し, 問題DBに接続する."""
-        self.page_path = cfg.PROBLEM_DB_PATH
         self.dev_mode = dev_mode
+
+        self.page_path = cfg.PROBLEM_DB_PATH
         if self.dev_mode:
             self.user_path = cfg.DEV_USER_DB_PATH
         else:            
             self.user_path = cfg.USER_DB_PATH
-        self.logger.debug("DB set up")
+
+        self.logger.debug("Sets the Database paths")
         self._connect()
 
-    def _connect(self) -> sqlite3.Connection:
+    def _connect(self):
         """
-        問題DBに接続し, ユーザDBをATTACHする. 問題/ユーザDBが存在しない, またはschemaが異なる場合, 
-        空の問題/ユーザDBを作成する. 
+        問題DBに接続し, ユーザDBをATTACHする.   
+        問題/ユーザDBが存在しない, またはschemaが異なる場合, 空の問題/ユーザDBを作成する. 
 
         このメソッドは直接呼び出さない.
         """
         try:
-            current_path = self.page_path
+            _current_path = self.page_path
             if not os.path.exists(self.page_path):
                 create_problem_db(self.page_path)
-                self.logger.info(f"create problem DB ({self.page_path})")
+                self.logger.info(f"Create problem DB ({self.page_path})")
             else:
                 check_db_schema(self.page_path, ["categories", "pages"])
 
-            current_path = self.user_path
+            _current_path = self.user_path
             if not os.path.exists(self.user_path):
                 create_user_db(self.user_path)
-                self.logger.info(f"create user DB ({self.user_path})")
+                self.logger.info(f"Create user DB ({self.user_path})")
             else:
                 check_db_schema(self.user_path, ["logs", "progress"])
-        except (InvalidDBSchema, FileNotFoundError) as e:
+        except InvalidDBSchema as e:
             self.logger.critical("\n".join([
                 e.__class__.__name__,
-                f"This DB({current_path}) cannot be used in this app.",
+                f"This DB({_current_path}) cannot be used in this app.",
                 f"Please remove it from {cfg.DB_DIR} and start again."
                 ]))
+            os.kill(os.getpid(), signal.SIGTERM)
+            return
+        except FileNotFoundError as e:
+            self.logger.critical("\n".join([
+                f"{e.filename} is not found.",
+            ]))
             os.kill(os.getpid(), signal.SIGTERM)
             return
         except Exception as e:
@@ -147,6 +157,9 @@ class DBHandler:
         kwargs: 
             sqlのパラメータを指定する
         """
+        if self.conn is None:
+            self.logger.warning("SQL cannot be executed before the connection is established.")
+            raise sqlite3.Error
         try:
             cur = self.conn.execute(sql, (kwargs))
             return cur.fetchall()
@@ -164,6 +177,9 @@ class DBHandler:
         kwargs:
             sqlのパラメータを指定する
         """
+        if self.conn is None:
+            self.logger.warning("SQL cannot be executed before the connection is established.")
+            raise sqlite3.Error
         try:
             sqls = [sql] if isinstance(sql, str) else sql
             for q in sqls:
@@ -186,6 +202,9 @@ class DBHandler:
         params:
             sqlのパラメータを指定する. 
         """
+        if self.conn is None:
+            self.logger.warning("SQL cannot be executed before the connection is established.")
+            raise sqlite3.Error
         try:
             self.conn.executemany(sql, params)
         except sqlite3.Error as e:
@@ -199,6 +218,8 @@ class DBHandler:
         """
         DBと接続されているかをチェックする.
         """
+        if self.conn is None:
+            return False
         try:
             self.conn.cursor()
             return True
@@ -215,13 +236,14 @@ class DBHandler:
             if self.check_connect():
                 self.logger.warning(f"Before delete db file, please disconnect from the database({self.page_path})")
             os.remove(self.user_path)
-            self.logger.warning(f'Test user DB({self.user_path}) is succesfully removed.')
+            self.logger.warning(f'Dev user DB({self.user_path}) is succesfully removed.')
 
     def close(self) -> None:
         """
         DBとの接続を切る. dev_modeがtrueの時, 開発用ユーザDBを削除する.
         """
-        self.conn.close()
-        self.logger.warning('DB is successfully closed.')
-        if self.dev_mode:
-            self._clean_up()
+        if self.conn is not None:
+            self.conn.close()
+            self.logger.warning('DB is successfully closed.')
+            if self.dev_mode:
+                self._clean_up()
