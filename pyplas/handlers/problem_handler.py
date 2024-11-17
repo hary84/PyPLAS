@@ -122,7 +122,7 @@ class ProblemHandler(ApplicationHandler):
         pyplas.dbから問題の基礎情報(p_id, title, category, page)を取得し, dictとして返す. 
         """
         sql = r"""SELECT p_id, title, category, page FROM pages
-            WHERE p_id = :p_id"""
+            WHERE p_id = :p_id AND status = 1"""
         try: 
             info = g.db.get_from_db(sql, p_id=p_id)
             assert len(info) == 1, "p_id is not exist in db"
@@ -137,7 +137,8 @@ class ProblemHandler(ApplicationHandler):
         user.dbからq_contentを取得し, dictとして返す 
         """
         sql = r"""SELECT q_content FROM user.progress
-        WHERE p_id=:p_id"""
+        INNER JOIN pages ON user.progress.p_id = pages.p_id
+        WHERE user.progress.p_id=:p_id AND pages.status = 1"""
         saved_answers = g.db.get_from_db(sql, p_id=p_id)
         answers = saved_answers[0]["q_content"] if len(saved_answers) else '{}'
         self.write({

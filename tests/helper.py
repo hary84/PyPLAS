@@ -127,7 +127,7 @@ class CategoryDummyRecord(DummyRecord):
 class PagesDummyRecord(DummyRecord):
     def __init__(
             self, 
-            cat_id_range: list[str]=[], 
+            cat_id_range: list[int]=[], 
             p_id: Optional[str] = None,
             title: Optional[str] = None,
             category: Union[int,  None] = -1,
