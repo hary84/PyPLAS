@@ -186,7 +186,7 @@ class DBHandler:
                 self.conn.execute(q, (kwargs))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise
+            raise e
         else:
             self.conn.commit()
             self.logger.debug("The data has been successfully written.")
@@ -209,7 +209,7 @@ class DBHandler:
             self.conn.executemany(sql, params)
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise 
+            raise e
         else:
             self.conn.commit()
             self.logger.debug("The data has been successfully written.")
