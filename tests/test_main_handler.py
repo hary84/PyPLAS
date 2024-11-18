@@ -12,11 +12,11 @@ class TestMainHandlerWithoutCategory(helper.MyHTTPTestCase):
     @classmethod
     def setUpClass(cls):
         page_records = [
-            helper.PagesDummyRecord(status=1),
-            helper.PagesDummyRecord(status=1)
+            helper.PagesDummyRecord(category=None, status=1),
+            helper.PagesDummyRecord(category=None, status=1)
         ]
         cls.testdb = helper.DummyDB()
-        cls.testdb.set_problemDB(categories=0, pages=page_records)
+        cls.testdb.set_problemDB(pages=page_records)
         cls.conn = sqlite3.connect(helper.TEST_DB_PATH)
         return super().setUpClass()
 
