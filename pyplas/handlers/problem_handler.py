@@ -27,7 +27,8 @@ class ProblemHandler(ApplicationHandler):
         """実行中のすべてのサブプロセスをkillする"""
         for p in cls.execute_pool.values():
             p.kill()
-        mylogger.warning("All Subprocess are killed")
+        if len(cls.execute_pool.values()) != 0:
+            mylogger.warning("All Subprocesses are killed")
 
     def prepare(self):
         mylogger.debug(f"{self.request.method} {self.request.uri}")
@@ -53,29 +54,30 @@ class ProblemHandler(ApplicationHandler):
             # GET /problems/<p_id>/<action>    
             elif p_id is not None and action is not None: 
                 if p_id == "log" and action == "download":
-                    try:
-                        self.load_url_queries(["cat"])
-                    except tornado.web.MissingArgumentError:
-                        self.write_error(400, reason="Invalid url query. Please set 'cat'.")
-                    else:
-                        self.log_downdload(**self.query)
+                    self.load_url_queries(["cat"])
+                    self.log_downdload(**self.query)
                 elif action == "info":
                     self.get_problem_info(p_id=p_id)
                 elif action == "save":
                     self.get_saved_answers(p_id=p_id)
                 else:    
                     self.write_error(404)
+
+        except tornado.web.MissingArgumentError:
+            self.write_error(400, reason="Invalid URL query. Please set 'cat'.")
+        except AssertionError as e:
+            mylogger.error(e)
+            self.write_error(404, reason=str(e))
         except Exception as e:
             mylogger.error(e, exc_info=True)
             self.write_error(500, reason=str(e))
-            self.finish()
 
 
     def render_problem(self, p_id:str):
         """
         DBから問題を取得し, レンダリングする
         """
-        sql = r"""SELECT pages.title, pages.page, categories.cat_name,
+        SQL = r"""SELECT pages.title, pages.page, categories.cat_name,
             COALESCE(user.progress.q_status, '{}') AS q_status, 
             COALESCE(user.progress.q_content, '{}') AS q_content
             FROM pages 
@@ -83,26 +85,19 @@ class ProblemHandler(ApplicationHandler):
             LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
             WHERE pages.p_id=:p_id AND (status=1 OR :is_dev)
             ORDER BY pages.order_index ASC, pages.register_at ASC"""
-        try:
-            page = g.db.get_from_db(sql, p_id=p_id, is_dev=self.is_dev_mode)
-            assert len(page) != 0, f"p_id='{p_id}' does not exist in DB."
-        except (AssertionError) as e:
-            self.write_error(404, reason=f"problem({p_id}) does not found.")
-        else:
-            page:dict = page[0]
-            try:
-                self.render(f"./problem.html", 
-                            title=page["title"],
-                            page=json.loads(page["page"]),
-                            q_status=json.loads(page["q_status"]),
-                            q_content=json.loads(page["q_content"]),
-                            category=page["cat_name"])
-            except Exception as e:
-                mylogger.error(e, exc_info=True)
-                self.write_error(500)
+        pages = g.db.get_from_db(SQL, p_id=p_id, is_dev=self.is_dev_mode)
+        assert len(pages) == 1, f"Problem(p_id={p_id}) is not found."
+
+        page = pages[0]
+        self.render(f"./problem.html", 
+                    title=page["title"],
+                    page=json.loads(page["page"]),
+                    q_status=json.loads(page["q_status"]),
+                    q_content=json.loads(page["q_content"]),
+                    category=page["cat_name"])
 
 
-    def log_downdload(self,  cat:str, **kwargs) -> list[dict]:
+    def log_downdload(self, cat:str, **kwargs):
         """
         user.dbのlogsテーブルからあるカテゴリcat_nameに属するログをdictのlistとして返す.
         """
@@ -119,32 +114,51 @@ class ProblemHandler(ApplicationHandler):
 
     def get_problem_info(self, p_id: str):
         """
-        pyplas.dbから問題の基礎情報(p_id, title, category, page)を取得し, dictとして返す. 
+        pyplas.dbから問題の基礎情報(p_id, title, category, page)を取得し, `dict`として返す. 
+
+        - 指定した`p_id`がpyplas.dbに存在しない場合, `AssertionError`を投げる
+        - 指定した`p_id`が非公開の場合, `AssertionError`を投げる
         """
-        sql = r"""SELECT p_id, title, category, page FROM pages
+        SQL = r"""SELECT p_id, title, category, page, status FROM pages
             WHERE p_id = :p_id"""
-        try: 
-            info = g.db.get_from_db(sql, p_id=p_id)
-            assert len(info) == 1, "p_id is not exist in db"
-            self.write(info[0] | 
-                       {"DESCR": "get problem info"})
-        except AssertionError:
-            self.set_status(404, reason=f"problem({p_id}) is not found.")
-            self.finish()
+        info = g.db.get_from_db(SQL, p_id=p_id)
+
+        assert len(info) == 1, f"Problem(p_id={p_id}) is not found."
+        if info[0]["status"] == 0:
+            raise AssertionError(f"This Problem(p_id={p_id}) is private.")
+        elif info[0]["status"] == 1:
+            self.write({
+                "p_id": p_id,
+                "title": info[0]["title"],
+                "category": info[0]["category"],
+                "page": info[0]["page"],
+                "DESCR": "Got a prolblem information"
+            })
 
     def get_saved_answers(self, p_id: str) -> None:
         """
-        user.dbからq_contentを取得し, dictとして返す 
+        user.dbから`q_content`を取得し, `dict`として返す 
+
+        - pyplas.dbに`p_id`が存在しない場合, `AssertionError`を投げる  
+        - 指定した`p_id`の問題が非公開(`status = 0`)の場合, `AssertionError`を投げる
+        - user.dbに`p_id`が存在しない場合, `savedAnswers`は空の`dict`を返す  
         """
-        sql = r"""SELECT q_content FROM user.progress
-        WHERE p_id=:p_id"""
-        saved_answers = g.db.get_from_db(sql, p_id=p_id)
-        answers = saved_answers[0]["q_content"] if len(saved_answers) else '{}'
-        self.write({
-            "p_id": p_id,
-            "savedAnswers": answers,
-            "DESCR": "get saved answers."
-        })
+        SQL = r"""SELECT status, user.progress.q_content FROM pages
+            LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
+            WHERE pages.p_id = :p_id"""
+        saved_answers = g.db.get_from_db(SQL, p_id=p_id)
+
+        assert len(saved_answers) == 1, f"Problem(p_id={p_id}) is not found."
+        if saved_answers[0]["status"] == 0:
+            raise AssertionError(f"This Problem(p_id={p_id}) is private.")
+        elif saved_answers[0]["status"] == 1:
+            q_content = saved_answers[0]["q_content"]
+            answers: str = "{}" if q_content is None else q_content
+            self.write({
+                "p_id": p_id,
+                "savedAnswers": answers,
+                "DESCR": "get saved answers."
+            })
 
     async def post(self, p_id:Optional[str]=None, action:Optional[str]=None) -> None:
         """

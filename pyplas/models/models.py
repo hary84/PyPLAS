@@ -88,7 +88,7 @@ class DBHandler:
         else:            
             self.user_path = cfg.USER_DB_PATH
 
-        self.logger.debug("Sets the Database paths")
+        self.logger.info("Sets the Database paths")
         self._connect()
 
     def _connect(self):
@@ -146,7 +146,7 @@ class DBHandler:
         fields = [column[0] for column in cursor.description]
         return {key: value for key, value in zip(fields, row)}
     
-    def get_from_db(self, sql:str, **kwargs) -> list:
+    def get_from_db(self, sql:str, **kwargs) -> list[dict]:
         """
         DBからデータを受け取る
         
