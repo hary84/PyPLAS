@@ -21,6 +21,9 @@
         margin: auto;
         max-width: 100%;
     }
+    P:has(>img) {
+        text-align: center;
+    }
     & > table {
         margin-bottom: .5rem;
         margin-left: auto;
