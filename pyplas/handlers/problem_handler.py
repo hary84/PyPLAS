@@ -27,7 +27,8 @@ class ProblemHandler(ApplicationHandler):
         """実行中のすべてのサブプロセスをkillする"""
         for p in cls.execute_pool.values():
             p.kill()
-        mylogger.warning("All Subprocess are killed")
+        if len(cls.execute_pool.values()) != 0:
+            mylogger.warning("All Subprocesses are killed")
 
     def prepare(self):
         mylogger.debug(f"{self.request.method} {self.request.uri}")
