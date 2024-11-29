@@ -1,11 +1,13 @@
 import asyncio
 from datetime import datetime, date
-import json 
+import json
+from typing import Union 
 
 from jupyter_client import AsyncKernelManager, AsyncKernelClient
 from tornado.websocket import WebSocketHandler
 from tornado.ioloop import IOLoop
 
+from pyplas.handlers.problem_handler import ProblemHandler
 from pyplas.utils import get_logger, globals as g
 
 mylogger = get_logger(__name__)
@@ -23,7 +25,7 @@ class ExecutionHandler(WebSocketHandler):
             self.kc.start_channels()
         mylogger.debug(f"WS OPEN {self.request.uri}")
 
-    async def on_message(self, received_msg: dict):
+    async def on_message(self, message: Union[str, bytes]):
         """
         メッセージ受信時の処理
 
@@ -34,7 +36,7 @@ class ExecutionHandler(WebSocketHandler):
             * <key> node_id | <value> 実行ノードのid
         """
         await self.kc.wait_for_ready()
-        received_msg = json.loads(received_msg)
+        received_msg:dict = json.loads(message)
         mylogger.debug(f"WS RECEIVE {self.request.uri}")
         _code = received_msg.get("code", "")
         self.node_id = received_msg.get("node_id", "unknown")
@@ -66,9 +68,10 @@ class ExecutionHandler(WebSocketHandler):
         elif self.close_code == 1001: # when closing page
             IOLoop.current().spawn_callback(wait_and_shutdown_kernel, kernel_id=self.kernel_id)
             mylogger.debug(f"kernel(kernel_id={self.kernel_id}) is stopped.")
+            ProblemHandler.kill_all_subprocess()
 
 
-def datetime_encoda(obj: object) -> str:
+def datetime_encoda(obj: object):
     """
     objがdatetimeオブジェクトであれば、isoformatの文字列に変換する
     """
