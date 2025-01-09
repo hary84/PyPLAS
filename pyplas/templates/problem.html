@@ -18,7 +18,7 @@
     <a href="/" class="nav-link text-light"><i class="bi bi-house"></i> Home</a>
 </li>
 <li class="nav-item align-self-center">
-    <a href="/?category={{category}}" class="nav-link text-light text-decoration-underline">My Category</a>
+    <a href="/categories/{{cat_id if cat_id is not None else 0}}" class="nav-link text-light text-decoration-underline">My Category</a>
 </li>
 {% end %}
 
@@ -70,7 +70,7 @@
 {% block side-content-r %}
 <div style="max-height: 70vh; overflow-y: auto;" id="rightSideBarScrollField">
     <h4>Category: </h4>
-    <h4 class="mb-4"><span class="badge bg-info" id="problemCategory">{{ category }}</span></h4>
+    <h4 class="mb-4"><span class="badge bg-info" id="problemCategory">{{ cat_name if cat_name is not None else '...' }}</span></h4>
     <h4>Questions</h4>
     <nav id="question-nav" class="h-100 flex-column align-items-stretch pe-4 mb-4">
         <nav class="nav nav-pills flex-column">

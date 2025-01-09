@@ -17,6 +17,20 @@ export function isCreateMode() {
 }
 
 /**
+ * valueがnullでないことを確認する
+ * @template T
+ * @param {T | null} value 
+ * @param {Error} error
+ * @returns {T}
+ */
+export function notNull(value, error=Error()) {
+    if (value === null) {
+        throw error
+    }
+    return value
+}
+
+/**
  * objのpropertyが変化した際にfuncを実行する
  * @param {object} obj 
  * @param {string} propName 
@@ -238,4 +252,22 @@ export const pagination = {
         }
         this.init(this.tableTag, itemsPerPage??this.itemsPerPage)
     }
+}
+
+/** 2つのオブジェクトのすべてのプロパティ値を比較する
+ * @returns {boolean}
+ */
+export function compareObjects(obj1, obj2) {
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+
+    // プロパティ数が異なる場合、false
+    if (keys1.length !== keys2.length) return false;
+
+    // プロパティごとに値を比較
+    for (const key of keys1) {
+        if (obj1[key] !== obj2[key]) return false;
+    }
+
+    return true;
 }

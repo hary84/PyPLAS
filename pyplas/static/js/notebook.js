@@ -1,44 +1,37 @@
 // for /create/<p_id> or /problems/<p_id>
 //@ts-check
-import { myNode } from "./modules/myclass.js"
-import * as myclass from "./modules/myclass.js"
+import { myNode } from "./modules/nodes.js"
+import * as nodes from "./modules/nodes.js"
 import * as utils from "./modules/utils.js"
+import { notNull } from "./modules/helper.js"
 import * as helper from "./modules/helper.js"
 import kh from "./modules/kernel.js"
 import reseter from "./modules/reset-manager.js"
 import * as error from "./modules/error.js"
 
+const nodesContainer = notNull(document.querySelector("#nodesContainer"))
 
 document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
 
 // markdown.js, highlight.jsの準備
-if (!helper.isCreateMode()) {
-    document.querySelectorAll(".explain").forEach(elem => {
-        elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML))
-    })
-} else {
+if (helper.isCreateMode()) {
     document.querySelectorAll(".node.explain").forEach(e => 
-        new myclass.ExplainNode(e).showPreview()
-    )
+        new nodes.ExplainNode(e).showPreview() )
+    } 
+else {
+    document.querySelectorAll(".explain:not([node-id])").forEach(elem => {
+        elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML)) })
+    nodes.userAnswerCompletion(nodesContainer)
+    helper.addInnerLink(nodesContainer, notNull(document.querySelector("#rightSideBarScrollField")), "beforeend")
 }
 hljs.highlightAll();
 
-const nodesContainer = document.querySelector("#nodesContainer")
-const rightSideBarScrollField = document.querySelector("#rightSideBarScrollField")
 
-if (nodesContainer !== null && rightSideBarScrollField !== null) {
-    helper.addInnerLink(nodesContainer, rightSideBarScrollField,"beforeend")
-}
-if (!helper.isCreateMode()) {
-    await userAnswerCompletion()
-}
 
 // start kernel and observe websocket
 await kh.setUpKernel()
 helper.watchValue(kh, "running", setExecuteAnimation)
 helper.watchValue(kh, "msg", renderMessage)
-
-// observe 'active node'
 helper.watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
 
 // left side bar button 
@@ -50,25 +43,20 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
     try {
         switch (action) {
             case "exec-all":
-                if (nodesContainer == null) {throw new Error()}
                 await kh.executeAll(nodesContainer)
                 break;
             case "restart-kernel":
                 await kh.setUpKernel(true)
                 document.querySelectorAll(".node.code").forEach(e => {
-                    new myclass.CodeNode(e).resetState()
+                    new nodes.CodeNode(e).resetState()
                 })
                 break;
             case "interrupt-kernel":
                 await kh.kernelInterrupt()
                 break;
             case "save":
-                if (!helper.isCreateMode()) {
-                    await utils.saveUserData()
-                } 
-                else {
-                    await utils.registerProblem()
-                }
+                if (!helper.isCreateMode()) { await utils.saveUserData() } 
+                else { await utils.registerProblem() }
                 break;
         }
     } catch(e) {
@@ -87,7 +75,7 @@ document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
 
 document.querySelector("main")?.addEventListener("click", e => {
     try {
-        const node = myNode.get(e.target?.closest(".node") ?? myclass.emptyNodeId)
+        const node = myNode.get(e.target?.closest(".node") ?? nodes.emptyNodeId)
         if (node != null) {
             myNode.activeNode.node_id = node.nodeId
         }
@@ -101,7 +89,7 @@ document.querySelector("main")?.addEventListener("click", async e => {
     const action = target.dataset.action
     target.classList.add("disabled")
     try {
-        const node = myNode.get(e.target.closest(".node") ?? myclass.emptyNodeId)
+        const node = myNode.get(e.target.closest(".node") ?? nodes.emptyNodeId)
         switch (action) {
             case "add-MD":
                 e.stopPropagation()
@@ -126,12 +114,12 @@ document.querySelector("main")?.addEventListener("click", async e => {
                 node?.delme()
                 return
             case "reset-input":
-                if (node instanceof myclass.QuestionNode || node instanceof myclass.CodeNode) {
+                if (node instanceof nodes.QuestionNode || node instanceof nodes.CodeNode) {
                     reseter.resetNode(node)
                 }
                 return
         }
-        if (node instanceof myclass.CodeNode) {
+        if (node instanceof nodes.CodeNode) {
             switch (action) {
                 case "exec":
                     await kh.execute(node.nodeId)
@@ -141,7 +129,7 @@ document.querySelector("main")?.addEventListener("click", async e => {
                     break;
             }
         }
-        else if (node instanceof myclass.QuestionNode) {
+        else if (node instanceof nodes.QuestionNode) {
             switch (action) {
                 case "test":
                     await node.scoring()
@@ -160,7 +148,7 @@ document.querySelector("main")?.addEventListener("click", async e => {
                     break;
             }
         }
-        else if (node instanceof myclass.ExplainNode) {
+        else if (node instanceof nodes.ExplainNode) {
             switch (action) {
                 case "embed-bold":
                     node.embedBold();
@@ -207,14 +195,14 @@ window.addEventListener("keydown", async e => {
     //    Ctrl + Enter
     // ============================== 
     if (e.ctrlKey && e.key == "Enter") {
-        if (currentActiveNode instanceof myclass.ExplainNode) {
+        if (currentActiveNode instanceof nodes.ExplainNode) {
             currentActiveNode.showPreview()
         } 
-        else if (currentActiveNode instanceof myclass.CodeNode) {
+        else if (currentActiveNode instanceof nodes.CodeNode) {
             currentActiveNode.editor.blur()
             kh.execute(currentActiveNode.nodeId)
         }
-        else if (currentActiveNode instanceof myclass.QuestionNode) {
+        else if (currentActiveNode instanceof nodes.QuestionNode) {
             if (!helper.isCreateMode()) {
                 await currentActiveNode.scoring()
             } 
@@ -225,14 +213,14 @@ window.addEventListener("keydown", async e => {
     // ============================== 
     else if (e.key == "Enter" && e.target?.tagName == "BODY") {
         e.preventDefault()
-        if (currentActiveNode instanceof myclass.ExplainNode) {
+        if (currentActiveNode instanceof nodes.ExplainNode) {
             currentActiveNode.showEditor()
             currentActiveNode.editor.focus()
         }
-        else if (currentActiveNode instanceof myclass.CodeNode) {
+        else if (currentActiveNode instanceof nodes.CodeNode) {
             currentActiveNode.editor.focus()
         }
-        else if (currentActiveNode instanceof myclass.QuestionNode) {
+        else if (currentActiveNode instanceof nodes.QuestionNode) {
             const answerNodes = currentActiveNode.childNodes
             if (answerNodes.length == 0) {
                 const nodeControl = currentActiveNode.answerField.querySelector(".node-control")
@@ -252,17 +240,17 @@ window.addEventListener("keydown", async e => {
     //    Escape
     // ============================== 
     else if (e.key == "Escape") {
-        if (currentActiveNode instanceof myclass.EditorNode && e.target?.tagName == "BODY") {
+        if (currentActiveNode instanceof nodes.EditorNode && e.target?.tagName == "BODY") {
             const e = currentActiveNode.parentQuestionNode
             if (e != null) {myNode.activeNode.node_id = e.nodeId}
         }
         else if (e.target?.tagName == "TEXTAREA") {
-            const targetNode = myNode.get(e.target?.closest(".node") ?? myclass.emptyNodeId)
-            if (targetNode instanceof myclass.EditorNode) {targetNode.editor.blur()}
+            const targetNode = myNode.get(e.target?.closest(".node") ?? nodes.emptyNodeId)
+            if (targetNode instanceof nodes.EditorNode) {targetNode.editor.blur()}
         }
         else {
             e.target?.blur()
-            if (currentActiveNode instanceof myclass.QuestionNode) {
+            if (currentActiveNode instanceof nodes.QuestionNode) {
                 currentActiveNode._hideToast()
             }
         }
@@ -339,7 +327,7 @@ window.addEventListener("keydown", async e => {
 window.addEventListener("dblclick", e => {
     const target = e.target?.closest(".node.explain")
     if (target != null) {
-        new myclass.ExplainNode(target).showEditor()
+        new nodes.ExplainNode(target).showEditor()
     }
 })
 
@@ -361,29 +349,6 @@ const runState = {
     suspending: "suspending"
 }
 
-async function userAnswerCompletion() {
-    const res = await fetch(`${window.location.origin}/problems/${helper.problem_meta.p_id}/save`, {
-        method: "GET"
-    })
-    if (res.ok) {
-        const json = await res.json()
-        console.log(json)
-
-        const savedAnswers = JSON.parse(json.savedAnswers)
-        nodesContainer?.querySelectorAll(".node.question").forEach(e => {
-            const questionNode = new myclass.QuestionNode(e)
-            if (questionNode.ptype == "0" && questionNode.qId !== null) {
-                if (savedAnswers[questionNode.qId] !== undefined) {
-                    questionNode.answerCompletion(savedAnswers[questionNode.qId])
-                }
-            }
-        })
-    } 
-    else {
-        throw new error.FetchError(res.status, res.statusText)
-    }
-}
-
 /**
  * KernelHandler classのrunningパラメータが変化した際に起動する関数
  * @param {boolean} oldValue
@@ -393,14 +358,14 @@ function setExecuteAnimation(kh, oldValue, newValue) {
     // コード実行中(kh.running == true)の時
     if (newValue) {
         try {
-            const runningNode = new myclass.CodeNode(kh.execute_task_q[0])
+            const runningNode = new nodes.CodeNode(kh.execute_task_q[0])
             runningNode.element.setAttribute("run-state", runState.running)
             runningNode.element.querySelector(".node-side")?.classList.add("bg-success-subtle")
             kh.execute_task_q.slice(1, ).forEach(id => {
-                new myclass.CodeNode(id).element.setAttribute("run-state", runState.suspending)
+                new nodes.CodeNode(id).element.setAttribute("run-state", runState.suspending)
             })
         } catch(e) {
-            if (e instanceof myclass.NodeError) {}
+            if (e instanceof nodes.NodeError) {}
             else {console.error(e)}
         }
     // 非コード実行中(kh.running == false)の時
@@ -419,7 +384,7 @@ function renderMessage(kh, oldValue, newValue) {
     if (newValue) {
         try {
             const content = newValue.content
-            const return_form = new myclass.CodeNode(newValue.node_id).element.querySelector(".return-box")
+            const return_form = new nodes.CodeNode(newValue.node_id).element.querySelector(".return-box")
             switch (newValue.msg_type) {
                 case "execute_result":
                     if (content["data"]["text/html"]) {
@@ -441,7 +406,7 @@ function renderMessage(kh, oldValue, newValue) {
                     break;
             }
         } catch (e) {
-            if (e instanceof myclass.NodeError) {}
+            if (e instanceof nodes.NodeError) {}
             else (console.error(e))
         }
     }
@@ -473,8 +438,8 @@ function renderResult(res, form, type="text") {
  * @param {String} newNodeId 
  */
 function setActiveNodePointer(activeNode, oldNodeId, newNodeId) {
-    const oldNode = myNode.get(oldNodeId ?? myclass.emptyNodeId)
-    const newNode = myNode.get(newNodeId ?? myclass.emptyNodeId)
+    const oldNode = myNode.get(oldNodeId ?? nodes.emptyNodeId)
+    const newNode = myNode.get(newNodeId ?? nodes.emptyNodeId)
     if (oldNode) {oldNode.element.classList.remove("active-node")}
     if (newNode) {newNode.element.classList.add("active-node")}
 }

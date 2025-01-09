@@ -2,7 +2,7 @@ from logging import Logger
 import os 
 import signal
 import sqlite3
-from typing import Literal, Optional, Union
+from typing import Any, Literal, Optional, Sequence, Union
 
 from pyplas.utils.log import get_logger
 from .. import config as cfg
@@ -145,55 +145,60 @@ class DBHandler:
         """
         fields = [column[0] for column in cursor.description]
         return {key: value for key, value in zip(fields, row)}
-    
-    def get_from_db(self, sql:str, **kwargs) -> list[dict]:
+
+    def execute(self, sql:str, **parameters) -> list[Any]:
         """
-        DBからデータを受け取る
-        
+        SQL文をを実行する
+
         Parameters
         ----------
         sql: str
-            sql文
-        kwargs: 
-            sqlのパラメータを指定する
+            単一のsql文を実行する
+        parameters:
+            sqlに埋め込まれるパラメータ群
         """
         if self.conn is None:
             self.logger.warning("SQL cannot be executed before the connection is established.")
             raise sqlite3.Error
         try:
-            cur = self.conn.execute(sql, (kwargs))
-            return cur.fetchall()
-        except sqlite3.Error:
-            raise
-    
-    def write_to_db(self, sql:Union[str, tuple, list], **kwargs) -> None:
-        """
-        DBにデータを書き込む
-        
-        Parameters
-        ----------
-        sql: str, tuple, list
-            sql文. tuple, listの場合は各sql文を実行する
-        kwargs:
-            sqlのパラメータを指定する
-        """
-        if self.conn is None:
-            self.logger.warning("SQL cannot be executed before the connection is established.")
-            raise sqlite3.Error
-        try:
-            sqls = [sql] if isinstance(sql, str) else sql
-            for q in sqls:
-                self.conn.execute(q, (kwargs))
+            cur = self.conn.execute(sql, (parameters))
+            records = cur.fetchall()
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise e
+            raise e 
         else:
             self.conn.commit()
-            self.logger.debug("The data has been successfully written.")
-
-    def write_to_db_many(self, sql:str, params:Union[tuple[dict], list[dict]]) -> None:
+            return records
+        
+    def executes(self, sqls:list[str], **parameters) -> list[list[Any]]:
         """
-        DBにデータを書き込む(executemanyを利用する)
+        SQL文をを実行する
+
+        Parameters
+        ----------
+        sql: list
+            単一のsql文のリスト
+        parameters:
+            sqlに埋め込まれるパラメータ群
+        """
+        if self.conn is None:
+            self.logger.warning("SQL cannot be executed before the connection is established.")
+            raise sqlite3.Error
+        responses = []
+        try:
+            for sql in sqls:
+                cur = self.conn.execute(sql, (parameters))
+                responses.append(cur.fetchall())
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise e 
+        else:
+            self.conn.commit()
+            return responses
+        
+    def execute_many(self, sql: str, params: Sequence[dict]):
+        """
+        executemanyを使って繰り返しsql文を実行する
 
         Parameters
         ----------
@@ -225,7 +230,7 @@ class DBHandler:
             return True
         except Exception:
             return False
-
+        
     def _clean_up(self) -> None:
         """
         user DBを削除する. 

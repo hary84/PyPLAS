@@ -84,5 +84,5 @@
 
 {% block side-content-r %}
 <h4>Category: </h4>
-<h4 class="mb-4"><span class="badge bg-info" id="problemCategory">{{ category }}</span></h4>
+<h4 class="mb-4"><span class="badge bg-info" id="problemCategory">{{ category if category is not None else '...' }}</span></h4>
 {% end %}

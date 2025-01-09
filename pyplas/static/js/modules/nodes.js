@@ -177,7 +177,7 @@ export class QuestionNode extends BaseNode {
         this.element.querySelectorAll(".node.code, .node.explain").forEach(e => {
             myNode.get(e)
         })
-        this.qId = this.element.getAttribute("q-id")
+        this.qId = this.element.getAttribute("q-id") ?? ""
     }
     get ptype() {
         return this.element.getAttribute("ptype")
@@ -278,24 +278,26 @@ export class QuestionNode extends BaseNode {
 
         const params = this.extractQuestionParams(0)
         this._showProgressBar()
-        const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/scoring`, {
+        const res = await fetch(`${window.location.origin}/scoring`, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
+                "p_id": problem_meta.p_id,
                 "q_id": params.q_id,
                 "ptype": params.ptype,
                 "answers": params.answers, 
-                "kernel_id": this.nodeId
+                "job_id": this.nodeId
             })
         })
         
         if (res.ok && res.status == 200) {
             const json = await res.json()
             console.log(`[scoring] ${json.DESCR}`)
-            this.element.setAttribute("progress", json.progress)
-            this._showToast(json.content)
+            const progress = json.result ? "2": "1"
+            this.element.setAttribute("progress", progress)
+            this._showToast(json.html)
             const questionNav = document.querySelector(`#question-nav a[href='#q-id-${params.q_id}']`)
-            questionNav?.setAttribute("progress", json.progress)
+            questionNav?.setAttribute("progress", progress)
             this._hideProgressBar()
         }
         else if (res.ok && res.status == 202) {}
@@ -328,8 +330,8 @@ export class QuestionNode extends BaseNode {
     }
     /** 採点のキャンセル */
     canceling = async () => {
-        const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/cancel?kernel_id=${this.nodeId}`, {
-            method: "POST",
+        const res = await fetch(`${window.location.origin}/scoring?job_id=${this.nodeId}`, {
+            method: "DELETE",
         })
         if (res.ok) {
             const json = await res.json()
@@ -593,5 +595,29 @@ export class NodeStructureError extends NodeError {
     constructor(nodeType, msg=`Invalid node structure in ${nodeType} node`) {
         super(`[${nodeType}] ${msg}`)
         this.nodeType = nodeType
+    }
+}
+
+/**
+ * APIを通じてユーザー入力を取得し，word testのQuestion Nodeを補完する
+ * @param {Element} container 
+ */
+export async function userAnswerCompletion(container) {
+    const res = await fetch(`${window.location.origin}/api/saves/${problem_meta.p_id}`)
+    if (res.ok) {
+        const json = await res.json()
+        
+        const saveDatas = json.saves
+        container.querySelectorAll(".node.question").forEach(e => {
+            const questionNode = new QuestionNode(e)
+            if (questionNode.ptype == "0") {
+                if (saveDatas[questionNode.qId] !== undefined) {
+                    questionNode.answerCompletion(saveDatas[questionNode.qId])
+                }
+            }
+        })
+    } 
+    else {
+        throw new error.FetchError(res.status, res.statusText)
     }
 }

@@ -2,7 +2,6 @@
 
 {% block head %}
 <title>PyPLAS</title>
-<script src="{{ static_url('js/index.js') }}" type="module"></script>
 {% end %}
 
 {% block head-nav-li %}
@@ -20,7 +19,6 @@
 {% end %}
 
 {% block main %}
-  {% if category is None %}
   <div class="px-2 mt-3" id="category">
     <p class="fs-3 border-bottom border-dark fw-bold"> About PyPLAS</p>
     <p class="lh-lg" style="text-indent: 1rem;">
@@ -30,79 +28,24 @@
     </p>
     <p class="fs-3 border-bottom border-dark fw-bold mt-3">  Categories</p>
     <div id="catContainer" class="d-flex justify-content-center" style="flex-wrap: wrap;">
-      {% if len(category_list) == 0 %}
+      {% if len(categories) == 0 %}
         {% module Template("modules/in-preparation.html",
               description="<br>".join([
               "Sorry... Category does not exist.",
               "Please start the server in developer mode and register the category."]))
         %}
       {% end %}
-      {% for cat_dict in category_list %}
-        <div class="card m-2" style="width: 45%;" onclick="location.href='./?category={{cat_dict["cat_name"]}}'">
-          <img src="{{ cat_dict['logo_url'] if cat_dict['logo_url'] is not None else ''}}" 
+      {% for category in categories %}
+        <div class="card m-2" style="width: 45%;" onclick="location.href='/categories/{{ category["cat_id"] }}'">
+          <img src="{{ static_url(category['logo_url']) }}"  alt="Category Logo"
               width="50%" height="100px" class="card-img-top object-fit-cover" alt="category logo">
           <div class="card-body">
-              <h5>{{ cat_dict["cat_name"] }}</h5>
+              <h5>{{ category["cat_name"] }}</h5>
           </div>
         </div>
       {% end %}
     </div>
   </div>
-  {% else %}
-  <div class="px-2 mt-3" id="progress">
-    <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-bookmarks"></i>  Problems</p>
-    {% if len(problem_list) != 0%}
-      <table class="table table-hover mb-5">
-        <thead>
-          <tr>
-              <th scope="col">#</th>
-              <th scope="col">title</th>
-              <th scope="col">progress</th>
-          </tr>
-        </thead>
-          {% for i, d in enumerate(problem_list) %}
-            <tbody>
-              <tr onclick="location.href='./problems/{{ d['p_id']}}'">
-                <th>{{ i }}</th>
-                <td scope="row">{{ d['title'] }}</td>
-                <td>
-                  {% if d['p_status'] == 0 %}
-                    <i class="bi bi-door-closed text-danger"></i>
-                    未学習
-                  {% elif d['p_status'] == 1 %}
-                    <i class="bi bi-slash-circle text-warning"></i>
-                    学習中
-                  {% elif d['p_status'] == 2 %}
-                    <i class="bi bi-check-circle text-success"></i>
-                    完了
-                  {% end %}
-                </td>
-              </tr>
-            </tbody>
-          {% end %}
-      </table> 
-      <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-terminal"></i>  Log</p>
-      <form>
-          <div class="mb-3">
-          <label for="inputNumber" class="form-label">Student ID</label>
-          <input type="input" class="form-control" id="inputNumber" autocomplete="off">
-          <div id="numberHelp" class="form-text">Input your student ID.</div>
-          </div>
-          <div class="mb-3">
-          <label for="inputName" class="form-label">Name</label>
-          <input type="input" class="form-control" id="inputName" autocomplete="off">
-          <div id="nameHelp" class="form-text">Input your Name.</div>
-          </div>
-          <a class="btn btn-primary" id="logDownloader">Download</a>
-      </form>
-    {% else %}
-      {% module Template("modules/in-preparation.html",
-            description = """Sorry ... This category is currently under preparation. <br>
-            Please wait for a while until problems are registered.""")
-      %}
-    {% end %}
-  </div>
-  {% end %}
 {% end %}
 
 {% block side-content-r %}

@@ -1,0 +1,82 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>PyPLAS</title>
+<script src="{{ static_url('js/index.js') }}" type="module"></script>
+{% end %}
+
+{% block head-nav-li %}
+{% end %}
+
+
+{% block side-content %}
+  {% if is_dev_mode %}
+      <p class="fs-4 text-secondary border-bottom border-dark">For Developer</p>
+      <div class="mb-2">
+          <a href="/create" class="btn btn-danger mx-1">Go to create page</a>
+      </div>
+  {% end %}
+  {% module Template("modules/sidebar-documentation.html") %}
+{% end %}
+
+{% block main %}
+  <div class="px-2 mt-3" id="progress">
+    <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-bookmarks"></i>
+      {{category_name + " - " if category_name is not None else ""}}Problems
+    </p>
+    {% if len(problems) != 0 %}
+      <table class="table table-hover mb-5">
+        <thead>
+          <tr>
+              <th scope="col">#</th>
+              <th scope="col">title</th>
+              <th scope="col">progress</th>
+          </tr>
+        </thead>
+          {% for i, d in enumerate(problems, 1) %}
+            <tbody>
+              <tr onclick="location.href='/problems/{{ d['p_id']}}'">
+                <th>{{ i }}</th>
+                <td scope="row">{{ d['title'] }}</td>
+                <td>
+                  {% if d['p_status'] == 0 %}
+                    <i class="bi bi-door-closed text-danger"></i>
+                    未学習
+                  {% elif d['p_status'] == 1 %}
+                    <i class="bi bi-slash-circle text-warning"></i>
+                    学習中
+                  {% elif d['p_status'] == 2 %}
+                    <i class="bi bi-check-circle text-success"></i>
+                    完了
+                  {% end %}
+                </td>
+              </tr>
+            </tbody>
+          {% end %}
+      </table> 
+      <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-terminal"></i>  Log</p>
+      <form>
+          <div class="mb-3">
+          <label for="inputNumber" class="form-label">Student ID</label>
+          <input type="input" class="form-control" id="inputNumber" autocomplete="off">
+          <div id="numberHelp" class="form-text">Input your student ID.</div>
+          </div>
+          <div class="mb-3">
+          <label for="inputName" class="form-label">Name</label>
+          <input type="input" class="form-control" id="inputName" autocomplete="off">
+          <div id="nameHelp" class="form-text">Input your Name.</div>
+          </div>
+          <a class="btn btn-primary" id="logDownloader">Download</a>
+      </form>
+    {% else %}
+      {% module Template("modules/in-preparation.html",
+            description = """Sorry ... This category is currently under preparation. <br>
+            Please wait for a while until problems are registered.""")
+      %}
+    {% end %}
+  </div>
+{% end %}
+
+{% block side-content-r %}
+{% end %}
+

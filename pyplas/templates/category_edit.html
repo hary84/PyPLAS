@@ -31,11 +31,11 @@
           <label for="categoryLogoURLSelect" class="form-label">Logo URL</label>
           <select class="form-select" id="categoryLogoURLSelect" aria-label="Select category logo img">
             <option value="" selected>Select Image</option>
-            {% for url in images %}
-              <option value="{{url}}">{{ url.split("/")[-1] }}</option>
+            {% for path in image_paths %}
+              <option value="{{ path }}" data-fullpath="{{ static_url(path) }}">{{ path.split("/")[-1] }}</option>
             {% end %}
           </select>
-          <div id="imgPreview"></div>
+          <div id="imgPreview" class="pt-1"></div>
         </div>
         <div class="mb-3">
           <label for="categoryDescriptionInput" class="form-label">Description</label>
@@ -62,8 +62,8 @@
       <table class="table table-hover table-responsive px-1 text-break" id="problemList">
         <thead>
           <tr>
-            <th scope="col" style="width: 10%;">Image</th>
-            <th scope="col" style="width: 15%;">Category Id</th>
+            <th scope="col" style="width: 10%;">##</th>
+            <th scope="col">Image</th>
             <th scope="col" style="width: 15%;">Category Name</th>
             <th scope="col" style="width: 70%;">Description</th>
           </tr>
@@ -71,9 +71,9 @@
         <tbody>
         {% for i, d in enumerate(categories) %}
           <tr data-bs-toggle="modal" data-bs-target="#categoryModal" data-cat-id="{{d['cat_id']}}">
-            <th scope="row"><img src="{{ d['logo_url'] if d['logo_url'] is not None else ''}}" style="width: 4rem;height: 4rem;"
+            <td>{{ f"#{i+1:02}" }}</td>
+            <th scope="row"><img src="{{ static_url(d['logo_url']) }}" style="width: 4rem;height: 4rem;"
               class="logo-img object-fit-cover border " alt="logo"></th>
-            <td>{{ d['cat_id'] }}</td>
             <td>{{ d['cat_name'] }}</td>
             <td>
               <div style="max-height: 4rem; overflow-y: auto;">{{ d['description'] }}</div>

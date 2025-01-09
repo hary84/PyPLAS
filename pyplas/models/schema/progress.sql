@@ -1,5 +1,5 @@
 CREATE TABLE progress (
-    p_id TEXT PRIMARY_KEY UNIQUE,
+    p_id TEXT PRIMARY KEY,
     q_status JSON NOT NULL,
     q_content JSON NOT NULL,
     p_status INT DEFAULT 0,

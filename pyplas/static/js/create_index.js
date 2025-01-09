@@ -1,21 +1,24 @@
 //@ts-check 
 import * as error from "./modules/error.js"
+import { notNull } from "./modules/helper.js"
 import * as helper from "./modules/helper.js"
 
 const itemsPerPage = 10
-const nullCategory = ""
 
-const tableBody = document.querySelector("#problemList tbody")
+const tableElement = notNull(document.querySelector("#problemList"))
 const queries = helper.getUrlQuery()
 
 const changedParams = {}
 let subWindow = null
 
 // formの監視を開始
-observeForm()
+observeForm(tableElement)
 
 // paginationを埋め込む
 helper.pagination.init("#problemList", itemsPerPage)
+
+// カテゴリーフィルターの有効化
+activateCategoryTagFilter(tableElement)
 
 // ボタンイベントリスナーの設定
 document.addEventListener("click", async e => {
@@ -28,7 +31,7 @@ document.addEventListener("click", async e => {
                 subWindow = openOrderChangeWindow()
                 break;
             case "del-problem":
-                const target = e.target?.closest("tr").getAttribute("target")
+                const target = notNull(btn.closest("tr")).getAttribute("target")
                 await deleteProblem(target)
                 break;
             case "update-profiles":
@@ -43,39 +46,7 @@ document.addEventListener("click", async e => {
     }
 })
 
-// カテゴリーフィルターの有効化
-const categoryTags = Array.from(document.querySelectorAll(".category-tag"))
-categoryTags.forEach(btn=> {
-    btn.addEventListener("click", (e) => {
-        const category = e.target.dataset.category
-        categoryTags.forEach(tag=> { // radio button
-            if (tag != btn) {
-                tag.classList.remove("active")
-            }
-        })
-        document.querySelector("#categoryActions")?.classList.toggle(
-            "d-none", !btn.classList.contains("active")
-        )
-        if (btn.classList.contains("active")) {
-            helper.addQueryParam("category", category)
-        } else {
-            helper.removeQueryParam("category")
-        }
-        tableBody?.querySelectorAll("tr").forEach(e => {
-            const registeredCat = e.querySelector("select.select-category")?.value
-            if (registeredCat == nullCategory) {
-                e.classList.toggle("d-none", btn.classList.contains("active"))
-            }
-            else if (registeredCat == category) {
-                e.classList.toggle("d-none", !btn.classList.contains("active"))
-            }
-            else {
-                e.classList.add("d-none")
-            }
-        })
-        helper.pagination.update()
-    })
-})
+
 
 // URLクエリーにcategoryがあるならば，指定されたカテゴリフィルターを有効にする
 if (queries.category !== undefined) {
@@ -97,11 +68,8 @@ window.addEventListener("beforeunload", e => {
 /** 問題順番変更用のウィンドウを開く */
 function openOrderChangeWindow() {
     const categoryId = helper.getUrlQuery().category
-    if (categoryId === undefined) {
-        throw new Error("Unexpected Error")
-    }
     const subWindow = window.open(
-        `${window.location.origin}/create/order?category=${categoryId}`,
+        `${window.location.origin}/edit/order/${categoryId}`,
         "_blank",
         "menubar=0,width=700,height=700,top=100,left=100")
     window.addEventListener("message", (e) => {
@@ -134,7 +102,7 @@ async function deleteProblem(p_id) {
 
 /** pageのstatus, category, titleを変更する */
 async function updateProfiles() {
-    const res = await fetch(`${window.location.origin}/create/profile`, {
+    const res = await fetch(`${window.location.origin}/edit/profiles`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({"profiles": changedParams})
@@ -151,39 +119,83 @@ async function updateProfiles() {
  * 
  * formに変更があった際に、グローバル変数changedParamsにp_id, title, category, status
  * を格納する。
+ * @param {Element} tableElement
  */
-function observeForm() {
+function observeForm(tableElement) {
     const initialFormValue = {}
-    const tbl = document.querySelector("#problemList")
-    if (tbl == null)  {console.error("there is no table"); return}
-    tbl.querySelectorAll("input, select").forEach(elem => {
-        const p_id = elem.closest("tr")?.getAttribute("target")
+    tableElement.querySelectorAll("input, select").forEach(elem => {
+        const p_id = notNull(elem.closest("tr")?.getAttribute("target"))
         if (typeof p_id === "string" && !(p_id in initialFormValue)) {
             initialFormValue[p_id] = {}
         }
-        const tag = elem.getAttribute("for")
+        const tag = notNull(elem.getAttribute("for"))
         initialFormValue[p_id][tag] = elem.value
     })
 
-    tbl.querySelectorAll("input, select").forEach(elem => {
-        elem.addEventListener("change", () => {
-            const tr = elem.closest("tr")
-            const p_id = tr?.getAttribute("target")
+    tableElement.addEventListener("change", highlightTableRow)
+    
+    /** フォームの値が変化したときに実行される関数*/
+    function highlightTableRow(event) {
+        const target = event.target
+        if (target.tagName === "INPUT" || target.tagName === "SELECT") {
+            /** @type {Element} */
+            const tableRow = notNull(target.closest("tr"))
+            const p_id = tableRow.getAttribute("target")
             const changed = {}
-            tr.querySelectorAll("input, select").forEach(elem => {
-                const tag = elem.getAttribute("for")
-                changed[tag] = elem.value
+            
+            tableRow.querySelectorAll("input, select").forEach(e => {
+                const tag = e.getAttribute("for")
+                changed[tag] = e.value
             })
-            if (initialFormValue[p_id]["title"] != changed["title"]
-                || initialFormValue[p_id]["category"] != changed["category"]
-                || initialFormValue[p_id]["status"] != changed["status"]) {
-                    changedParams[p_id] = changed
-                    tr.classList.add("table-danger")
-                }
-            else {
+            if (!helper.compareObjects(initialFormValue[p_id], changed)) {
+                changedParams[p_id] = changed
+                tableRow.classList.add("table-danger")
+            } else {
                 delete changedParams[p_id]
-                tr.classList.remove("table-danger")
+                tableRow.classList.remove("table-danger")
             }
+        }
+    }
+}
+
+/** 
+ * タグによるテーブルフィルターを有効化する 
+ * @param {Element} tableElement*/
+function activateCategoryTagFilter(tableElement) {
+    const categoryTags = Array.from(document.querySelectorAll(".category-tag"))
+    categoryTags.forEach(btn=> {
+        btn.addEventListener("click", (e) => {
+            const cat_id = e.target.dataset.category
+
+            // 他のボタンをnon-activeにする
+            categoryTags.forEach(tag=> {
+                if (tag != btn) tag.classList.remove("active")
+            })
+            document.querySelector("#categoryActions")?.classList.toggle(
+                "d-none", !btn.classList.contains("active")
+            )
+
+            // カテゴリアクションの表示/非表示切り替え
+            if (btn.classList.contains("active")) {
+                helper.addQueryParam("category", cat_id)
+            } else {
+                helper.removeQueryParam("category")
+            }
+
+            // 該当するカテゴリの列のみを表示する
+            Array.from(tableElement.querySelectorAll("tr")).slice(1, ).forEach(e => {
+                const registeredCat = e.querySelector("select.select-category")?.value
+                if (btn.classList.contains("active")) {
+                    e.classList.toggle("d-none", registeredCat !== cat_id)
+                }
+                else if (!btn.classList.contains("active")) {
+                    e.classList.remove("d-none")
+                }
+            })
+
+            // ページ数を更新する
+            helper.pagination.update()
         })
     })
+
 }

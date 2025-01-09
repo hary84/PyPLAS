@@ -1,10 +1,40 @@
 //@ts-check
 
-if (window.opener !== null) {
-    // Sortable.jsを有効化
-    const tableBody = document.querySelector("#problemList tbody")
-    const tableOrderSwitch = document.querySelector("input#activateOrderChange")
-    const sortable = Sortable.create(tableBody, {
+import { notNull } from "./modules/helper.js"
+
+if (window.opener === null) {
+    // 警告文を出して/createへリダイレクト
+    alert([
+        "This URL cannot be opened directly.",
+        "Please open it from the `Change Problem Order` button in /create."
+    ].join("\n"))
+    window.location.href = "/create"
+} 
+else {
+    // テーブルのソート機能を有効化
+    const tableBody = notNull(document.querySelector("#problemList tbody"))
+    const sortableObj = activateSortable(tableBody)
+    
+    // クリックイベント
+    document.addEventListener("click", async e=> {
+        const btn = e.target?.closest(".btn")
+        if (btn == null) {return}
+        try {
+            switch (btn.dataset.action) {
+                case "update-order":
+                    await sortableObj.updateOrder()
+                    window.opener.postMessage("processCompleted")
+                case "reset-order":
+                    sortableObj.resetOrder()
+            }
+        } catch (e) {
+            alert(e)
+        }
+    })
+}    
+
+function activateSortable(tBodyElement) {
+    const sortable = Sortable.create(tBodyElement, {
         handle: ".handle",
         chosenClass: "chosen",
         animation: 200,
@@ -17,57 +47,34 @@ if (window.opener !== null) {
         } 
     })
     const initialOrder = sortable.toArray()
-    console.log(initialOrder)
-    
-    document.addEventListener("click", async e=> {
-        const btn = e.target?.closest(".btn")
-        if (btn == null) {return}
-        try {
-            switch (btn.dataset.action) {
-                case "update-order":
-                    await updateOrder()
-                        alert([
-                        "Problem order is succesfully updated",
-                        "This window is closed.",
-                        "Check the original window.",
-                    ].join("\n"))
-                    window.opener.postMessage("processCompleted")
-                case "reset-order":
-                    await resetOrder()
+
+    return {
+        sortable: sortable,
+
+        updateOrder: async () => {
+            const trList = Array.from(tBodyElement.querySelectorAll("tr"))
+            const order = trList.map((tr) => tr.getAttribute("target"))
+            const res = await fetch(window.location.href, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({"order": order})
+            })
+            if (res.ok) {}
+            else { 
+                throw new Error(res.statusText)
             }
-        } catch (e) {
-            alert(e)
-        }
-    })
-    
-    async function updateOrder() {
-        const trList = Array.from(tableBody.querySelectorAll("tr"))
-        const order = trList.map((tr) => tr.getAttribute("target"))
-        const res = await fetch(`${window.location.origin}/create/order`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({"order": order})
-        })
-        if (res.ok) {} 
-        else {
-            throw new Error(res.statusText)
+        },
+
+        resetOrder: () => {
+            sortable.sort(initialOrder, true)
+            tBodyElement.querySelectorAll("tr").forEach(e => {
+                e.classList.remove("table-warning")
+            })
         }
     }
+
+}
     
-    async function resetOrder() {
-        sortable.sort(initialOrder, true)
-        tableBody?.querySelectorAll("tr").forEach(e => {
-            e.classList.remove("table-warning")
-        })
-    }
-    window.addEventListener("beforeunload", e=> {
-        window.opener.postMessage("processAborted")
-    })
-}
-else {
-    alert([
-        "This URL cannot be opened directly.",
-        "Please open it from the `Change Problem Order` button in /create."
-    ].join("\n"))
-    window.location.href = "/create"
-}
+window.addEventListener("beforeunload", e=> {
+    window.opener.postMessage("processAborted")
+})
