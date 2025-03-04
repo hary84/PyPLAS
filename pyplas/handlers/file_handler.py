@@ -25,7 +25,15 @@ class LogHandler(ApplicationHandler):
             condition = r"category is NULL"
         else:
             condition = r"category = :cat_id"
-        SQL = fr"""SELECT * FROM user.logs WHERE {condition}"""
+        SQL = fr"""SELECT p_id, 
+                          title, 
+                          category, 
+                          q_id, 
+                          ptype, 
+                          content, 
+                          result, 
+                          answer_at 
+                    FROM user.logs WHERE {condition}"""
         logs = g.db.execute(SQL, cat_id=cat_id)
         
         logs_string = StringIO(json.dumps(logs))

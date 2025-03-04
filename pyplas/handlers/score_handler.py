@@ -202,15 +202,17 @@ class ScoringHandler(ApplicationHandler):
             )
             """,
             r"""
-            INSERT INTO user.progress(p_id, q_status, q_content)
+            INSERT INTO user.progress(p_id, q_status, q_content, p_status)
                 VALUES(
                 :p_id,
                 JSON_OBJECT(:q_id, :result),
-                JSON_OBJECT(:q_id, JSON(:content))
+                JSON_OBJECT(:q_id, JSON(:content)),
+                1
                 )
             ON CONFLICT(p_id) DO UPDATE SET
                 q_status=JSON_SET(q_status, '$.' || :q_id, :result),
-                q_content=JSON_SET(q_content, '$.' || :q_id, JSON(:content))
+                q_content=JSON_SET(q_content, '$.' || :q_id, JSON(:content)),
+                p_status=1
             """
         ]
         g.db.executes(SQL,
