@@ -34,7 +34,7 @@
 @media (min-width: 993px) { 
   .sidebar {
     position: sticky;
-    top: 10%;
+    top: 75px;
     overflow-y: auto;
     max-height: calc(100vh);
   }
