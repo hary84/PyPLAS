@@ -124,8 +124,8 @@
       opacity: 0.6;
   }
 } 
-/* when there are not Nodes in (with .answer-content) */
-.dynamic-nodes-container.answer-content:not(:has(.node)) {
+/* when there are not Nodes in (with .answer-content or example-answer-content) */
+.dynamic-nodes-container:is(.answer-content, .example-answer-content):not(:has(.node)) {
   .node-control {
     .btn {
       display: inline;
