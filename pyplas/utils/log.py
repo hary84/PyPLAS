@@ -32,6 +32,7 @@ class CustomFormatter(logging.Formatter):
 
 def get_logger(name: str, use_color:bool=True):
 
+    # get or create logger named `name`
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
@@ -40,7 +41,9 @@ def get_logger(name: str, use_color:bool=True):
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(CustomFormatter(use_color))
 
-    logger.addHandler(ch)
+    # when logger is new 
+    if len(logger.handlers) == 0:
+        logger.addHandler(ch)
 
     return logger
 

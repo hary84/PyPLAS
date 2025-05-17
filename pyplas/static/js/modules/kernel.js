@@ -1,5 +1,5 @@
 //@ts-check
-import {CodeNode} from "./myclass.js"
+import {CodeNode} from "./nodes.js"
 import * as error from "./error.js"
 
 class KernelHandler {
@@ -70,7 +70,7 @@ class KernelHandler {
      */
     isAliveKernel = async (kernel_id) => {
         const id = (kernel_id) ? kernel_id : this.kernel_id
-        const res = await fetch(`${window.location.origin}/kernel/${id}`, {method: "GET"})
+        const res = await fetch(`${window.location.origin}/kernels/${id}`, {method: "GET"})
         if (res.ok) {
             const json = await res.json()
             console.log(`[KernelHandler] ${json.DESCR}`)
@@ -85,7 +85,7 @@ class KernelHandler {
      * @returns {Promise<Array>}
      */
     getKernelIds = async () => {
-        const res = await fetch(`${window.location.origin}/kernel`, {method: "GET"})
+        const res = await fetch(`${window.location.origin}/kernels`, {method: "GET"})
         if (res.ok) {
             const json = await res.json()
             console.log(`[KernelHandler] ${json.DESCR}`)
@@ -103,7 +103,7 @@ class KernelHandler {
      */
     kernelStart = async () => {
         const id = (this.kernel_id) ? this.kernel_id : ""
-        const res = await fetch(`${window.location.origin}/kernel/${id}`, {method: "POST"})
+        const res = await fetch(`${window.location.origin}/kernels/${id}`, {method: "POST"})
         if (res.ok) {
             const json = await res.json()
             console.log(`[Kernelhandler] ${json.DESCR}`)   
@@ -118,7 +118,7 @@ class KernelHandler {
      * このメソッドは直接呼び出さず、kernelStart(), setUpKernel()からのみ呼び出す
      */
     kernelRestart = async () => {
-        const res = await fetch(`${window.location.origin}/kernel/${this.kernel_id}/restart`,
+        const res = await fetch(`${window.location.origin}/kernels/${this.kernel_id}/restart`,
                               {method: "POST"})
         if (res.ok) {
             const json = await res.json()
@@ -133,7 +133,7 @@ class KernelHandler {
      * 
      */
     kernelInterrupt = async () => {
-        const res = await fetch(`${window.location.origin}/kernel/${this.kernel_id}/interrupt`,
+        const res = await fetch(`${window.location.origin}/kernels/${this.kernel_id}/interrupt`,
                               {method: "POST"})
         if (res.ok) {
             const json = await res.json()

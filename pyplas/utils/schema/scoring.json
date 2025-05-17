@@ -3,14 +3,20 @@
     "title": "Scoring Validate",
     "type": "object",
     "properties": {
+        "p_id": {"type": "string"},
         "q_id": {"type": "string"},
-        "ptype": {"type": "integer"},
+        "ptype": {
+            "type": "integer",
+            "enum": [0, 1]
+        },
         "answers": {
             "type": "array",
             "items": {
                 "type": "string"
             }
         },
-        "kernel_id": {"type": "string"}
-    }
+        "job_id": {"type": "string"}
+    },
+    "required": ["p_id", "q_id", "ptype", "answers", "job_id"],
+    "additionalProperties": false
 }

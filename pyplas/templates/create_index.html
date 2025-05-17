@@ -5,13 +5,13 @@
 <link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
 <script src="{{ static_url('js/create_index.js') }}" type="module"></script>
 <style>
-  #problemList  {
+  /* #problemList  {
     tr:has(select[for="status"] > option[value="0"]:checked) {
         th, td {
             background-color: #4a1b2052;
         }
     }
-   }
+   } */
 </style>
 {% end %}
 
@@ -27,10 +27,11 @@
 <div class="" id="progress">
     <p class="fs-3 border-bottom border-dark mt-3">Create Problems</p>
     <div id="cateogoryFilterContainer">
+      <button class="category-tag btn btn-sm btn-outline-info" data-category="0" data-bs-toggle="button"># {{ None }}</button>
       {% for cat_d in categories %}
         <button class="category-tag btn btn-sm btn-outline-info" data-category="{{cat_d['cat_id']}}" data-bs-toggle="button"># {{ cat_d['cat_name'] }}</button>
       {% end %}
-      <a href="/create/category" class="text-info fw-bold"> ... +</a>
+      <a href="/edit/categories" class="text-info fw-bold"> ... +</a>
     </div>
     <div class="d-flex justify-content-end d-none" id="categoryActions">
       <button class="btn btn-sm btn-warning" data-action="open-order-window"><i class="bi bi-list-ol"></i> Change Problem Order</button>
@@ -47,12 +48,12 @@
         </thead>
         <tbody>
         {% for i, d in enumerate(problem_list) %}
-          <tr class="{{'d-none' if d['category'] is not None else ''}}" target="{{ d['p_id'] }}" data-sort-id="{{i}}">
+          <tr  target="{{ d['p_id'] }}" data-sort-id="{{i}}">
             <th scope="row"><span>{{i}}</span></th>
             <td><input type="text" class="title-form form-control form-control-sm" for="title" value="{{ d['title'] }}" autocomplete="off"></td>
             <td>
               <select class="select-category form-select form-select-sm" for="category">
-                <option value="" {{"selected" if d['category'] is None else "" }}>None</option>
+                <option value="0" {{"selected" if d['category'] is None else "" }}></option>
                 {% for cat_d in categories %}
                   <option value="{{ cat_d['cat_id'] }}" {{"selected" if d['category'] == cat_d['cat_id'] else "" }}>{{ cat_d['cat_name'] }}</option>
                 {% end %}

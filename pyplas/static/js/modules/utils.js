@@ -1,7 +1,7 @@
 //@ts-check
 
-import { myNode } from "./myclass.js"
-import * as myclass from "./myclass.js"
+import { myNode } from "./nodes.js"
+import * as myclass from "./nodes.js"
 import { problem_meta } from "./helper.js"
 import * as error from "./error.js"
 
@@ -22,10 +22,9 @@ export async function addMD(loc, pos, {
         throw new Error("argument Error")
     }
     const node_id = crypto.randomUUID()
-    const res = await fetch(`${window.location.origin}/api/render?action=addMD`, {
+    const res = await fetch(`${window.location.origin}/modules/explainNode`, {
         method: "POST",
-        headers: {
-            "Content-type": "application/json"},
+        headers: {"Content-type": "application/json"},
         body: JSON.stringify({
             "content": content,
             "allow_del": allow_del,
@@ -66,7 +65,7 @@ export async function addCode(loc, pos, {
         throw new Error("argument error")
     }
     const node_id = crypto.randomUUID()
-    const res = await fetch(`${window.location.origin}/api/render?action=addCode`, {
+    const res = await fetch(`${window.location.origin}/modules/codeNode`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -102,7 +101,7 @@ export async function addQ(loc, pos, ptype) {
         new Error("argument error")
     }
     const node_id = crypto.randomUUID()
-    const res = await fetch(`${window.location.origin}/api/render?action=addQ`, {
+    const res = await fetch(`${window.location.origin}/modules/questionNode`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -134,11 +133,11 @@ export async function saveUserData() {
         const params = questionNode.extractQuestionParams(0)
         userInput[params.q_id] = params.answers
     })
-    const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}/save`, {
+    const res = await fetch(`${window.location.origin}/problems/${problem_meta.p_id}`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            "q_content": userInput
+            "content": userInput
         })})
     if (res.ok) {
         const json = await res.json()
@@ -195,7 +194,7 @@ export async function loadIpynb(file, loc, user=1) {
 export async function registerProblem() {
 
     const title = document.querySelector("#titleForm")?.value
-    if (title === undefined || title.length == 0) {
+    if (title === undefined || title.trim().length == 0) {
         alert("input problem title")
         return 
     }
@@ -255,7 +254,7 @@ export async function registerProblem() {
         "answers": answers    // dict
     }
 
-    const res = await fetch(`${window.location.origin}/create/${problem_meta.p_id}/register`,{
+    const res = await fetch(`${window.location.origin}/create/${problem_meta.p_id}`,{
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(send_msg)
@@ -271,4 +270,36 @@ export async function registerProblem() {
     else {
         throw new error.FetchError(res.status, res.statusText)
     } 
+}
+
+
+/**
+ * ログファイルをダウンロードする
+ * @param {string} number 
+ * @param {string} name 
+ * @param {string} category 
+ * @returns 
+ */
+export async function downloadLog(number, name, category) {
+    if (number.trim() == "" || name.trim() == "") {
+        alert("Please complete the form before downloading.")
+        return 
+    }
+
+    const res = await fetch(
+        `${window.location.origin}/files/log?cat=${category}&num=${number}&name=${name}`)
+        
+    if (res.ok) {
+        const content = await res.blob()
+        const objectUrl = window.URL.createObjectURL(content)
+        const a = document.createElement("a")
+        a.href = objectUrl
+        a.download = `PyPLAS-${category}-${number}-${name}.csv`
+        a.click()
+        a.remove()
+        window.URL.revokeObjectURL(objectUrl)
+    } else {
+        alert("Failed to download log file")
+        throw new error.FetchError(res.status, res.statusText)
+    }
 }

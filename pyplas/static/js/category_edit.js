@@ -1,5 +1,6 @@
 //@ts-check
 import * as error from "./modules/error.js"
+import {notNull} from "./modules/helper.js"
 
 /** 
  * @typedef {Object} CategoryInfo カテゴリの詳細情報
@@ -9,74 +10,72 @@ import * as error from "./modules/error.js"
  * @prop {string} description
  */
 
-/** @type {HTMLElement | null} */
-const modalElement = document.querySelector("#categoryModal")
-/** @type {HTMLInputElement | null} */
-const categoryNameInput = document.querySelector("#categoryNameInput")
-/** @type {HTMLSelectElement | null} */
-const categoryLogoURLSelect = document.querySelector("#categoryLogoURLSelect")
-/** @type {HTMLElement | null} */
-const previewContainer = document.querySelector("#imgPreview")
-/** @type {HTMLInputElement  | null} */
-const categoryDescInput = document.querySelector("#categoryDescriptionInput")
+/** @type {HTMLElement} */
+const modalElement = notNull(document.querySelector("#categoryModal"))
+/** @type {HTMLInputElement} */
+const categoryNameInput = notNull(document.querySelector("#categoryNameInput"))
+/** @type {HTMLSelectElement} */
+const categoryLogoURLSelect = notNull(document.querySelector("#categoryLogoURLSelect"))
+/** @type {HTMLElement} */
+const previewContainer = notNull(document.querySelector("#imgPreview"))
+/** @type {HTMLInputElement} */
+const categoryDescInput = notNull(document.querySelector("#categoryDescriptionInput"))
 
-if (modalElement == null || 
-    categoryNameInput == null || 
-    categoryLogoURLSelect == null ||
-    categoryDescInput == null) {
-        throw new error.ElementNotFoundError()
+
+// モーダル表示のイベント
+modalElement?.addEventListener("show.bs.modal", async e => {
+    /** @type {HTMLElement} */
+    const triggerElement = e.relatedTarget
+    const catId = triggerElement.dataset.catId
+    modalElement.dataset.shownCatId = catId
+    const modalTitle = notNull(document.querySelector("#categoryModalLabel"))
+
+    if (catId === "new") {
+        modalTitle.textContent = "Category: NEW"
+        categoryNameInput.value = ""
+        setImageFromURL("")
+        categoryDescInput.value = ""
     }
-else {
-    modalElement?.addEventListener("show.bs.modal", async e => {
-        /** @type {HTMLElement} */
-        const triggerElement = e.relatedTarget
-        const catId = triggerElement.dataset.catId
-        modalElement.dataset.shownCatId = catId
-        const modalTitle = document.querySelector("#categoryModalLabel")
-        if (modalTitle === null) { throw new error.ElementNotFoundError()}
-    
-        if (catId === "new") {
-            modalTitle.textContent = "Category: NEW"
-            categoryNameInput.value = ""
-            setImageFromURL("")
-            categoryDescInput.value = ""
-        }
-        else if (catId !== undefined) {
-            const catInfo = await getCategoryInfo(catId)
-            modalTitle.textContent = `Category: #${catInfo.cat_id} ${catInfo.cat_name}`
-            categoryNameInput.value = catInfo.cat_name
-            setImageFromURL(catInfo.logo_url)
-            categoryDescInput.value = catInfo.description
-        } 
-    })
-    modalElement?.addEventListener("hide.bs.modal", e => {
-        modalElement.dataset.shownCatId = ""
-    })
-    
-    document.addEventListener("click", async e => {
-        /** @type {HTMLElement | null} */
-        const btn = e.target.closest(".btn")
-        if (btn == null) {return}
-        const action = btn.dataset.action 
-        const catId = modalElement.dataset.shownCatId 
-        if (catId === undefined || action === undefined) {return}
-        switch (action) {
-            case "update-category":
-                await updateCategory(catId)
-                break;
-            case "delete-category":
-                const agree = confirm("Do you really want to delete it?")
-                if (agree) {
-                    await deleteCategory(catId)
-                }
-        }
-    })
-    categoryLogoURLSelect?.addEventListener("change", e => {
-        /** @type {string} */
-        const url = e.target.value 
-        showImgPreview(url)
-    })
-}
+    else if (catId !== undefined) {
+        const catInfo = await getCategoryInfo(catId)
+        modalTitle.textContent = `Category: #${catInfo.cat_id} ${catInfo.cat_name}`
+        categoryNameInput.value = catInfo.cat_name
+        setImageFromURL(catInfo.logo_url)
+        categoryDescInput.value = catInfo.description
+    } 
+})
+
+// モーダル非表示時のイベント
+modalElement?.addEventListener("hide.bs.modal", e => {
+    modalElement.dataset.shownCatId = ""
+})
+
+// ボタンをクリックしたときのイベント
+document.addEventListener("click", async e => {
+    /** @type {HTMLElement | null} */
+    const btn = e.target.closest(".btn")
+    if (btn == null) {return}
+    const action = btn.dataset.action 
+    const catId = modalElement.dataset.shownCatId 
+    if (catId === undefined || action === undefined) {return}
+    switch (action) {
+        case "update-category":
+            await updateCategory(catId)
+            break;
+        case "delete-category":
+            const agree = confirm("Do you really want to delete it?")
+            if (agree) {
+                await deleteCategory(catId)
+            }
+    }
+})
+// モーダル中のselectタグが変化したときのイベント
+categoryLogoURLSelect?.addEventListener("change", e => {
+    /** @type {string} */
+    const url = e.target.value
+    setImageFromURL(url)
+})
+
 /**
  * selectタグ内のoptions中から指定されたurlを探し，selected状態にする  
  * 
@@ -85,13 +84,13 @@ else {
  * @param {string} url 
  */
 function setImageFromURL(url) {
-    const optionValues = Array.from(categoryLogoURLSelect.options).map(op=>op.value)
-    const idx = optionValues.indexOf(url)
+    const options = Array.from(categoryLogoURLSelect.options)
+    const idx = options.map(op => op.value).indexOf(url)
     categoryLogoURLSelect.selectedIndex = (idx >= 0) ? idx : 0
     if (idx > 0) {
-        showImgPreview(optionValues[idx])
+        showImgPreview(options[idx].dataset.fullpath??"")
     } else {
-        previewContainer.innerHTML = ""
+        showImgPreview("")
     }
 }
 /**
@@ -99,6 +98,12 @@ function setImageFromURL(url) {
  * @param {string} url 
  */
 function showImgPreview(url) {
+    if (url.trim() === "") {
+        previewContainer.innerHTML = ""
+        previewContainer.innerHTML = "<p class='rounded bg-secondary-subtle text-center py-1'>NO IMAGE</p>"
+        console.log(url)
+        return
+    }
     const img = document.createElement("img")
     img.src = encodeURI(url)
     img.style.maxHeight = "8rem"
@@ -113,9 +118,7 @@ function showImgPreview(url) {
  * @returns {Promise<CategoryInfo>}
  */
 async function getCategoryInfo(cat_id) {
-    const res = await fetch(`${window.location.origin}/create/category/${cat_id}`, {
-        method: "GET"   
-    })
+    const res = await fetch(`${window.location.origin}/api/categoryinfo/${cat_id}`)
     if (res.ok) {
         const json = await res.json()
         return json 
@@ -128,7 +131,7 @@ async function getCategoryInfo(cat_id) {
  * @param {string} cat_id 
  */
 async function deleteCategory(cat_id) {
-    const res = await fetch(`${window.location.origin}/create/category/${cat_id}`,{
+    const res = await fetch(`${window.location.origin}/edit/categories/${cat_id}`,{
         method: "DELETE",
     })
     if (res.ok) {
@@ -149,7 +152,7 @@ async function updateCategory(cat_id) {
         logo_url: categoryLogoURLSelect.value,
         description: categoryDescInput.value,
     }
-    const res = await fetch(`${window.location.origin}/create/category/${cat_id}`, {
+    const res = await fetch(`${window.location.origin}/edit/categories/${cat_id}`, {
         method: "POST",
         headers: {"Content-type": "application/json"},
         body: JSON.stringify(updateInfo)

@@ -8,6 +8,7 @@ from tornado.websocket import WebSocketHandler
 from tornado.ioloop import IOLoop
 
 from pyplas.handlers.problem_handler import ProblemHandler
+from pyplas.handlers.score_handler import ScoringHandler
 from pyplas.utils import get_logger, globals as g
 
 mylogger = get_logger(__name__)
@@ -68,7 +69,7 @@ class ExecutionHandler(WebSocketHandler):
         elif self.close_code == 1001: # when closing page
             IOLoop.current().spawn_callback(wait_and_shutdown_kernel, kernel_id=self.kernel_id)
             mylogger.debug(f"kernel(kernel_id={self.kernel_id}) is stopped.")
-            ProblemHandler.kill_all_subprocess()
+            ScoringHandler.kill_all_subprocess()
 
 
 def datetime_encoda(obj: object):

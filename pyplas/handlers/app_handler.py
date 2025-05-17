@@ -7,6 +7,7 @@ from tornado.httputil import HTTPServerRequest
 from tornado.web import Application
 
 from pyplas.utils.helper import validate_json
+from pyplas.utils.log import get_logger
 
 class InvalidJSONError(Exception):
     """POST, PUT, DELETE等でRequest-Bodyから取得したJSONが無効な形式"""
@@ -19,6 +20,10 @@ class ApplicationHandler(tornado.web.RequestHandler):
         self.query = {}
         self.is_dev_mode: bool = self.settings["develop"]
 
+    def prepare(self):
+        self.logger = get_logger(self.__class__.__module__)
+        self.logger.debug(f"{self.request.method} {self.request.uri}")
+
     def get_template_namespace(self) -> Dict[str, Any]:
         namespace = super().get_template_namespace()
         namespace["current_url"] = self.request.uri
@@ -29,9 +34,8 @@ class ApplicationHandler(tornado.web.RequestHandler):
         """エラー時に表示するデフォルトの画面を設定する"""
         self.set_status(status_code, kwargs.get("reason", None))
         self.render("error.html", status_code=status_code)
-            
-            
-    def load_json(self, validate: Optional[str]=None):
+        
+    def decode_request_body(self, validate: Optional[str]=None) -> dict[str, Any]:
         """
         リクエストボディをPythonの`dict`に変換し, `self.json`に格納する
         
@@ -39,16 +43,16 @@ class ApplicationHandler(tornado.web.RequestHandler):
         ----------
         validate: str or None, default None
             キーやタイプについて検証するか否か  
-            - `None`の場合, 検証を行わない.  
-            - `str`型の場合, `config.SCHEMA_PATH`内のjsonschemaファイルを参照してjsonの検証を行う
+            - `str`型の場合, `config.SCHEMA_PATH`内のjsonschemaファイルを参照してjsonの検証を行う 
         """
         if self.request.headers.get("Content-Type", None) == "application/json":
-            self.json = json.loads(self.request.body)
+            decoded_body = json.loads(self.request.body)
             if validate is not None:
                 try:
-                    validate_json(self.json, schema_name=validate)
+                    validate_json(decoded_body, schema_name=validate)
                 except jsonschema.exceptions.ValidationError:
                     raise InvalidJSONError
+            return decoded_body
         else:
             raise InvalidJSONError
             
@@ -71,3 +75,10 @@ class ApplicationHandler(tornado.web.RequestHandler):
                 if isinstance(query, str):
                     query = self.get_query_argument(name, default)
                 self.query[name] = query
+
+class DevHandler(ApplicationHandler):
+    """開発者権限が必要なハンドラー"""
+    def prepare(self):
+        super().prepare()
+        if not self.is_dev_mode:
+            self.write_error(403, reason="server is NOT developer mode.")
