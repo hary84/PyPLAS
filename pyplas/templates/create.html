@@ -51,7 +51,25 @@
                 {% module Explain(content=page.get("header", {}).get("source", ""), editor=True, allow_del=False) %}
             </div>
             <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
-                {% module Explain(content=page.get("header", {}).get("env", ""), editor=True, allow_del=False) %}
+                {% if is_new %}
+                    {% try %}
+                        {% import sys %}
+                        {% from sklearn import __version__ as sklearn_v %}
+                        {% from pandas import __version__ as pandas_v %}
+                        {% from numpy import __version__ as numpy_v %}
+                        {% set env = "\n".join([
+                            f"- Python: {sys.version}",
+                            f"- sklearn: {sklearn_v}",
+                            f"- pandas: {pandas_v}",
+                            f"- numpy: {numpy_v}"
+                            ]) %}
+                    {% except %}
+                        {% set env = "必要なライブラリが存在しません。" %}
+                    {% end %}
+                {% else %}
+                    {% set env = ""%}
+                    {% end %}
+                {% module Explain(content=page.get("header", {}).get("env", env), editor=True, allow_del=False) %}
             </div>
         </div>
     </div>
