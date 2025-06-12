@@ -54,21 +54,19 @@
                 {% if is_new %}
                     {% try %}
                         {% import sys %}
-                        {% from sklearn import __version__ as sklearn_v %}
-                        {% from pandas import __version__ as pandas_v %}
-                        {% from numpy import __version__ as numpy_v %}
                         {% set env = "\n".join([
-                            f"- Python: {sys.version}",
-                            f"- sklearn: {sklearn_v}",
-                            f"- pandas: {pandas_v}",
-                            f"- numpy: {numpy_v}"
+                            "**Python**",
+                            f"- Version: {sys.version}",
+                            "",
+                            "**Packages**",
+                            f"- xx",
                             ]) %}
                     {% except %}
                         {% set env = "必要なライブラリが存在しません。" %}
                     {% end %}
                 {% else %}
                     {% set env = ""%}
-                    {% end %}
+                {% end %}
                 {% module Explain(content=page.get("header", {}).get("env", env), editor=True, allow_del=False) %}
             </div>
         </div>
