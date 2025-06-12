@@ -125,7 +125,7 @@
   }
 } 
 /* when there are not Nodes in (with .answer-content or example-answer-content) */
-.dynamic-nodes-container:is(.answer-content, .example-answer-content):not(:has(.node)) {
+.dynamic-nodes-container:is(.answer-content, .explanation-content):not(:has(.node)) {
   .node-control {
     .btn {
       display: inline;
@@ -321,6 +321,10 @@
       content: "Untried";
     }
   }
+  a.tabpane-switch {
+    color: gray;
+    pointer-events: none;
+  }
 }
 *[progress="1"] {
   .progress-badge {
@@ -329,6 +333,10 @@
     &::before {
       content: "Tried"
     }
+  }
+  a.tabpane-switch {
+    color: gray;
+    pointer-events: none;
   }
 }
 *[progress="2"] {

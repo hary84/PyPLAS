@@ -25,13 +25,13 @@
 
 	<div class="card-body py-2 position-relative pt-2">
 		{% if ptype == 1 %}
-			<ul class="nav nav-pills nav-justified">
-				<li class="nav-item"><a href="#" class="nav-link active" data-bs-toggle="tab" data-bs-target="#your-answer-{{ node_id }}" aria-current="page">Your Answer</a></li>
-				<li class="nav-item"><a href="#" class="nav-link" data-bs-toggle="tab" data-bs-target="#example-answer-{{ node_id }}">Example Answer</a></li>
+			<ul class="nav nav-tabs nav-justified">
+				<li class="nav-item"><a href="#" class="nav-link active tabpane-switch" data-bs-toggle="tab" data-bs-target="#QuestionPane-{{ node_id }}" aria-current="page">Your Answer</a></li>
+				<li class="nav-item"><a href="#" class="nav-link tabpane-switch" data-bs-toggle="tab" data-bs-target="#ExplanationPane-{{ node_id }}">Explanation</a></li>
 			</ul>
 		{% end %}
 		<div class="tab-content p-1">
-			<div class="tab-pane fade show active" id="your-answer-{{ node_id }}" role="tabpanel">
+			<div class="tab-pane fade show active" id="QuestionPane-{{ node_id }}" role="tabpanel">
 				<div class="question-info">
 					<div class="mb-0 d-flex">
 						<span class="badge bg-success me-auto" style="align-self: center;">Question</span>
@@ -105,9 +105,9 @@
 					</div>
 				{% end %}
 			</div>
-			<div class="tab-pane fade" id="example-answer-{{ node_id }}" role="tabpanel">
+			<div class="tab-pane fade" id="ExplanationPane-{{ node_id }}" role="tabpanel">
 				{% if (user == 1) and (ptype == 1) %}
-					<div class="example-answer-content mx-1 p-2 {{ 'dynamic-nodes-container' if ptype==1 else '' }}">
+					<div class="mx-1 p-2 dynamic-nodes-container explanation-content" data-role="ExplanationNodeContainer">
 						{% module NodeControl(question=False) %}
 					</div>
 				{% end %}		
