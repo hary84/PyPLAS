@@ -321,7 +321,7 @@
       content: "Untried";
     }
   }
-  a.tabpane-switch {
+  a.explanation-tabpane-switch:not(.allways-active) {
     color: gray;
     pointer-events: none;
   }
@@ -334,7 +334,7 @@
       content: "Tried"
     }
   }
-  a.tabpane-switch {
+  a.explanation-tabpane-switch:not(.allways-active) {
     color: gray;
     pointer-events: none;
   }

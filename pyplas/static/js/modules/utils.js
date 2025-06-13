@@ -194,20 +194,23 @@ export async function loadIpynb(file, loc, user=1) {
 export async function registerProblem() {
 
     const title = document.querySelector("#titleForm")?.value
+    const answers = {}
+    const explanations = {}
+    
     if (title === undefined || title.trim().length == 0) {
         alert("input problem title")
         return 
     }
-
+    
     // 概要欄のSummary, Data Source, Environmentを取得
     const headers = []
     document.querySelectorAll("#summary .node.explain").forEach(e => {
         const explainNode = new myclass.ExplainNode(e)
         headers.push(explainNode.editor.getValue())
     })
+    
     // The Source CodeからNodeを取得
     const body = []
-    const answers = {}
     let q_id = 1
     document.querySelectorAll("#nodesContainer > .node").forEach(e => {
         const node = myNode.get(e)
@@ -231,6 +234,7 @@ export async function registerProblem() {
         else if (node instanceof myclass.QuestionNode) {
             const params = node.extractQuestionParams(1)
             answers[`${q_id}`] = params.answers 
+            explanations[`${q_id}`] = params.explanations
             body.push({
                 "type": myclass.nodeType.question, // str
                 "q_id": String(q_id),              // str
@@ -249,10 +253,13 @@ export async function registerProblem() {
         "body": body
     }
     const send_msg = {
-        "title": title,       // str
-        "page": page,         // dict
-        "answers": answers    // dict
+        "title": title,                 // str
+        "page": page,                   // dict
+        "answers": answers,             // dict
+        "explanations": explanations    // dict
     }
+
+    console.log(send_msg)
 
     const res = await fetch(`${window.location.origin}/create/${problem_meta.p_id}`,{
         method: "POST",

@@ -26,8 +26,8 @@
 	<div class="card-body py-2 position-relative pt-2">
 		{% if ptype == 1 %}
 			<ul class="nav nav-tabs nav-justified">
-				<li class="nav-item"><a href="#" class="nav-link active tabpane-switch" data-bs-toggle="tab" data-bs-target="#QuestionPane-{{ node_id }}" aria-current="page">Your Answer</a></li>
-				<li class="nav-item"><a href="#" class="nav-link tabpane-switch" data-bs-toggle="tab" data-bs-target="#ExplanationPane-{{ node_id }}">Explanation</a></li>
+				<li class="nav-item"><a href="#" class="nav-link active question-tabpane-switch" data-bs-toggle="tab" data-bs-target="#QuestionPane-{{ node_id }}" aria-current="page">Your Answer</a></li>
+				<li class="nav-item"><a href="#" class="nav-link explanation-tabpane-switch {{ 'allways-active' if user==1 else '' }}" data-bs-toggle="tab" data-bs-target="#ExplanationPane-{{ node_id }}">Explanation</a></li>
 			</ul>
 		{% end %}
 		<div class="tab-content p-1">

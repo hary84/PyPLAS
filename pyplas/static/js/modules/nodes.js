@@ -1,6 +1,6 @@
 //@ts-check
 
-import {problem_meta} from "./helper.js"
+import {problem_meta, notNull} from "./helper.js"
 import * as error from "./error.js"
 
 export const nodeType = {
@@ -9,6 +9,19 @@ export const nodeType = {
     question: "question"
 }
 export const emptyNodeId = "none"
+
+/**
+ * @typedef QuestionNodeParams
+ * @type {object}
+ * @property {string} node_id
+ * @property {string} q_id
+ * @property {number} ptype
+ * @property {Array=}  conponent
+ * @property {string=} question
+ * @property {boolean=} editable
+ * @property {Array} answers
+ * @property {Array=} explanations
+ */
 
 export const myNode = {
     /** active node */
@@ -192,8 +205,8 @@ export class QuestionNode extends BaseNode {
     }
     /**
      * Questionインスタンスのパラメータを返す
-     * @param {number} mode 
-     * @returns {object}
+     * @param {number} mode 0: leaner, 1: creator
+     * @returns {QuestionNodeParams}
      */
     extractQuestionParams (mode) {
         const node_id = this.nodeId
@@ -203,6 +216,7 @@ export class QuestionNode extends BaseNode {
         const answers = []
         let question = ""
         let editable = false 
+        const explanations = []
     
         const parser = new DOMParser()
     
@@ -228,7 +242,7 @@ export class QuestionNode extends BaseNode {
         }
     
         // creator mode 
-        if (mode == 1) {
+        else if (mode == 1) {
             if (ptype == 0) {
                 const mdString = new ExplainNode(this.answerField.querySelector(".explain[node-id]") ?? emptyNodeId).editor.getValue()
                 const mdDOM = parser.parseFromString(mdString, "text/html").querySelector("body")
@@ -261,16 +275,39 @@ export class QuestionNode extends BaseNode {
                         }
                     })
                 }
+                const expContainer = notNull(
+                    this.element.querySelector("[data-role='ExplanationNodeContainer']"),
+                    new NodeStructureError(this.type)
+                )
+                expContainer.querySelectorAll(".node").forEach(e => {
+                    const n = myNode.get(e)
+                    if (n instanceof ExplainNode) {
+                        explanations.push({
+                            "type": nodeType.explain,
+                            "content": n.editor.getValue()
+                        })
+                    } else if (n instanceof CodeNode) {
+                        const param = n.extractCodeParams()
+                        explanations.push({
+                            "type": nodeType.code,
+                            "content": param.content
+                        })
+                    }
+                })
             }
             return {
-                "node_id": node_id,     // str
-                "q_id": q_id,           // str
-                "ptype": ptype,         // int 
-                "conponent": conponent, // list
-                "question": question,   // str
-                "editable": editable,   // bool
-                "answers": answers      // list
+                "node_id": node_id,         // str
+                "q_id": q_id,               // str
+                "ptype": ptype,             // int 
+                "conponent": conponent,     // list
+                "question": question,       // str
+                "editable": editable,       // bool
+                "answers": answers,          // list
+                "explanations": explanations // list
             }
+        }
+        else {
+            throw new NodeStructureError(this.type, `mode(${mode}) is invalid`)
         }
     }
     /** 解答の採点を行う */
