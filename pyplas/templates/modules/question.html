@@ -106,10 +106,19 @@
 				{% end %}
 			</div>
 			<div class="tab-pane fade" id="ExplanationPane-{{ node_id }}" role="tabpanel">
-				{% if (user == 1) and (ptype == 1) %}
-					<div class="mx-1 p-2 dynamic-nodes-container explanation-content" data-role="ExplanationNodeContainer">
+				{% if ptype == 1 %}
+				<div class="mx-1 p-2 dynamic-nodes-container explanation-content" data-role="ExplanationNodeContainer">
+					{% if user == 1 %}
 						{% module NodeControl(question=False) %}
-					</div>
+					{% end %}
+					{% for exp_node in explanation %}
+						{% if exp_node["type"] == "explain" %}
+							{% module Explain(content=exp_node["content"], allow_del=user, editor=user) %}
+						{% elif exp_node["type"] == "code" %}
+							{% module Code(content=exp_node["content"], readonly=user==0, user=user, allow_del=user) %}
+						{% end %}
+					{% end %}
+				</div>
 				{% end %}		
 			</div>
 		</div>

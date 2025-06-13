@@ -105,7 +105,7 @@ class ProblemCreateHandler(DevHandler):
 
         # edit exist page   
         else:
-            sql = r"""SELECT title, page, answers, cat.cat_name AS cat_name
+            sql = r"""SELECT title, page, answers, explanations, cat.cat_name AS cat_name
             FROM pages 
             LEFT OUTER JOIN categories AS cat ON category = cat.cat_id 
             WHERE p_id = :p_id"""
@@ -116,6 +116,7 @@ class ProblemCreateHandler(DevHandler):
                         title=page["title"],
                         page=json.loads(page["page"]),
                         answers=json.loads(page["answers"]),
+                        explanations=json.loads(page["explanations"]),
                         is_new=False,
                         category=page["cat_name"])
 
