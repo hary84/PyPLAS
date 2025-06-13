@@ -13,6 +13,7 @@ class RegisterBody():
     title: str
     page: dict[str, Any]
     answers: dict[str, Any]
+    explanations: dict[str, Any]
 
 
 class ProblemCreateHandler(DevHandler):
@@ -125,23 +126,26 @@ class ProblemCreateHandler(DevHandler):
         # register new problem
         if p_id == "new": 
             self.p_id = str(uuid.uuid4())
-            sql = r"""INSERT INTO pages(p_id, title, page, answers) 
-            VALUES(:p_id, :title, :page, :answers)"""
+            sql = r"""INSERT INTO pages(p_id, title, page, answers, explanations) 
+            VALUES(:p_id, :title, :page, :answers, :explanations)"""
             g.db.execute(sql, p_id=self.p_id, 
                              title=self.json.title, 
                              page=json.dumps(self.json.page),
-                             answers=json.dumps(self.json.answers))
+                             answers=json.dumps(self.json.answers),
+                             explanations=json.dumps(self.json.explanations))
             self.finish({"p_id": self.p_id,
                          "DESCR": "New Problem is successfully registered."})
             self.logger.info(f"New Problem(p_id={self.p_id}) is added.")
         # edit exist problem
         else: 
-            sql = r"""UPDATE pages SET title=:title, page=:page, answers=:answers 
+            sql = r"""UPDATE pages SET title=:title, page=:page, 
+                answers=:answers, explanations=:explanations 
             WHERE p_id=:p_id"""
             g.db.execute(sql, p_id=p_id, 
                              title=self.json.title,
                              page=json.dumps(self.json.page),
-                             answers=json.dumps(self.json.answers))
+                             answers=json.dumps(self.json.answers),
+                             explanations=json.dumps(self.json.explanations))
             self.finish({"p_id": p_id,
                          "DESCR": f"Problem(id='{p_id}') is successfully saved."})
             self.logger.info(f"Problem(id='{p_id}') is updated.")
