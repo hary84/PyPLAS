@@ -87,8 +87,7 @@
                 {% elif d["type"] == "code" %}
                     {% module Code(**d, user=1, allow_del=True) %}
                 {% elif d["type"] == "question" %}
-                    {% module Question(**d, user=1, 
-                        answers=answers.get(str(d['q_id']), [])) %}
+                    {% module Question(**d, user=1, answers=answers.get(str(d['q_id']), []), explanation=explanations.get(str(d['q_id']), [])) %}
                 {% end %}
                 {% module NodeControl() %}
             {% end %}

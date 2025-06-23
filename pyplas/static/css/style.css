@@ -124,8 +124,8 @@
       opacity: 0.6;
   }
 } 
-/* when there are not Nodes in (with .answer-content) */
-.dynamic-nodes-container.answer-content:not(:has(.node)) {
+/* when there are not Nodes in (with .answer-content or example-answer-content) */
+.dynamic-nodes-container:is(.answer-content, .explanation-content):not(:has(.node)) {
   .node-control {
     .btn {
       display: inline;
@@ -321,6 +321,10 @@
       content: "Untried";
     }
   }
+  a.explanation-tabpane-switch:not(.allways-active) {
+    color: gray;
+    pointer-events: none;
+  }
 }
 *[progress="1"] {
   .progress-badge {
@@ -329,6 +333,10 @@
     &::before {
       content: "Tried"
     }
+  }
+  a.explanation-tabpane-switch:not(.allways-active) {
+    color: gray;
+    pointer-events: none;
   }
 }
 *[progress="2"] {

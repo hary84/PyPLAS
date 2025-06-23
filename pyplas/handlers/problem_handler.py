@@ -12,7 +12,8 @@ class ProblemHandler(ApplicationHandler):
         # pagesテーブルからtitle, page,
         # categoriesテーブルからcat_name,
         # progressテーブルからq_status, q_content を取得する
-        SQL = r"""SELECT pages.title, pages.page, pages.category, categories.cat_name,
+        SQL = r"""SELECT pages.title, pages.page, pages.category, pages.explanations,
+            categories.cat_name,
             COALESCE(user.progress.q_status, '{}') AS q_status, 
             COALESCE(user.progress.q_content, '{}') AS q_content
             FROM pages 
@@ -31,6 +32,7 @@ class ProblemHandler(ApplicationHandler):
                         page=json.loads(page["page"]),
                         q_status=json.loads(page["q_status"]),
                         q_content=json.loads(page["q_content"]),
+                        explanations=json.loads(page["explanations"]),
                         cat_id=page["category"],
                         cat_name=page["cat_name"])
         except AssertionError as e:
