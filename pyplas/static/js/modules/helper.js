@@ -19,12 +19,12 @@ export function isCreateMode() {
 /**
  * valueがnullでないことを確認する
  * @template T
- * @param {T | null} value 
+ * @param {T | null | undefined} value 
  * @param {Error} error
  * @returns {T}
  */
 export function notNull(value, error=Error()) {
-    if (value === null) {
+    if (value === null || value === undefined) {
         throw error
     }
     return value

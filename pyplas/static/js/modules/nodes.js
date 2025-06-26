@@ -8,6 +8,12 @@ export const nodeType = {
     explain: "explain",
     question: "question"
 }
+export const runState = {
+    idle: "idle",
+    queued: "queued",
+    running: "running",
+}
+
 export const emptyNodeId = "none"
 
 /**
@@ -101,39 +107,31 @@ export const myNode = {
 /** Nodeオブジェクトの基底クラス */
 export class BaseNode {
     /**
-     * .node[node-id]要素をメンバ変数elementにもつオブジェクトnodeを作成する. 
-     * nodeはnode-idとElementの両方から指定できる
+     * BaseNodeオブジェクトを作成する．  
+     * BaseNodeオブジェクトは，data-role='node'かつ指定したdata-node-idを持つ要素で構成される
      * 
      * 指定された要素がない場合NodeStructureErrorを投げる
-     * @param {string | Element} specifier
+     * @param {string} node_id
      */
-    constructor(specifier) {
+    constructor(node_id) {
         this.type = this.constructor.name
-        const nodeId = specifier instanceof Element ? 
-            specifier.getAttribute("node-id") ?? emptyNodeId : specifier
-
-        const element = BaseNode.getNodeElementByNodeId(nodeId)
-        if (element == null) {
-            throw new NodeStructureError(this.type, "The specified Element was not found")
-        }
-        this.nodeId = nodeId 
+        const element = notNull(BaseNode.getNodeElementByNodeId(node_id), new NodeError("指定したnode-idを持つ要素は存在しません"))
+        this.nodeId = notNull(element.dataset.nodeId, new NodeError("node-idが存在しません"))
         this.element = element
     }
     /**
      * node-idから対応する.nodeをもつ要素を返す.
-     * node-idがnoneの場合
-     * 
-     * 対応する要素がない場合nullを返す
-     * @param {string} nodeId 
-     * @returns {Element | null}
+     * @param {string} node_id 
+     * @returns {HTMLElement | null}
      */
-    static getNodeElementByNodeId(nodeId) {
-        if (typeof nodeId !== "string") {
-            throw new TypeError('nodeId must be string other than “none"')
-        } else if (nodeId === emptyNodeId) {
-            return null
-        }
-        return document.querySelector(`div.node[node-id="${nodeId}"]`)
+    static getNodeElementByNodeId(node_id) {
+        return document.querySelector(`div[data-role="node"][data-node-id="${node_id}"]`)
+    }
+    /**要素がBaseNodeの条件に合うか確かめる
+    * @param {Element} e 
+    * @returns {boolean} */
+    isNode(e) {
+        return e.getAttribute("data-node-id") !== null && e.getAttribute("data-role") == "node"
     }
     /**
      * 次の.node[node-id]を持つ要素を返す
@@ -142,7 +140,7 @@ export class BaseNode {
     nextNodeElement () {
         let sibling = this.element.nextElementSibling
         while (sibling) {
-            if (sibling.getAttribute("node-id") && sibling.classList.contains("node")) {
+            if (this.isNode(sibling)) {
                 return sibling
             }
             sibling = sibling.nextElementSibling 
@@ -156,7 +154,7 @@ export class BaseNode {
     prevNodeElement () {
         let sibling = this.element.previousElementSibling
         while (sibling) {
-            if (sibling.getAttribute("node-id") && sibling.classList.contains("node")) {
+            if (this.isNode(sibling)) {
                 return sibling
             }
             sibling = sibling.previousElementSibling
@@ -165,52 +163,66 @@ export class BaseNode {
     }
     /** nodeが削除可能かを調べる*/
     allowDelete () {
-        return this.element.querySelector("[data-action='del-node']") != null
+        const nodeConfig = notNull(this.element.dataset.nodeConfig)
+        return JSON.parse(nodeConfig).allow_del
     }
     /** BaseNode.elementを削除する */
     delme() {
-        const nodeControl = this.element.nextElementSibling
-        if (nodeControl != null && nodeControl.classList.contains("node-control")) {
-            nodeControl.remove()
+        if (this.allowDelete()) {
+            const nodeControl = this.element.nextElementSibling
+            if (nodeControl != null && nodeControl.getAttribute("data-role") == "node-control") {
+                nodeControl.remove()
+            }
+            this.element.remove()
         }
-        this.element.remove()
     }
 }
 
 export class QuestionNode extends BaseNode {
     /**
-     * .node[node-id]要素を指定する. インスタンス作成時, 
-     * 内部のCodeNode, ExplainNodeのAceEditorを有効化する.
+     * BaseNodeの制約に加えて，
+     * - `data-node-type` = 'question'
+     * - `data-q-id`
+     * - `data-q-ptype`  
+     * を持つ要素を下に作成する
      * 
      * 要素がないとき, NodeStructureErrorを投げる.
-     * @param {string | Element} specifier 
+     * @param {string} node_id
      */
-    constructor(specifier) {
-        super(specifier)
-        this.element.querySelectorAll(".node.code, .node.explain").forEach(e => {
-            myNode.get(e)
-        })
-        this.qId = this.element.getAttribute("q-id") ?? ""
+    constructor(node_id) {
+        super(node_id)
+        const dataset = this.element.dataset
+        this.qId = notNull(dataset.qId, new NodeStructureError(this.type))
+        this.ptype = notNull(dataset.qPtype, new NodeStructureError(this.type))
+        this.activate()
     }
-    get ptype() {
-        return this.element.getAttribute("ptype")
-    }
-    get editable() {
-        return this.element.classList.contains("editable")
-    }
+
     get answerField() {
-        const c = this.element.querySelector(".answer-content")
+        const c = this.element.querySelector("[data-role='answer-field']")
         if (c === null) {throw new NodeStructureError(this.type)}
         return c
     }
+
+    get questionField() {
+        const c = this.element.querySelector("[data-role='question-field']")
+        if (c === null) {throw new NodeStructureError(this.type)}
+        return c
+    }
+
+    /**QuestionNode内のEditorNodeのace editorを有効化する*/
+    activate = () => {
+        this.element.querySelectorAll("[data-role='node']").forEach(e => {
+            const dataset = e.dataset 
+            if (dataset.nodeType == nodeType.code) {new CodeNode(dataset.nodeId)}
+            else if (dataset.nodeType == nodeType.explain) {new ExplainNode(dataset.nodeId)}
+        })
+    }
     /**
      * Questionインスタンスのパラメータを返す
-     * @param {number} mode 0: leaner, 1: creator
+     * @param {0 | 1} mode 0: leaner, 1: creator
      * @returns {QuestionNodeParams}
      */
     extractQuestionParams (mode) {
-        const node_id = this.nodeId
-        const q_id = this.qId
         const ptype = Number(this.ptype)
         const conponent = []
         const answers = []
@@ -223,39 +235,42 @@ export class QuestionNode extends BaseNode {
         // learner mode 
         if (mode == 0) {
             if (ptype == 0) {
-                this.answerField.querySelectorAll("input, select").forEach(e => {
+                this.questionField.querySelectorAll("input, select").forEach(e => {
                     answers.push(e.value) // user answers
                 }) 
             }
             else if (ptype == 1) {
-                this.answerField.querySelectorAll(".node.code").forEach(e => {
-                    const codeNode = new CodeNode(e)
+                this.answerField.querySelectorAll("[data-node-type='code']").forEach(e => {
+                    const codeNode = new CodeNode(e.getAttribute("data-node-id"))
                     answers.push(codeNode.editor.getValue()) // user answers
                 })
             }
             return {
-                "node_id": node_id, // str
-                "q_id": q_id,       // str
-                "ptype": ptype,     // int 
-                "answers": answers  // list
+                "node_id": this.nodeId, // str
+                "q_id": this.qId,           // str
+                "ptype": ptype,         // int 
+                "answers": answers      // list
             }
         }
     
         // creator mode 
         else if (mode == 1) {
             if (ptype == 0) {
-                const mdString = new ExplainNode(this.answerField.querySelector(".explain[node-id]") ?? emptyNodeId).editor.getValue()
-                const mdDOM = parser.parseFromString(mdString, "text/html").querySelector("body")
+                const e = this.questionField.querySelector("[data-node-type='explain']")
+                const mdString = new ExplainNode(e?.getAttribute("data-node-id")).editor.getValue()
+                const mdDOM = notNull(parser.parseFromString(mdString, "text/html").querySelector("body"))
                 mdDOM.querySelectorAll("input[ans], select[ans]").forEach(e => { // currect answers
                     answers.push(e.getAttribute("ans"))
                 })
                 question = mdDOM.innerHTML // question
             }
             else if (ptype == 1) {
-                answers.push(new CodeNode(this.element.querySelector(".test-code > .code[node-id]") ?? emptyNodeId).editor.getValue()) // answers
-                question = new ExplainNode(this.element.querySelector(".question-info .explain[node-id]") ?? emptyNodeId).editor.getValue() // question
+                const t = notNull(this.element.querySelector("[data-role='test-code'] > [data-node-type]"))
+                answers.push(new CodeNode(t.getAttribute("data-node-id")).editor.getValue()) // answers
+                const q = notNull(this.questionField.querySelector("[data-node-type='explain']"))
+                question = new ExplainNode(q.getAttribute("data-node-id")).editor.getValue() // question
                 
-                editable = this.element.querySelector(".editable-flag")?.checked // editable
+                editable = this.element.querySelector("[data-role='check-editable']")?.checked // editable
                 if (!editable) { // conponent
                     this.answerField.querySelectorAll(".node").forEach(e => {
                         const n = myNode.get(e)
@@ -430,16 +445,18 @@ export class QuestionNode extends BaseNode {
 
 /** ExplainNode, CodeNodeの親クラス. このクラスは直接インスタンス化しない */
 export class EditorNode extends BaseNode {
-    /** @param {string | Element} specifier */
-    constructor(specifier) {
-        super(specifier) 
+    /** @param {string} node_id */
+    constructor(node_id) {
+        super(node_id) 
         this.hasAce = this.element.querySelector(".ace_text-input") != null
     }
+    /** ace editorオブジェクトを取得する */
     get editor() {
-        const AceInputElem = this.element.querySelector("div:has(>.ace_text-input)")
-        if (AceInputElem == null) {throw new NodeStructureError(
-            this.type, "Ace Editor is not embeded.\n Use CodeNode or ExplainNode.")}
-        return ace.edit(AceInputElem)
+        const aceTargetElem = notNull(this.element.querySelector("[data-role='ace-editor']:has(>.ace_text-input)"),
+            new NodeStructureError(this.type, 
+                "Ace Editor is not embeded.\n Use CodeNode or ExplainNode.")
+        )
+        return ace.edit(aceTargetElem)
     }
     /**
      * EditorNodeがQuestionNodeの内部にある場合, そのQuestionNodeのオブジェクトを返す.
@@ -448,10 +465,16 @@ export class EditorNode extends BaseNode {
      * @returns {QuestionNode | null}
      */
     get parentQuestionNode() {
-        const parent = this.element.closest(".question.node")
-        if (parent) {return new QuestionNode(parent)}
+        const parent = this.element.closest("[data-role='question']")
+        if (parent) {return new QuestionNode(parent.dataset.nodeId)}
         return null
     } 
+    /** ace editorに文章をいれる
+     * @param {string} content
+     */
+    setValue (content) {
+        this.editor.setValue(content)
+    }
     /** ace editorを解除し，自身のElementを削除する */
     delme () {
         this.editor.destroy()
@@ -461,26 +484,35 @@ export class EditorNode extends BaseNode {
 /** pythonを記述するためのノード */
 export class CodeNode extends EditorNode {
     /**
-     * ace editorを持ったCodeNodeオブジェクトを作成する 
-     * 
-     * .code.node[kernel-id]がない場合，NodeStructureErrorを投げる
-     * @param {string | Element | any} specifier 
+     * BaseNodeの制約に加えて，
+     * - data-node-type`: 'code'  
+     * を持つ要素を元にCodeNodeオブジェクトを作成する
+     * @param {string} node_id 
      */
-    constructor(specifier) {
-        super(specifier)
-        if (!this.element.classList.contains("code")) {
+    constructor(node_id) {
+        super(node_id)
+        if (this.element.dataset.nodeType != nodeType.code) {
             throw new NodeStructureError("CodeNode")
         }
         if (!this.hasAce) {
             this._registerAcePythonEditor()
         }
     }
+    /**
+     * 指定した要素がCodeNodeの制約を守っているかを確かめる
+     * @param {HTMLElement} e 
+     * @returns {boolean}
+     */
+    isNode = (e) => {
+        return e.dataset.nodeType == nodeType.code
+    }
+
     _registerAcePythonEditor = () => {
         const defaultLineNumbers = 5
         const maxLines = 25
         
-        const editableElem = this.element.querySelector(".code .node-code")
-        if (editableElem == null) {throw new NodeStructureError("CodeNode")}
+        const editableElem = notNull(this.element.querySelector("[data-role='ace-editor']"),
+            new NodeStructureError("CodeNode"))
 
         const editor = ace.edit(editableElem, {
             mode: "ace/mode/python",
@@ -497,7 +529,7 @@ export class CodeNode extends EditorNode {
     /**  Codeインスタンスのパラメータを返す */
     extractCodeParams = () => {
         const content = this.editor.getValue()
-        const readonlyFlag = this.element.querySelector(".readonly-flag")
+        const readonlyFlag = this.element.querySelector("[data-role='check-readonly']")
         const readonly = (readonlyFlag != null) ? readonlyFlag.checked : false
         return {
             "content": content,
@@ -506,23 +538,23 @@ export class CodeNode extends EditorNode {
     }
     /** Codeインスタンスの実行状態を初期化する */
     resetState = () => {
-        const returnBox = this.element.querySelector(".return-box")
+        const returnBox = this.element.querySelector("[data-role='execution-return']")
         if (returnBox == null) {throw new NodeStructureError(this.type)}
         returnBox.innerHTML = ""
-        this.element.querySelector(".node-side")?.classList.remove("bg-success-subtle")
+        this.element.dataset.runState = runState.idle
     }
 }
 /** markdownを記述するためのノード */
 export class ExplainNode extends EditorNode {
     /**
-     * ace editorを持ったExplainNodeオブジェクトを作成する
-     * 
-     * .explain.node[kernel-id]がない場合，NodeStructureErrorを投げる
-     * @param {string | Element} specifier 
+     * BaseNodeの制約に加えて，
+     * - data-node-type`: 'explain'  
+     * を持つ要素を元にCodeNodeオブジェクトを作成する
+     * @param {string} node_id 
      */
-    constructor(specifier) {
-        super(specifier)
-        if (!this.element.classList.contains("explain")) {
+    constructor(node_id) {
+        super(node_id)
+        if (this.element.dataset.nodeType != nodeType.explain) {
             throw new NodeStructureError("ExplainNode")
         }
         if (!this.hasAce) {
@@ -533,7 +565,7 @@ export class ExplainNode extends EditorNode {
         const defaultLineNumbers = 5
         const maxLines = 40
     
-        const editableElem = this.element.querySelector(".explain .node-mde")
+        const editableElem = this.element.querySelector("[data-role='ace-editor']")
         if (editableElem === null) {throw new NodeStructureError("ExplainNode")}
     
         const editor = ace.edit(editableElem, {
@@ -558,8 +590,8 @@ export class ExplainNode extends EditorNode {
     /** previewを表示する */
     showPreview = () => {
         const html = marked.parse(this.editor.getValue())
-        const preview = this.element.querySelector(".for-preview")
-        const mde = this.element.querySelector(".mde")
+        const preview = this.element.querySelector("[data-role='md-preview']")
+        const mde = this.element.querySelector("[data-role='MDE']")
         if (mde == null || preview == null) {
             throw new NodeStructureError(this.type)
         }
@@ -572,7 +604,7 @@ export class ExplainNode extends EditorNode {
     }
     /** editorを表示する */
     showEditor = () => {
-        const mde = this.element.querySelector(".mde")
+        const mde = this.element.querySelector("[data-role='MDE']")
         if (mde === null) {throw new NodeStructureError(this.type)}
         mde.classList.remove("preview-active")
     }

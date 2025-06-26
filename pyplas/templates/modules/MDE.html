@@ -1,4 +1,4 @@
-<div class="mde">
+<div class="mde" data-role="MDE">
     <div class="toolbar d-flex ps-2">
         <div class="btn-group md-tools">
             <button type="button" class="btn btn-outline-dark btn-sm" data-action="embed-bold"><i class="bi bi-type-bold"></i></button>
@@ -24,7 +24,7 @@
         </div>
     </div>
     <div class="mde-container">
-        <div class="node-mde editor">{{ content }}</div>
-        <div class="for-preview"></div>
+        <div class="node-mde editor" data-role="ace-editor">{{ content }}</div>
+        <div class="for-preview" data-role="md-preview"></div>
     </div>
 </div>

@@ -343,11 +343,6 @@ document.querySelector("input#ipynbForm")?.addEventListener("change", async e =>
 
 })
 
-const runState = {
-    idle: "idle",
-    running: "running",
-    suspending: "suspending"
-}
 
 /**
  * KernelHandler classのrunningパラメータが変化した際に起動する関数
@@ -359,10 +354,10 @@ function setExecuteAnimation(kh, oldValue, newValue) {
     if (newValue) {
         try {
             const runningNode = new nodes.CodeNode(kh.execute_task_q[0])
-            runningNode.element.setAttribute("run-state", runState.running)
+            runningNode.element.setAttribute("run-state", nodes.runState.running)
             runningNode.element.querySelector(".node-side")?.classList.add("bg-success-subtle")
             kh.execute_task_q.slice(1, ).forEach(id => {
-                new nodes.CodeNode(id).element.setAttribute("run-state", runState.suspending)
+                new nodes.CodeNode(id).element.setAttribute("run-state", nodes.runState.queued)
             })
         } catch(e) {
             if (e instanceof nodes.NodeError) {}
@@ -371,7 +366,7 @@ function setExecuteAnimation(kh, oldValue, newValue) {
     // 非コード実行中(kh.running == false)の時
     } else {
         document.querySelectorAll(".code").forEach(elem => {
-            elem.setAttribute("run-state", runState.idle)
+            elem.setAttribute("run-state", nodes.runState.idle)
         })
     }
 }
