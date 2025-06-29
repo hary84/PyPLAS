@@ -141,7 +141,7 @@
 ============== */
 .editor {
   height: auto;
-  padding-bottom: 1rem;
+  padding-bottom: 1.5rem;
   box-sizing: content-box;
 }
 
@@ -150,6 +150,7 @@
   Code Node
 ============= */
 .code {
+  padding-left: .5rem;
   .node-toolbar {
       padding-top: 0.15rem;
       .btn {
@@ -169,7 +170,7 @@
       }
       .btn-interrupt {padding: 0rem 0.2rem;}
   }
-  .code-node-main {
+  .node-main {
       .code-config {
         height: 1.7rem;
         border-radius: 5px;
@@ -232,10 +233,16 @@
   .executing {display: block;}
   .waiting {display: none;}
 }
-.code[data-run-state="suspending"] > .node-toolbar {
+.code[data-run-state="queued"] > .node-toolbar {
   .btn-exec {display: none;}
   .executing {display: none;}
   .waiting {display: block;}
+}
+.code[data-run-state='complete'] > .node-toolbar {
+  background-color: var(--bs-success-bg-subtle) !important;
+  .btn-exec {display: block;}
+  .executing {display: none;}
+  .waiting {display: none;}
 }
 
 
@@ -270,6 +277,13 @@
   .card-body {
     .only-inq { display: block !important;} 
     .node-control .toggle-addQ {display: none !important;}
+    .explanation-content {
+      .code.node {
+        .dropdown.code-options {
+          display: none;
+        }
+      }
+    }
     .question-info {
       .dropdown.question-options {
         .dropdown-toggle::after {
@@ -278,6 +292,13 @@
       }
       .dropdown.question-options:not(:has(.dropdown-item)) {
         display: none;
+      }
+    }
+    .test-code {
+      .code.node {
+        .dropdown.code-options {
+          display: none;
+        }
       }
     }
   }
