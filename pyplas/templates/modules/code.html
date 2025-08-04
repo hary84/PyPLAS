@@ -1,5 +1,6 @@
-<div class="code node my-2 w-100 d-flex pe-2" node-id="{{node_id}}" run-state="idle" style="padding-left: .5rem;">
-    <div class="node-side bg-light rounded-start-2 border border-dark-subtle border-1">
+<div class="code node my-2 w-100 d-flex pe-2" data-role="node" data-node-type="code" data-node-id="{{node_id}}" data-run-state="idle"
+        data-node-config='{"allow_del": {{"true" if allow_del else "false"}}, "readonly": {{"true" if (readonly and user == 0) else "false" }}}'>
+    <div class="node-toolbar bg-light rounded-start-2 border border-dark-subtle border-1" data-role="code-node-toolbar">
         <button class="btn-exec btn btn-sm btn-outline-dark" data-action="exec" tabindex="-1">
             <i class="bi bi-caret-right-fill blocked-bi text-dark"></i>
         </button>
@@ -11,7 +12,7 @@
             <i class="bi bi-stop-circle text-dark blocked-bi"></i>
         </button>
     </div>
-    <div class="node-prime position-relative w-100" style="flex: 1; min-width: 0">
+    <div class="node-main position-relative w-100" style="flex: 1; min-width: 0">
         <div class="code-config bg-secondary-subtle m-1 d-flex position-absolute end-0 top-0" style="z-index: var(--z-index-code-config);">
             {% if allow_del %}
                 <button class="btn btn-danger" tabindex="-1" data-action="del-node"><i class="bi bi-trash blocked-bi"></i></button>
@@ -22,21 +23,19 @@
                     <i class="bi bi-justify"></i> 
                 </button>
                 <ul class="dropdown-menu">
-                  {% if user == 1 %}
-                    <li>
-                        <span class="dropdown-item d-flex">
-                            <input class="form-check-input readonly-flag me-2" type="checkbox" {{ 'checked' if readonly else "" }}>
-                            <label class="form-check-label my-auto" for="readonly-flag">readonly</label>
-                        </span>
-                    </li>
-                  {% end %}
+                <li>
+                    <span class="dropdown-item {{'d-flex' if user == 1 else 'd-none'}}">
+                        <input class="form-check-input readonly-flag me-2" type="checkbox" {{ 'checked' if readonly else "" }} data-role="check-readonly">
+                        <label class="form-check-label my-auto" for="readonly-flag">readonly</label>
+                    </span>
+                </li>
                   {% if (user == 0) and (allow_del == False) %} 
                     <li><a class="dropdown-item" data-action="reset-input">Reset Input</a></li>
                   {% end %}
                 </ul>
             </div>
         </div>
-        <div class="node-code editor border rounded-end-2 {{ 'readonly' if readonly and user==0 else '' }} w-100">{%raw content %}</div>
-        <div class="return-box border border-dark-subtle rounded-end-1"></div>            
+        <div class="node-code editor border rounded-end-2 w-100 {{ 'readonly' if readonly and user==0 else '' }}" data-role="ace-editor">{%raw content %}</div>
+        <div class="return-box border border-dark-subtle rounded-end-1" data-role="execution-return"></div>           
     </div>
 </div>

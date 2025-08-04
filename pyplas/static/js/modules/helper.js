@@ -1,37 +1,61 @@
 //@ts-check
 
-const groups = window.location.pathname.match(
-            /(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/)?.groups
+/**
+ * 問題のメタ情報を提供する  
+ * URLから問題IDと実行モードを解析し，`p_id`と`mode`に格納する
+ */
+export const problem_meta = (() => {
+    const match = window.location.pathname.match(/(?<parent_path>problems|create)\/(?<p_id>[-\w]+)/);
+    const groups = match?.groups || {};
 
-export const problem_meta= {
-    mode: groups?.parent_path,
-    p_id: groups?.p_id
-}
+    const mode = groups.parent_path;
+    const p_id = groups.p_id;
+
+    return {
+        /** モード (例: `"problems"`, `"create"`) */
+        mode,
+        /** 問題ID */
+        p_id,
+        /** モードが `"create"` なら `true` */
+        isCreateMode() {
+            return this.mode === "create";
+        }
+    };
+})();
 
 console.log(`problem_id(p_id) is '${problem_meta.p_id}'`)
 console.log(`mode is '${problem_meta.mode}'`)
 
-
-export function isCreateMode() {
-    return problem_meta.mode == "create"
-}
-
 /**
- * valueがnullでないことを確認する
+ * `value`が`null`や`undefined`でないことを確認する  
+ * `null`, `undefined`の場合，引数`error`で指定したエラーを発生させる
  * @template T
- * @param {T | null} value 
+ * @param {T | null | undefined} value 
  * @param {Error} error
  * @returns {T}
  */
 export function notNull(value, error=Error()) {
-    if (value === null) {
+    if (value === null || value === undefined) {
         throw error
     }
     return value
 }
 
 /**
- * objのpropertyが変化した際にfuncを実行する
+ * objのpropertyを監視し，値が変化した際に`func`を実行する  
+ * `func`は引数として，`obj`, `プロパティの変化前の値`, `プロパティの変化後の値`を持たなければならない
+ * @example
+ * const a = {
+ *  test: "test"
+ * }
+ * function printNewValue(obj, oldV, newV) {
+ *  console.log(newV)
+ * }
+ * 
+ * watchValue(a, "test", printNewValue)
+ * a.test = "new test"
+ * // => 'new test'
+ * 
  * @param {object} obj 
  * @param {string} propName 
  * @param {function} func 
@@ -48,10 +72,18 @@ export function watchValue(obj, propName, func) {
         configurable: true
     });
 }
+
 /**
- * showFilePickerでファイルピッカーを表示し, Fileオブジェクトを返す. 
- * @param {object} acceptMIME MINE typeがキー, ファイル拡張子のarrayが値のオブジェクト
+ * `showFilePicker`でファイルピッカーを表示し, 選択したファイルのFileオブジェクトを返す.   
+ * `showFilePicker`の仕様上, HTTPSでしか使えない? 
+ * 
+ * @param {object} acceptMIME 
+ * `window.ShowOpenFIlePicker`の`accept`オプション  
+ * MINEタイプをキー, ファイル拡張子の配列を値として持つ`object`
+ * 
  * @returns {Promise<File>} 選択されたファイルオブジェクト
+ * 
+ * @see https://developer.mozilla.org/ja/docs/Web/API/Window/showOpenFilePicker 
  */
 export async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
     const [handle] = await window.showOpenFilePicker({
@@ -65,10 +97,20 @@ export async function filePicker(acceptMIME={"text/*": [".ipynb"]}) {
     const file = await handle.getFile()
     return file
 }
+
 /**
- * 文字列をhtmlとansiエスケープする
- * @param {String} str 
- * @param {boolean} ansi 
+ * 受け取った文字列をHTML, ANSIエスケープ処理する  
+ * ```
+ *  '&': '&amp;',
+    "'": '&#x27;',
+    '`': '&#x60;',
+    '"': '&quot;',
+    '<': '&lt;',
+    '>': '&gt;',
+ * ```
+ * 
+ * @param {String} str エスケープ処理する文字列
+ * @param {boolean} ansi ANSIエスケープする場合は`true`
  * @returns {String}
  */
 export function escapeHTML(str, ansi=true) {
@@ -86,8 +128,9 @@ export function escapeHTML(str, ansi=true) {
         }[match]
     });
 }
+
 /** 
- * エスケープ処理された文字をもとに戻す
+ * HTMLエスケープ処理された文字をもとに戻す
  * @param {string} str */
 export function unescapeHTML(str) {
     return str.replace(/&amp;/g, "&")
@@ -96,7 +139,17 @@ export function unescapeHTML(str) {
               .replace(/&quot;/g, '"')
               .replace(/&#39;/g, "'")
 }
-/** オブジェクト化したクエリ文字列を返す */
+
+/** 
+ * URLクエリを`{パラメータ名: 値}`のオブジェクトにして返す
+ * 
+ * @example
+ * // url: localhost:8888?name=bob&age=20
+ * getUrlQuery() 
+ * // => {name: 'bob', age: '20'}
+ * 
+ * @returns {object}
+ */
 export function getUrlQuery() {
     const queryStr = window.location.search.slice(1)
     const queries = {}
@@ -109,22 +162,28 @@ export function getUrlQuery() {
     })
     return queries
 }
+
 /** 
  * 現在のURLにクエリパラメータを追加する
- * @param {string} key
- * @param {string} value  */
+ * @param {string} key パラメータ名
+ * @param {string} value  パラメータ値
+ * */
 export function addQueryParam(key, value) {
     const url = new URL(window.location.href)
     url.searchParams.set(key, value)
     history.pushState(null, "", url)
 }
-/** 現在のURLのクエリパラメータを削除する
- * @param {string} key */
+
+/** 
+ * 現在のURLのクエリパラメータを削除する
+ * @param {string} key パラメータ名
+ * */
 export function removeQueryParam(key) {
     const url = new URL(window.location.href)
     url.searchParams.delete(key)
     history.replaceState(null, "", url)
 }
+
 /**
  * h1~h6の内部リンクを設置する
  * @param {Element} linksContainer 
@@ -159,44 +218,60 @@ export function addInnerLink(linksContainer, ankerLoc, position) {
     details.appendChild(ul)
     ankerLoc.insertAdjacentElement(position, details)
 }
-/** ページネーションオブジェクト */
+
+/**
+ * テーブルにページネーションを追加する．
+ * 
+ * - `pagination.init()`でページネーションを追加する
+ * - `pagination.update()`でページネーションを再構築する
+ */
 export const pagination = {
-    tableTag: "",
+    /** 1ページあたりに表示するアイテム数のデフォルト値 */
     itemsPerPage: 10,
+
+    /** 現在のページ番号（0始まり） */
     currentPage: 0,
 
+    /** 表示対象の <tr> 要素リスト */
     items: Array(),
-    /** @property {Element} targetTableElem */
-    targetTableElem: {},
-    controller: {},
+
+    /** 対象のテーブルDOM要素 */
+    /** @type {Element | undefined} */
+    targetTableElem: undefined,
+
+    /** イベントリスナを制御するための`AbortController` */
+    /** @type {AbortController} */
+    controller: new AbortController(),
 
     /**
-     * テーブルにページネーションを実装する
-     * @param {string} tableTag  
+     * ページネーションの初期化処理
+     * 
+     * 最初にこのメソッドを実行する
+     * @param {Element} table  対象テーブルのCSSセレクタ
+     * @param {number} itemsPerPage  1ページあたりのアイテム数
      */
-    init(tableTag, itemsPerPage=10) {
-        this.tableTag = tableTag
+    init(table, itemsPerPage=10) {
         this.itemsPerPage = itemsPerPage
         this.currentPage = 0
         
-        const content = document.querySelector(tableTag);
-        if (content == null) {throw new Error("The specified table was not found.")}
-        this.targetTableElem = content
-        this.items = Array.from(content.getElementsByTagName("tr")).filter(e=>{
-            return window.getComputedStyle(e).display !== "none"
-        }).slice(1)
+        if (table.tagName != "TABLE") {throw new Error("引数`table`はtable要素でありません")}
+        this.targetTableElem = table
+        this.items = Array.from(table.getElementsByTagName("tr"))
+            .filter(e=>{return window.getComputedStyle(e).display !== "none"})
+            .slice(1)
 
         if (this.itemsPerPage < 1) {
             this.itemsPerPage = this.items.length
         }
 
-        this.createPageButton()
-        this.showPage()
-        this.updateButtonState()
+        this._createPageButton()
+        this._showPage()
+        this._updateButtonState()
     },
 
-    /** ページ移動ボタンを追加する */
-    createPageButton() {
+    /** ページボタンを生成・表示する */
+    _createPageButton() {
+        if (this.targetTableElem === undefined) {throw new Error("`init`が呼ばれていません")}
         this.controller = new AbortController()
         const totalPages = Math.ceil(this.items.length / this.itemsPerPage)
         const paginationContainer = document.createElement("div")
@@ -209,15 +284,15 @@ export const pagination = {
             pageButton.textContent = String(i + 1)
             pageButton.addEventListener("click", () => {
                 this.currentPage = i; 
-                this.showPage()
-                this.updateButtonState()
+                this._showPage()
+                this._updateButtonState()
             }, {signal: this.controller.signal})
             paginationDiv?.appendChild(pageButton)
         }
     },
 
-    /** currentPageを表示する */
-    showPage() {
+    /** 現在のページに該当する要素を表示する */
+    _showPage() {
         const startIndex = this.currentPage * this.itemsPerPage
         const endIndex = startIndex + this.itemsPerPage
         this.items.forEach((item, idx) => {
@@ -225,8 +300,8 @@ export const pagination = {
         })
     },
 
-    /** ページ移動ボタンの状態を変更する */
-    updateButtonState() {
+    /** ページボタンの状態を変更する */
+    _updateButtonState() {
         const pageButtons = document.querySelectorAll(".my-pagination button")
         pageButtons.forEach((btn, idx) => {
             if (idx == this.currentPage) {
@@ -237,10 +312,13 @@ export const pagination = {
             }
         })
     },
-    /** ページネーションを更新する
+
+    /** 
+     * ページネーションを再構築する
      * @param {number | null} itemsPerPage 
      */
     update(itemsPerPage=null) {
+        if (this.targetTableElem === undefined ) {throw new Error("`init`が呼ばれていません")}
         const paginationDiv = this.targetTableElem.nextElementSibling
         if (paginationDiv != null && paginationDiv.classList.contains("my-pagination")) {
             this.controller.abort()
@@ -250,11 +328,14 @@ export const pagination = {
                 e.classList.remove("pgn-hidden")
             })
         }
-        this.init(this.tableTag, itemsPerPage??this.itemsPerPage)
+        this.init(this.targetTableElem, itemsPerPage??this.itemsPerPage)
     }
 }
 
-/** 2つのオブジェクトのすべてのプロパティ値を比較する
+/** 
+ * 2つのオブジェクトのすべてのプロパティ値を比較し，異なるプロパティがなければ`true`を返す
+ * @param {object} obj1 
+ * @param {object} obj2
  * @returns {boolean}
  */
 export function compareObjects(obj1, obj2) {

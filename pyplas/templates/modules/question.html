@@ -1,23 +1,21 @@
-<div class="node question card my-2 mx-2 position-relative {{'editable' if editable else ''}} accordion" node-id="{{ node_id }}"
-			id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
+<div class="node question card my-2 mx-2 position-relative accordion" id="q-id-{{ q_id }}"
+	data-role="node" data-node-type="question" data-node-id="{{ node_id }}" data-q-progress="{{ progress }}" data-q-id="{{q_id}}"
+	data-q-ptype="{{ptype}}">
 	<div class="card-header bg-success-subtle d-flex">
 		<button class="accordion-button bg-success-subtle" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{q_id}}" style="padding: 0;">
 			Question <span class="ms-2 fw-bold text-secondary">{{"Word Test" if ptype==0 else "Code Test"}}</span>
 		</button>
-		{% if user == 0 %}
-		<span class="progress-badge badge rounded-pill ms-3"> </span>
-		{% elif user == 1 %}
-		<div class="ms-3 d-flex">
+		<span class="progress-badge badge rounded-pill ms-3 {{'d-none' if user == 1 else ''}}"> </span>
+		<div class="ms-3 {{'d-none' if user == 0 else 'd-flex'}}">
 			{% if ptype == 1 %}
 			<div class="form-check form-switch">
-				<input class="form-check-input editable-flag" type="checkbox" role="switch" {{'checked' if editable else "" }}>
+				<input class="form-check-input editable-flag" type="checkbox" role="switch" {{'checked' if editable else "" }} data-role="check-editable">
 				<label class="form-check-label" >Editable</label>
 			</div>
 			{% end %}
 			<div class="vr mx-2 my-1"></div>
 			<button type="button" class="btn btn-danger" data-action="del-node"><i class="bi bi-trash"></i></button>
 		</div>	
-		{% end %}
 		<div class="for-toast">
 			{% module Template("modules/toast.html") %}
 		</div>
@@ -32,7 +30,7 @@
 		{% end %}
 		<div class="tab-content p-1">
 			<div class="tab-pane fade show active" id="QuestionPane-{{ node_id }}" role="tabpanel">
-				<div class="question-info">
+				<div class="question-info" data-role="question-field">
 					<div class="mb-0 d-flex">
 						<span class="badge bg-success me-auto" style="align-self: center;">Question</span>
 						<div class="dropdown question-options">
@@ -52,16 +50,11 @@
 							</ul>
 						</div>
 					</div>
-					{% if ptype == 1 %}
-						{% module Explain(editor=user, content=question, allow_del=False) %}
-					{% end %}
+					{% module Explain(editor=user, content=question, allow_del=False) %}
 				</div>
 		
-				<div class="answer-content mx-1 p-2 {{ 'dynamic-nodes-container' if ptype==1 else '' }} collapse show" id="collapse-{{q_id}}">
-					{% if ptype == 0 %} 
-						{% module Explain(editor=user, content=question, allow_del=False) %}
-		
-					{% elif ptype == 1 %}
+				{% if ptype == 1 %}
+					<div class="answer-content mx-1 p-2 dynamic-nodes-container collapse show" id="collapse-{{q_id}}" data-role="answer-field">
 						{% if user == 1 %}
 							{% module NodeControl(question=False) %}
 							{% for d in conponent %}
@@ -95,14 +88,13 @@
 								{% end %}
 							{% end %}
 						{% end %}
-					{% end %}
-				</div>
-		
-				{% if (user == 1) and (ptype == 1) %}
-					<div class="test-code mt-2">
-						<p class="mb-2"><span class="badge bg-danger">Test Code</span></p>
-						{% module Code(content=answers[0] if len(answers) > 0 else "", allow_del=False, user=0) %}
 					</div>
+					{% if user == 1 %}
+						<div class="test-code mt-2" data-role="test-code">
+							<p class="mb-2"><span class="badge bg-danger">Test Code</span></p>
+							{% module Code(content=answers[0] if len(answers) > 0 else "", allow_del=False, user=0) %}
+						</div>
+					{% end %}
 				{% end %}
 			</div>
 			<div class="tab-pane fade" id="ExplanationPane-{{ node_id }}" role="tabpanel">
@@ -124,7 +116,7 @@
 		</div>
 	</div>
 
-	<div class="progress position-relative d-none" role="progressbar" aria-label="scoring progress bar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style="height: 0.5rem">
+	<div class="progress position-relative d-none" role="progressbar" aria-label="scoring progress bar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style="height: 0.5rem" data-role="progress-bar">
 		<div class="progress-bar position-absolute h-100" style="width: 20%"></div>
 	</div>
 

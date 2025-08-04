@@ -5,212 +5,224 @@ import * as nodes from "./modules/nodes.js"
 import * as utils from "./modules/utils.js"
 import { notNull } from "./modules/helper.js"
 import * as helper from "./modules/helper.js"
-import kh from "./modules/kernel.js"
 import reseter from "./modules/reset-manager.js"
 import * as error from "./modules/error.js"
+import exeHandler from "./modules/kernel.js"
 
 const nodesContainer = notNull(document.querySelector("#nodesContainer"))
 
-document.querySelectorAll(".node.explain, .node.code").forEach(e => myNode.get(e))// ace editorの有効化
-
+// ノードの有効化
+document.querySelectorAll("[data-role='node']").forEach(e => {
+    const n = myNode.get(e)
+    if (n instanceof nodes.ExplainNode) {
+        n.showPreview()
+    }
+})
+    
 // markdown.js, highlight.jsの準備
-if (helper.isCreateMode()) {
-    document.querySelectorAll(".node.explain").forEach(e => 
-        new nodes.ExplainNode(e).showPreview() )
-    } 
-else {
-    document.querySelectorAll(".explain:not([node-id])").forEach(elem => {
+if (!helper.problem_meta.isCreateMode()) {
+    document.querySelectorAll(".explain:not([data-role='node'])").forEach(elem => {
+        // @ts-ignore marked.js
         elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML)) })
-    nodes.userAnswerCompletion(nodesContainer)
+    await userAnswerCompletion()
     helper.addInnerLink(nodesContainer, notNull(document.querySelector("#rightSideBarScrollField")), "beforeend")
-}
+} 
+// @ts-ignore highlight.js
 hljs.highlightAll();
 
 
 
-// start kernel and observe websocket
-await kh.setUpKernel()
-helper.watchValue(kh, "running", setExecuteAnimation)
-helper.watchValue(kh, "msg", renderMessage)
+// カーネルの起動・WebSocketの接続・プロパティの監視
+await exeHandler.setUpKernel()
+helper.watchValue(exeHandler, "running", setExecuteAnimation)
+helper.watchValue(exeHandler, "msg", renderMessage)
 helper.watchValue(myNode.activeNode, "node_id", setActiveNodePointer)
 
-// left side bar button 
-document.querySelector("#kernel-ops")?.addEventListener("click", async e => {
-    const target = e.target?.closest("a")
-    if (target === null) {return}
+// ボタン，リンクをクリックイベントリスナー
+document.querySelector("body")?.addEventListener("click", async e => {
+    /** @type {HTMLElement | undefined} イベントを発生させたA, BUTTONタグの`Element` */
+    const target = e.target?.closest("a, button")
+    if (target === null || target === undefined) {return}
+
+    /** 発生させるイベント */
     const action = target.dataset.action
+
+    /** `target`を子要素に持つ`data-role='node'`の`Element`*/
+    const nodeElement = target.closest("[data-role='node']")
+
+    // 連続して発火しないようにボタン，リンクを無効化
     target.classList.add("disabled")
     try {
-        switch (action) {
-            case "exec-all":
-                await kh.executeAll(nodesContainer)
-                break;
-            case "restart-kernel":
-                await kh.setUpKernel(true)
-                document.querySelectorAll(".node.code").forEach(e => {
-                    new nodes.CodeNode(e).resetState()
-                })
-                break;
-            case "interrupt-kernel":
-                await kh.kernelInterrupt()
-                break;
-            case "save":
-                if (!helper.isCreateMode()) { await utils.saveUserData() } 
-                else { await utils.registerProblem() }
-                break;
+        // すべてのコードを実行
+        if (action == "exec-all") {
+            if (nodeElement !== null) {
+                const n = myNode.get(nodeElement)
+                if (n instanceof nodes.QuestionNode) {
+                    exeHandler.executeAll(n.answerField)
+                }
+            }
+            else {
+                await exeHandler.executeAll(nodesContainer)
+            }
+        }// カーネルを再起動
+        else if (action == "restart-kernel") {
+            await exeHandler.restartKernel()
+            document.querySelectorAll("[data-node-type='code']").forEach(e => {
+                new nodes.CodeNode(nodes.getNodeParamsByElement(e).node_id).resetState()
+            })
+        }// カーネル実行を中断
+        else if (action == "interrupt-kernel") {
+            await exeHandler.kh.kernelInterrupt(exeHandler.kernel_id)
+        }// ユーザ入力を保存 / 作成した問題を登録
+        else if (action == "save") {
+            if (!helper.problem_meta.isCreateMode()) {await utils.saveUserData()}
+            else {await utils.registerProblem()}
+        }// ExplainNodeを追加
+        else if (action == "add-MD") {
+            e.stopPropagation()
+            const nc = notNull(target.closest(".node-control"))
+            const explainNode = await utils.addMD(nc, "afterend")
+            myNode.activeNode.node_id = explainNode.node_id
+        }// CodeNodeを追加
+        else if (action == "add-Code") {
+            e.stopPropagation()
+            const nc = notNull(target.closest(".node-control"))
+            const codeNode = await utils.addCode(nc, "afterend", {user: Number(helper.problem_meta.isCreateMode())})
+            myNode.activeNode.node_id = codeNode.node_id
+        }// QuestionNodeを追加
+        else if (action == "add-Question") {
+            e.stopPropagation()
+            const nc = notNull(target.closest(".node-control"))
+            const questionNode = await utils.addQ(nc, "afterend", {
+                ptype: Number(target.dataset.ptype)?? nodes.QuestionNode.ptypes.WORDTEST
+            })
+            myNode.activeNode.node_id = questionNode.node_id
+        }// ノードを削除
+        else if (action == "del-node") {
+           myNode.get(notNull(nodeElement))?.delme()
+        }// ユーザ入力を初期化
+        else if (action == "reset-input") {
+            const node = myNode.get(notNull(nodeElement))
+            if (node instanceof nodes.QuestionNode || node instanceof nodes.CodeNode) {
+                reseter.resetNode(node)
+            }
+        }// コード実行
+        else if (action == "exec") {
+            const node = myNode.get(notNull(nodeElement))
+            if (node instanceof nodes.CodeNode) {
+                await exeHandler.execute(node.node_id)
+            }
+        }// コード実行を中断
+        else if (action == "interrupt-kernel") {
+            const node = myNode.get(notNull(nodeElement))
+            if (node instanceof nodes.CodeNode) {
+                await exeHandler.kh.kernelInterrupt(exeHandler.kernel_id)
+            }
+        }
+        else if (["test", "cancel-test", "load-ipynb"].includes(action)) {
+            const node = myNode.get(notNull(nodeElement))
+            if (!(node instanceof nodes.QuestionNode)) {return}
+            // 問題の採点
+            if (action == "test") {
+                await node.scoring()
+                const questionNavi = document.querySelector(`#question-nav a[href='#q-id-${node.q_id}']`)
+                if (questionNavi === null) {return}
+                questionNavi.dataset.qProgress = node.element.dataset.qProgress
+            }// 採点の中断
+            else if (action == "cancel-test") {
+                await node.canceling()
+            }// JupyterNotebookファイルを読み込む
+            else if (action == "load-ipynb") {
+                let file 
+                try {
+                    file = await helper.filePicker()
+                } catch (e) {
+                    return
+                }
+                const loc = node.answerField
+                const user = helper.problem_meta.isCreateMode()? 1 : 0
+                await utils.loadIpynb(file, loc, user)
+            }
+        }
+        else if ([
+            "embed-bold",
+            "embed-italic",
+            "embed-href",
+            "embed-img",
+            "embed-FIB",
+            "embed-select",
+            "show-preview"]
+        .includes(action)) {
+            const node = myNode.get(notNull(nodeElement))
+            if (!(node instanceof nodes.ExplainNode)) {return}
+            if (action == "embed-bold") { node.embedBold() }
+            else if (action == "embed-italic") {node.embedItalic() }
+            else if (action == "embed-href") {node.embedLink() }
+            else if (action == "embed-img") {node.embedImg() }
+            else if (action == "embed-FIB") {node.addFillInBlankProblem() }
+            else if (action == "embed-select") {node.addSelectionProblem()}
+            else if (action == "show-preview") {node.showPreview()}
         }
     } catch(e) {
-        if (e instanceof error.ApplicationError) {
-            alert(e.message)
-            console.error(e)
-        }
-        else {
-            alert("Unexpected error")
-            console.error(e)
-        }
+        alert(e.message)
+        console.error(e)
     } finally {
+        // ボタン，リンクを有効化
         target.classList.remove("disabled")
     }
 })
 
+// ノードをクリックしたときのイベントリスナー
 document.querySelector("main")?.addEventListener("click", e => {
     try {
-        const node = myNode.get(e.target?.closest(".node") ?? nodes.emptyNodeId)
-        if (node != null) {
-            myNode.activeNode.node_id = node.nodeId
+        const node = myNode.get(notNull(e.target?.closest("[data-role='node']")))
+        if (node !== null) {
+            myNode.activeNode.node_id = node.node_id
         }
     } catch {}
 })
 
-// main
-document.querySelector("main")?.addEventListener("click", async e => {
-    const target = e.target?.closest("a, button")
-    if (!target) {return}
-    const action = target.dataset.action
-    target.classList.add("disabled")
-    try {
-        const node = myNode.get(e.target.closest(".node") ?? nodes.emptyNodeId)
-        switch (action) {
-            case "add-MD":
-                e.stopPropagation()
-                const explainNode = await utils.addMD(target.closest(".node-control"), "afterend")
-                myNode.activeNode.node_id = explainNode.nodeId
-                return
-            case "add-Code":
-                e.stopPropagation()
-                const codeNode = await utils.addCode(target.closest(".node-control"), "afterend", {
-                    user: Number(helper.isCreateMode())
-                })
-                myNode.activeNode.node_id = codeNode.nodeId
-                return
-            case "add-Question":
-                e.stopPropagation()
-                const questionNode = await utils.addQ(target.closest(".node-control"), "afterend", 
-                    Number(target.dataset.ptype)
-                )
-                myNode.activeNode.node_id = questionNode.nodeId
-                return
-            case "del-node":
-                node?.delme()
-                return
-            case "reset-input":
-                if (node instanceof nodes.QuestionNode || node instanceof nodes.CodeNode) {
-                    reseter.resetNode(node)
-                }
-                return
-        }
-        if (node instanceof nodes.CodeNode) {
-            switch (action) {
-                case "exec":
-                    await kh.execute(node.nodeId)
-                    break;
-                case "interrupt-kernel":
-                    await kh.kernelInterrupt()
-                    break;
-            }
-        }
-        else if (node instanceof nodes.QuestionNode) {
-            switch (action) {
-                case "test":
-                    await node.scoring()
-                    break;
-                case "cancel-test":
-                    await node.canceling()
-                    break;
-                case "load-ipynb":
-                    const file = await helper.filePicker()
-                    const loc = node.answerField
-                    const user = helper.isCreateMode()? 1 : 0
-                    await utils.loadIpynb(file, loc, user)
-                    break;
-                case "exec-all":
-                    await kh.executeAll(node.answerField)
-                    break;
-            }
-        }
-        else if (node instanceof nodes.ExplainNode) {
-            switch (action) {
-                case "embed-bold":
-                    node.embedBold();
-                    break;
-                case "embed-italic":
-                    node.embedItalic();
-                    break;
-                case "embed-href":
-                    node.embedLink();
-                    break;
-                case "embed-img":
-                    node.embedImg();
-                    break;
-                case "embed-FIB":
-                    node.addFillInBlankProblem();
-                    break;
-                case "embed-select":
-                    node.addSelectionProblem();
-                    break;
-                case "show-preview":
-                    node.showPreview();
-                    break;
-            }
-        }
-    }
-    catch (e) {
-        if (e instanceof error.ApplicationError) {
-            alert(e.message)
-        }
-        else {
-            alert("Unexpected error")
-            console.error(e)
-        }
-    }
-    finally {
-        target.classList.remove("disabled")
-    }
-})
-
-// Event Listener (key down)
+// キーボードを押したときのイベントリスナー
 window.addEventListener("keydown", async e => {
+    /** 現在アクティブなNode */
     const currentActiveNode = myNode.activeNode.get()
-    // ============================== 
-    //    Ctrl + Enter
-    // ============================== 
+    /**
+     * ============================================================  
+     * Ctrl + Enter
+     * 
+     * アクティブノードが
+     * - `ExplainNode`の場合, プレビューを表示
+     * - `CodeNode`の場合, コード実行
+     * - `QuestionNode`の場合，採点
+     * ============================================================  
+     */
     if (e.ctrlKey && e.key == "Enter") {
         if (currentActiveNode instanceof nodes.ExplainNode) {
             currentActiveNode.showPreview()
         } 
         else if (currentActiveNode instanceof nodes.CodeNode) {
             currentActiveNode.editor.blur()
-            kh.execute(currentActiveNode.nodeId)
+            exeHandler.execute(currentActiveNode.node_id)
         }
         else if (currentActiveNode instanceof nodes.QuestionNode) {
-            if (!helper.isCreateMode()) {
+            if (!helper.problem_meta.isCreateMode()) {
                 await currentActiveNode.scoring()
+                const questionNavi = document.querySelector(`#question-nav a[href='#q-id-${currentActiveNode.q_id}']`)
+                if (questionNavi === null) {return}
+                questionNavi.dataset.qProgress = currentActiveNode.element.dataset.qProgress
             } 
         }
     }
-    // ============================== 
-    //    Enter
-    // ============================== 
+    /**
+     * ============================================================  
+     * Enter
+     * 
+     * アクティブノードが
+     * - `ExplainNode`の場合, エディタを表示
+     * - `CodeNode`の場合, エディタにフォーカス
+     * - `QuestionNode`の場合，内部の最初のNodeをアクティブに
+     * ============================================================  
+     */
     else if (e.key == "Enter" && e.target?.tagName == "BODY") {
         e.preventDefault()
         if (currentActiveNode instanceof nodes.ExplainNode) {
@@ -221,31 +233,39 @@ window.addEventListener("keydown", async e => {
             currentActiveNode.editor.focus()
         }
         else if (currentActiveNode instanceof nodes.QuestionNode) {
-            const answerNodes = currentActiveNode.childNodes
+            const answerNodes = currentActiveNode.answerNodes
             if (answerNodes.length == 0) {
                 const nodeControl = currentActiveNode.answerField.querySelector(".node-control")
                 if (nodeControl != null) {
                     const nextActiveNode = await utils.addCode(nodeControl, "afterend", {
-                        user: Number(helper.isCreateMode())
+                        user: Number(helper.problem_meta.isCreateMode())
                     })
-                    myNode.activeNode.node_id = nextActiveNode.nodeId
+                    myNode.activeNode.node_id = nextActiveNode.node_id
                 }
             } 
             else {
-                myNode.activeNode.node_id = answerNodes[0].nodeId
+                myNode.activeNode.node_id = answerNodes[0].node_id
             }
         }
     }
-    // ============================== 
-    //    Escape
-    // ============================== 
+    /**
+     * ============================================================  
+     * Escape 
+     * 
+     * アクティブノードが
+     * - `EditorNode`の場合，親に`QuestionNode`があれば，それをアクティブに
+     * - `QuestionNode`の場合，トーストを非表示に
+     * 
+     * TEXTAREAにフォーカスしていた場合，フォーカスを解く
+     * ============================================================  
+     */
     else if (e.key == "Escape") {
         if (currentActiveNode instanceof nodes.EditorNode && e.target?.tagName == "BODY") {
             const e = currentActiveNode.parentQuestionNode
-            if (e != null) {myNode.activeNode.node_id = e.nodeId}
+            if (e != null) {myNode.activeNode.node_id = e.node_id}
         }
         else if (e.target?.tagName == "TEXTAREA") {
-            const targetNode = myNode.get(e.target?.closest(".node") ?? nodes.emptyNodeId)
+            const targetNode = myNode.get(e.target?.closest("[data-role='node']"))
             if (targetNode instanceof nodes.EditorNode) {targetNode.editor.blur()}
         }
         else {
@@ -256,129 +276,136 @@ window.addEventListener("keydown", async e => {
         }
     }
 
-    // ============================== 
-    //    Ctrl-S
-    // ============================== 
+    /**
+     * ============================================================  
+     * Ctrl-S
+     * 
+     * ユーザ入力を保存もしくは作成した問題を登録する
+     * ============================================================  
+     */
     else if (e.ctrlKey && e.key == "s" && e.target?.tagName == "BODY") {
         e.preventDefault()
-        if (!helper.isCreateMode()) {
+        if (!helper.problem_meta.isCreateMode()) {
             await utils.saveUserData()
         } else {
             await utils.registerProblem()
         }
     }
-    // ============================== 
-    //    J or K
-    // ============================== 
+    /**
+     * ============================================================  
+     * J or K
+     * 
+     * J => アクティブノードを次のノードに変える
+     * K => アクティブノードを前のノードに変える
+     * 
+     * 同時に，アクティブノードがページ領域の中心になるようにスクロールする
+     * ============================================================  
+     */
     else if ((e.key == "j" || e.key == "k") && e.target?.tagName == "BODY") {
         if (currentActiveNode == null) {return}
         const nextActiveNode = (e.key == "j") ? 
             myNode.nextNode(currentActiveNode) : myNode.prevNode(currentActiveNode)
         if (nextActiveNode != null) {
-            myNode.activeNode.node_id = nextActiveNode.nodeId
+            myNode.activeNode.node_id = nextActiveNode.node_id
             const {top, bottom} = nextActiveNode.element.getBoundingClientRect()
             if (top < 0 || bottom > window.innerHeight) {
                 nextActiveNode.element.scrollIntoView({"behavior": "instant", "block": "center"})
             }
         }
     }
-    // ============================== 
-    //    Ctrl-L
-    // ============================== 
+    /**
+     * ============================================================  
+     * Ctrl-L 
+     * 
+     * アクティブノードが画面の中心になるようにスクロール
+     * ============================================================  
+     */
     else if (e.ctrlKey && e.key == "l" && e.target?.tagName == "BODY") {
         e.preventDefault()
         if (currentActiveNode != null) {
             currentActiveNode.element.scrollIntoView({"behavior": "instant", "block": "center"})
         }
     }
-    // ============================== 
-    //    B or A
-    // ============================== 
+    /**
+     * ============================================================  
+     * B or A
+     * 
+     * B => 前にコードノードを追加する
+     * A => 次にコードノードを追加する
+     * 
+     * 現在のアクティブノードの直前・直後にNodeControlがなければ何もしない
+     * ============================================================  
+     */
     else if ((e.key == "b" || e.key == "a") && e.target?.tagName == "BODY") {
         if (currentActiveNode == null) {return}
         const nodeCotnrol = (e.key == "b") ? 
                 currentActiveNode.element.nextElementSibling : currentActiveNode.element.previousElementSibling
         if (nodeCotnrol != null && nodeCotnrol.classList.contains("node-control")) {
             await utils.addCode(nodeCotnrol, "afterend", {
-                user: Number(helper.isCreateMode())
+                user: Number(helper.problem_meta.isCreateMode())
             })
         }
     }
-    // ============================== 
-    //    Ctrl + D
-    // ============================== 
-    else if (e.ctrlKey && e.key == "d" && e.target?.tagName == "BODY") {
-        e.preventDefault()
-        if (currentActiveNode == null) {return}
-        try {
-            if (currentActiveNode.allowDelete()) {
-                let nextNode = 
-                    myNode.nextNode(currentActiveNode)
-                    || myNode.prevNode(currentActiveNode)
-                    || currentActiveNode.parentQuestionNode
-                currentActiveNode.delme()
-                myNode.activeNode.node_id = nextNode.nodeId
-            }
-        } catch (e) {}
-                
-    }
-})
-// イベントリスナー (dblclick)
-window.addEventListener("dblclick", e => {
-    const target = e.target?.closest(".node.explain")
-    if (target != null) {
-        new nodes.ExplainNode(target).showEditor()
-    }
 })
 
+
+// ExplainNodeをダブルクリックしたときのイベントリスナー
+window.addEventListener("dblclick", e => {
+    try {
+        const n = myNode.get(e.target?.closest("[data-node-type='explain']"))
+        if (n instanceof nodes.ExplainNode) {
+            n.showEditor()
+        }
+    } catch {}
+})
+
+
+// 読み込むJupyterNotebookファイル(.ipynb)が変化したときのイベントリスナー
 document.querySelector("input#ipynbForm")?.addEventListener("change", async e => {
     const file = e.target?.files[0]
     const loc = nodesContainer
-    if (loc == null) {
-        alert("unexpected error")
-        return
-    }
-    const user = helper.isCreateMode() ? 1 : 0
+    const user = helper.problem_meta.isCreateMode() ? 1 : 0
     await utils.loadIpynb(file, loc, user)
 
 })
 
-const runState = {
-    idle: "idle",
-    running: "running",
-    suspending: "suspending"
-}
 
 /**
- * KernelHandler classのrunningパラメータが変化した際に起動する関数
- * @param {boolean} oldValue
- * @param {boolean} newValue 
+ * `ExecutionHandler`の`running`パラメータが変化した際に起動する関数
+ * @param {boolean} oldValue `running`パラメータの変化前の値
+ * @param {boolean} newValue `running`パラメータの変化後の値
+ * 
+ * @see {@link exeHandler.running}
  */
-function setExecuteAnimation(kh, oldValue, newValue) {
-    // コード実行中(kh.running == true)の時
+function setExecuteAnimation(exeHandler, oldValue, newValue) {
+    // コード実行中(running == true)の時
     if (newValue) {
         try {
-            const runningNode = new nodes.CodeNode(kh.execute_task_q[0])
-            runningNode.element.setAttribute("run-state", runState.running)
-            runningNode.element.querySelector(".node-side")?.classList.add("bg-success-subtle")
-            kh.execute_task_q.slice(1, ).forEach(id => {
-                new nodes.CodeNode(id).element.setAttribute("run-state", runState.suspending)
+            const runningNode = new nodes.CodeNode(exeHandler.execute_task_q[0])
+            runningNode.element.dataset.runState = nodes.CodeNode.runState.RUNNING
+            exeHandler.execute_task_q.slice(1, ).forEach(id => {
+                new nodes.CodeNode(id).element.dataset.runState = nodes.CodeNode.runState.QUEUED
             })
         } catch(e) {
             if (e instanceof nodes.NodeError) {}
             else {console.error(e)}
         }
-    // 非コード実行中(kh.running == false)の時
+    // 非コード実行中(running == false)の時
     } else {
-        document.querySelectorAll(".code").forEach(elem => {
-            elem.setAttribute("run-state", runState.idle)
+        nodesContainer.querySelectorAll(":scope > [data-node-type='code']").forEach(elem => {
+            const dataset = elem.dataset 
+            if (dataset.runState == nodes.CodeNode.runState.QUEUED) {
+                elem.dataset.runState = nodes.CodeNode.runState.IDLE
+            }
         })
     }
 }
 /**
- * KernelHandlerがwsでメッセージを受信した際の処理を行う関数
+ * `ExecutionHandler`がWebSocketでメッセージを受信した際の処理を行う関数
  * @param {Object} oldValue 
  * @param {Object} newValue 
+ * 
+ * @see {@link exeHandler.msg}
  */
 function renderMessage(kh, oldValue, newValue) {
     if (newValue) {
@@ -434,12 +461,37 @@ function renderResult(res, form, type="text") {
 /**
  * activeNodeがnode_idを変更した際の処理を行う関数
  * @param {Object} activeNode 
- * @param {String | undefined} oldNodeId 
+ * @param {String} oldNodeId 
  * @param {String} newNodeId 
  */
 function setActiveNodePointer(activeNode, oldNodeId, newNodeId) {
-    const oldNode = myNode.get(oldNodeId ?? nodes.emptyNodeId)
-    const newNode = myNode.get(newNodeId ?? nodes.emptyNodeId)
+    const oldNode = myNode.get(oldNodeId)
+    const newNode = myNode.get(newNodeId)
     if (oldNode) {oldNode.element.classList.remove("active-node")}
     if (newNode) {newNode.element.classList.add("active-node")}
+}
+
+/**
+ * APIを通じてユーザー入力を取得し，word testのQuestion Nodeを補完する
+ */
+async function userAnswerCompletion() {
+    const res = await fetch(`${window.location.origin}/api/saves/${helper.problem_meta.p_id}`)
+    if (res.ok) {
+        const json = await res.json()
+        
+        const saveDatas = json.saves
+        nodesContainer.querySelectorAll("[data-node-type='question']").forEach(e => {
+            const questionNode = myNode.get(e)
+            if (questionNode instanceof nodes.QuestionNode) {
+                if (questionNode.ptype == nodes.QuestionNode.ptypes.WORDTEST) {
+                    if (saveDatas[questionNode.q_id] !== undefined) {
+                        questionNode.answerCompletion(saveDatas[questionNode.q_id])
+                    }
+                }
+            }
+        })
+    } 
+    else {
+        throw new error.FetchError(res.status, res.statusText)
+    }
 }
