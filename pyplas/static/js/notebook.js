@@ -19,14 +19,16 @@ document.querySelectorAll("[data-role='node']").forEach(e => {
     }
 })
     
-// markdown.js, highlight.jsの準備
-if (!helper.problem_meta.isCreateMode()) {
-    document.querySelectorAll(".explain:not([data-role='node'])").forEach(elem => {
-        // @ts-ignore marked.js
-        elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML)) })
+if (helper.problem_meta.mode == "problems") {
     await userAnswerCompletion()
     helper.addInnerLink(nodesContainer, notNull(document.querySelector("#rightSideBarScrollField")), "beforeend")
 } 
+
+
+// markdown.js, highlight.jsの準備
+document.querySelectorAll(".explain:not([data-role='node'])").forEach(elem => {
+    // @ts-ignore marked.js
+    elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML)) })
 // @ts-ignore highlight.js
 hljs.highlightAll();
 

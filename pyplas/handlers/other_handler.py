@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import sqlite3
 
-from .app_handler import DevHandler, InvalidJSONError
+from .app_handler import DevHandler, InvalidJSONError, ApplicationHandler
 from .main_handler import NON_CATEGORIZED_CAT_ID
 from pyplas.utils import globals as g
 
@@ -98,3 +98,12 @@ class ProfileHandler(DevHandler):
             self.logger.error(str(e))
             self.set_status(500, "INTERNAL SERVER ERROR")
             self.finish()
+
+class PracticeHandler(ApplicationHandler):
+    """練習ページ用ハンドラー"""
+
+    def get(self):
+        """
+        練習ページを表示する
+        """
+        self.render("practice.html")

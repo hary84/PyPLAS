@@ -45,7 +45,9 @@ def make_app(develop: bool):
         # ws
         (r"/ws/([\w-]+)/?", handlers.ExecutionHandler),
         # modules 
-        (r"/modules/(?P<module_name>[\w]+)/?", handlers.ModuleHandler)
+        (r"/modules/(?P<module_name>[\w]+)/?", handlers.ModuleHandler),
+        # practice
+        (r"/practice/?", handlers.PracticeHandler)
     ],
     default_handler_class=handlers.ErrorHandler,
     template_path=cfg.TEMPLATE_DIR,

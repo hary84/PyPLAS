@@ -6,7 +6,7 @@ from .kernel_handler import KernelHandler
 from .create_handler import ProblemCreateHandler
 from .category_handler import CategoryHandler
 from .api_handler import ProblemInfoHandler, CategoryInfoHandler, UserInputHandler
-from .other_handler import ProblemOrderHandler, ProfileHandler
+from .other_handler import ProblemOrderHandler, ProfileHandler, PracticeHandler
 from .file_handler import LogHandler
 from .execution_handler import ExecutionHandler
 from .module_handler import ModuleHandler
