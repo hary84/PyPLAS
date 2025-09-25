@@ -216,7 +216,7 @@ class ScoringHandler(ApplicationHandler):
             """
         ]
         g.db.executes(SQL,
-                      content=json.dumps(content),
+                      content=json.dumps(content, ensure_ascii=False),
                       result=result_int,
                       **asdict(self.json))
         
