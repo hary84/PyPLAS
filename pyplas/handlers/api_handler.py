@@ -16,7 +16,7 @@ class ProblemInfoHandler(ApplicationHandler):
         problem_records = g.db.execute(SQL, p_id=p_id)
         
         if len(problem_records) == 0:
-            self.set_status(404, f"Problem(p_id='{p_id}') is not found.")
+            self.set_status(404, f"PROBLEM({p_id}) NOT FOUND")
             self.finish()
 
         else:
@@ -35,7 +35,7 @@ class UserInputHandler(ApplicationHandler):
         records = g.db.execute(SQL, p_id=p_id)
 
         if len(records) == 0:
-            self.set_status(404, f"Problem(p_id='{p_id}') is not found.")
+            self.set_status(404, f"PROBLEM({p_id}) NOT FOUND")
             self.finish()
         else:
             record: dict = records[0]
@@ -55,7 +55,7 @@ class CategoryInfoHandler(ApplicationHandler):
         records = g.db.execute(SQL, cat_id=cat_id)
 
         if len(records) == 0:
-            self.set_status(404, f"Category(cat_id='{cat_id}') is not found.")
+            self.set_status(404, f"CATEGORY({cat_id}) NOT FOUND")
             self.finish()
         else:
             record: dict = records[0]

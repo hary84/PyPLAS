@@ -12,6 +12,7 @@ class KernelHandler(ApplicationHandler):
         super().prepare()
         g.km.updated.clear()
 
+    # GET
     async def get(self, kernel_id:Optional[str]=None, action:Optional[str]=None):
         """
         - `/kernels`              :管理しているすべてのカーネルを出力
@@ -27,9 +28,10 @@ class KernelHandler(ApplicationHandler):
 
         # GET /kernel/<kernel_id>/<action>
         elif kernel_id is not None and action is not None:
-            self.set_status(404, f"{self.request.uri} is not Found.")
+            self.set_status(404, f"NOT FOUND")
             self.finish()
 
+    # POST
     async def post(self, kernel_id:Optional[str]=None, action:Optional[str]=None):
         """ 
         - `/kernels`                        :ランダムなidでカーネルを起動
@@ -53,19 +55,20 @@ class KernelHandler(ApplicationHandler):
                 elif action == "interrupt":
                     await self.kernel_interrupt(kernel_id=kernel_id)
                 else:
-                    self.set_status(404, reason=f"{self.request.uri} is not Found.")
+                    self.set_status(404, reason=f"NOT FOUND")
                     self.finish()
         except DuplicateKernelError as e:
-            self.set_status(400, reason=f"kernel(id='{kernel_id}') is already exist.")
+            self.set_status(400, reason=f"BAD REQUEST (KERNEL ALREADY EXISTS)")
             self.finish()
         except KeyError as e:
-            self.set_status(404, reason=f"kernel(id='{kernel_id}') is not found.")
+            self.set_status(404, reason=f"KERNEL NOT FOUND")
             self.finish()
         except Exception as e:
             self.logger.error(e, exc_info=True)
-            self.set_status(500, reason="Internal Server Error")
+            self.set_status(500, reason="INTERNAL SERVER ERROR")
             self.finish()
 
+    # DELETE
     async def delete(self, kernel_id:Optional[str]=None, action:Optional[str]=None):
         """
         - `/kernels/<kernel_id>` :`kernel_id`のIDをもつカーネルを停止する
@@ -73,7 +76,7 @@ class KernelHandler(ApplicationHandler):
         try:
             # DELETE /kernels
             if kernel_id is None and action is None:
-                self.set_status(404, reason=f"{self.request.uri} is not found.")
+                self.set_status(404, reason=f"NOT FOUND")
                 self.finish()
 
             # DELETE /kernels/<kernel_id>
@@ -82,10 +85,10 @@ class KernelHandler(ApplicationHandler):
             
             # DELETE /kernels/<kernel_id>/<action>
             elif kernel_id is not None and action is not None:
-                self.set_status(404, reason=f"{self.request.uri} is not found.")
+                self.set_status(404, reason=f"NOT FOUND")
                 self.finish()
         except KeyError:
-            self.set_status(404, reason=f"kernel(id='{kernel_id}') is not found.")
+            self.set_status(404, reason=f"KERNEL NOT FOUND")
             self.finish()    
 
     def get_alive_kernels(self):

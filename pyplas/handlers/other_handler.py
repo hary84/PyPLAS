@@ -17,7 +17,9 @@ class ProfileChangeBody():
     profiles: dict[str, dict]
 
 class ProblemOrderHandler(DevHandler):
-    """問題順序変更用ハンドラー"""
+    """
+    問題順序変更用ハンドラー
+    """
     def get(self, cat_id: str):
         """
         問題順序変更ページを表示する
@@ -49,15 +51,21 @@ class ProblemOrderHandler(DevHandler):
             self.write({"DESCR": "Problem Order is updated."})
             self.logger.info(f"Update problems order in the category(cat_id='{cat_id}')")
         except InvalidJSONError:
-            self.set_status(400, "Invalid Request Body")
+            self.set_status(400, "BAD REQUEST (INVALID REQUEST BODY)")
+            self.finish()
+        except sqlite3.Error as e:
+            self.logger.error(e)
+            self.set_status(400, reason="BAD REQUEST (UNACCEPTABLE ENTRY)")
             self.finish()
         except Exception as e:
-            self.logger.error(str(e))
-            self.set_status(500, "Internal Server Error")
+            self.logger.error(e)
+            self.set_status(500, "INTERNAL SERVER ERROR")
             self.finish()
 
 class ProfileHandler(DevHandler):
-    """問題プロファイル変更用ハンドラー"""
+    """
+    問題プロファイル変更用ハンドラー
+    """
     def post(self):
         """
         pagesテーブルのプロファイル(title, category, status)を変更する
@@ -81,12 +89,12 @@ class ProfileHandler(DevHandler):
             self.write({"DESCR": "Profile of Problems is updated."})
             self.logger.info("Problem's profiles are updated")
         except InvalidJSONError:
-            self.set_status(400, "Invalid request body format. Please check your input and try again.")
+            self.set_status(400, "BAD REQUEST (INVALID REQUEST BODY)")
             self.finish()
         except sqlite3.Error as e:
-            self.set_status(400, f"[DB] Invalid Request; {e}")
+            self.set_status(400, reason="BAD REQUEST (UNACCEPTABLE ENTRY)")
             self.finish()
         except Exception as e:
             self.logger.error(str(e))
-            self.set_status(500, "Internal Server Error; Please show server access log.")
+            self.set_status(500, "INTERNAL SERVER ERROR")
             self.finish()

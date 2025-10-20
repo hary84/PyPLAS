@@ -17,7 +17,7 @@ class LogHandler(ApplicationHandler):
         try:
             cat_id = self.get_query_argument("cat")
         except MissingArgumentError:
-            self.set_status(400, reason="Invalid URL query")
+            self.set_status(400, reason="BAD REQUEST (INVALID URL QUERY)")
             self.finish()
             return
         

@@ -49,6 +49,12 @@
                         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#SideMenu" aria-label="Close"></button>
                     </div>
                     <div class="offcanvas-body flex-column">
+                        {% if is_dev_mode %}
+                            <p class="fs-4 text-secondary border-bottom border-dark">For Developer</p>
+                            <div class="mb-2">
+                                <a href="/create" class="btn btn-danger mx-1">Go to create page</a>
+                            </div>
+                        {% end %}
                         {% block side-content %}
                         {% end %}
                     </div> 
