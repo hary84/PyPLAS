@@ -37,6 +37,7 @@ def make_app(develop: bool):
         (r"/api/probleminfo/(?P<p_id>[\w-]+)/?", handlers.ProblemInfoHandler),
         (r"/api/categoryinfo/(?P<cat_id>[\w]+)/?", handlers.CategoryInfoHandler),
         (r"/api/saves/(?P<p_id>[\w-]+)/?", handlers.UserInputHandler),
+        (r"/api/categorymembers/(?P<cat_id>[\w-]+)/?", handlers.api_handler.CategoryMemberInfoHandler),
         # other
         (r"/edit/order/(?P<cat_id>[\w-]+)/?", handlers.ProblemOrderHandler),
         (r"/edit/profiles/?", handlers.ProfileHandler),
