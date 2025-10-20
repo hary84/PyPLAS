@@ -61,11 +61,11 @@ class ProblemHandler(ApplicationHandler):
                             p_id=p_id,
                             q_content=json.dumps(rcv_json["content"]))
         except InvalidJSONError as e:
-            self.set_status(400, reason="Invalid request body")
+            self.set_status(400, reason="BAD REQUEST (INVALID REQUEST BODY)")
             self.finish()
         except Exception as e:
             self.logger.error(e, exc_info=True)
-            self.set_status(500, reason="Internal Server Error")
+            self.set_status(500, reason="INTERNAL SERVER ERROR")
             self.finish()
         else:
             self.finish({

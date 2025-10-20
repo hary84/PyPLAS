@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import json
+import sqlite3
 from typing import Any, Optional
 import uuid
 
@@ -18,12 +19,16 @@ class RegisterBody():
 
 class ProblemCreateHandler(DevHandler):
     """問題作成/編集ハンドラ"""
-            
+    
+    # GET
     def get(self, p_id:Optional[str]=None):
         """
-        - `/create`                           :問題リスト
-        - `/create/new`                       :新規問題作成ページ
-        - `/create/<p_id(uuid)>`              :問題編集ページ
+        - `/create`
+            問題リスト
+        - `/create/new`
+            新規問題作成ページ
+        - `/create/<p_id(uuid)>`
+            問題編集ページ
         """
         try:
             # GET /create
@@ -35,20 +40,23 @@ class ProblemCreateHandler(DevHandler):
                 self.render_problem_editor(p_id=p_id)
         except AssertionError as e:
             self.logger.error(e)
-            self.write_error(404, reason=str(e))
+            self.write_error(404, reason=f"PROBLEM({p_id}) NOT FOUND")
         except Exception as e:
             self.logger.error(e, exc_info=True)
-            self.write_error(500, reason="Intenal Server Error")
+            self.write_error(500, reason="INTERNAL SERVER ERROR")
 
+    # POST
     def post(self, p_id:Optional[str]=None):
         """
-        - `/create/new`      :新規問題登録
-        - `/create/<p_id>`   :登録済みの問題の編集保存
+        - `/create/new`
+            新規問題登録
+        - `/create/<p_id>`
+            登録済みの問題の編集保存
         """
         try:
             # POST /create
             if p_id is None:
-                self.set_status(404, reason=f"{self.request.uri} is not Found.")
+                self.set_status(404, reason=f"PROBLEM NOT FOUND")
                 self.finish()
 
             # POST /create/<p_id>
@@ -56,25 +64,37 @@ class ProblemCreateHandler(DevHandler):
                 self.json = RegisterBody(**self.decode_request_body(validate="register.json"))
                 self.register(p_id)
         except InvalidJSONError:
-            self.set_status(400, reason="Invalid Request-Body")
+            self.set_status(400, reason="BAD REQUEST (INVALID REQUEST BODY)")
+            self.finish()
+        except sqlite3.Error as e:
+            self.logger.error(e)
+            self.set_status(400, reason="BAD REQUEST (UNACCEPTABLE ENTRY)")
             self.finish()
         except Exception as e:
             self.logger.error(e, exc_info=True)
-            self.set_status(500, reason="internal server error")
+            self.set_status(500, reason="INTERNAL SERVER ERROR")
             self.finish()
 
     def delete(self, p_id:Optional[str]=None):
         """
         - `/create/<p_id>`   :`p_id`のIDを持つ問題を削除する
         """
-        # DELETE /create
-        if p_id is None:
-            self.set_status(404, reason=f"{self.request.uri} is not Found.")
-            self.finish()
+        try:
+            # DELETE /create
+            if p_id is None:
+                self.set_status(404, reason=f"PROBLEM NOT FOUND")
+                self.finish()
 
-        # DELETE /create/<p_id>
-        elif p_id is not None:
-            self.delete_problem(p_id)
+            # DELETE /create/<p_id>
+            elif p_id is not None:
+                self.delete_problem(p_id)
+        except AssertionError as e:
+            self.set_status(404, f"PROBLEM({p_id}) NOT FOUND")
+            self.finish()
+        except Exception as e:
+            self.logger.error(e, exc_info=True)
+            self.set_status(500, reason="INTERNAL SERVER ERROR")
+            self.finish()
 
     def render_problem_list(self):
         """
@@ -110,8 +130,9 @@ class ProblemCreateHandler(DevHandler):
             LEFT OUTER JOIN categories AS cat ON category = cat.cat_id 
             WHERE p_id = :p_id"""
             pages = g.db.execute(sql, p_id=p_id)
-            assert len(pages) != 0, f"problem({p_id}) is not found in DB"
+            assert len(pages) != 0
             page = pages[0]
+            
             self.render("create.html",
                         title=page["title"],
                         page=json.loads(page["page"]),
@@ -154,9 +175,15 @@ class ProblemCreateHandler(DevHandler):
     def delete_problem(self, p_id: str):
         """
         問題を削除する
+
+        問題が見つからない場合、`AssertionError`を投げる
         """
-        sql = r"""DELETE FROM pages WHERE p_id=:p_id"""
-        g.db.execute(sql, p_id=p_id)
-        self.finish({"p_id": p_id,
-                        "DESCR": f"Problem(id='{p_id}') is successfully deleted."})
-        self.logger.info(f"Problem(id={p_id}) is deleted.")
+        sql = r"""DELETE FROM pages WHERE p_id=:p_id RETURNING *"""
+        res = g.db.execute(sql, p_id=p_id)
+        assert len(res) == 1
+        res = res[0]
+
+        descr = f"Problem(id='{p_id}') is successfully deleted."
+        res["DESCR"] = descr
+        self.logger.info(descr)
+        self.finish(res)
