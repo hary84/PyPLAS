@@ -5,7 +5,7 @@ import {notNull} from "./modules/helper.js"
 /** 
  * @typedef {Object} CategoryMembers カテゴリの詳細情報
  * @prop {string=} cat_id 
- * @prop {array} problems
+ * @prop {Array<any>} problems
  * @prop {string} DESCR
  */
 
@@ -14,45 +14,52 @@ const searchCategoryMemberSelect = notNull(document.querySelector("#SearchCatego
 /** @type {Element} */
 const categoryMembersLinks = notNull(document.querySelector("#CategoryMembersLinks"))
 
+/** @description sessionStorageに格納された現在のカテゴリを取得するためのキー */
+const KeyForCategoryID = "practice-SearchCategory"
+
+const currentCategoryID = sessionStorage.getItem(KeyForCategoryID)
+if (currentCategoryID !== undefined) {
+    searchCategoryMemberSelect.querySelectorAll("option").forEach(async e => {
+        if (e.value == "-1") {
+            return
+        }
+        if (e.value == currentCategoryID) {
+            e.selected = true
+            const m = await getCategoryMember(currentCategoryID)
+            showCategoryTable(m)
+        }
+    })
+}
+
 
 // モーダル中のselectタグが変化したときのイベント
 searchCategoryMemberSelect?.addEventListener("change", async e => {
     /** @type {string} */
     const cat_id = e.target.value
+    sessionStorage.setItem(KeyForCategoryID, cat_id)
+
     if (cat_id == "-1") {
         categoryMembersLinks.innerHTML = ""
         return
     }
+
     const mems = await getCategoryMember(cat_id)
+    showCategoryTable(mems)
+})
 
-    categoryMembersLinks.innerHTML = ""
-    let trs = ''
-    for (var mem of mems.problems) {
-        const p_id = mem.p_id
-        /** @type {string} */
-        const q_ids = mem.q_id
-        let links = ""
-        let n = 1
-        for (var q_id of q_ids.split(",")) {
-            links += `<a class='px-2' href='/practice?p_id=${p_id}&q_id=${q_id}'>${n}</a>`
-            n += 1
-        }
-        console.log(links)
-        trs += `<tr  class='px-3'><td>${mem.title}</td><td>${links}</td></tr>`
+document.addEventListener("click", e => {
+    /** @type {HTMLElement} */
+    const btn = e.target?.closest("a, button")
+    if (btn === null || btn === undefined) {return}
+    const action = btn.dataset.action 
+    console.log(action)
+
+    if (action == "remove-question") {
+        const blk = btn.closest("#selectedQuestion")
+        const prv = blk?.previousElementSibling
+        blk?.remove()
+        if (prv.dataset.role == "node-control") {prv?.remove()}
     }
-
-    const html = `
-    <table class='table table-sm table-hover table-striped mx-auto table-success' style='width: 90%'>
-        <thead>
-            <tr>
-                <th scope='col' style='width: 65%'>Title</th>
-                <th scope='col' style='width: 35%'>Questions</th>
-            </tr>
-        </thead>
-        <tbody>${trs}</tbody>
-    </table>
-    `
-    categoryMembersLinks.insertAdjacentHTML("beforeend", html)
 
 })
 
@@ -70,45 +77,37 @@ async function getCategoryMember(cat_id) {
         throw new error.FetchError(res.status, res.statusText)
     }
 }
-/**
- * 指定のカテゴリを削除する
- * @param {string} cat_id 
+
+/** 問題一覧を表形式にして表示する
+ * @param {CategoryMembers} membersArray
  */
-async function deleteCategory(cat_id) {
-    const res = await fetch(`${window.location.origin}/edit/categories/${cat_id}`,{
-        method: "DELETE",
-    })
-    if (res.ok) {
-        window.location.reload()
+function showCategoryTable(membersArray) {
+    categoryMembersLinks.innerHTML = ""
+    let trs = ''
+    for (var mem of membersArray.problems) {
+        const p_id = mem.p_id
+        /** @type {string} */
+        const q_ids = mem.q_id
+        let links = ""
+        let n = 1
+        for (var q_id of q_ids.split(",")) {
+            links += `<a class='px-2' href='/practice?p_id=${p_id}&q_id=${q_id}'>${n}</a>`
+            n += 1
+        }
+        trs += `<tr><td style='padding-left: .5rem !important'>${mem.title}</td><td>${links}</td></tr>`
     }
-    else {
-        throw new error.FetchError(res.status, res.statusText)
-    }
+
+    const html = `
+    <table class='table table-sm table-hover table-striped mx-auto table-light' style='width: 90%'>
+        <thead>
+            <tr>
+                <th scope='col' style='width: 65%'>Title</th>
+                <th scope='col' style='width: 35%'>Questions</th>
+            </tr>
+        </thead>
+        <tbody>${trs}</tbody>
+    </table>
+    `
+    categoryMembersLinks.insertAdjacentHTML("beforeend", html)    
 }
-/**
- * カテゴリを更新する
- * @param {string} cat_id 
- */
-async function updateCategory(cat_id) {
-    /** @type {CategoryInfo} */
-    const updateInfo = {
-        cat_name: categoryNameInput.value,
-        logo_url: categoryLogoURLSelect.value,
-        description: categoryDescInput.value,
-    }
-    const res = await fetch(`${window.location.origin}/edit/categories/${cat_id}`, {
-        method: "POST",
-        headers: {"Content-type": "application/json"},
-        body: JSON.stringify(updateInfo)
-    })
-    if (res.ok) {
-        window.location.reload()
-    }
-    else {
-        throw new error.FetchError(res.status, res.statusText)
-    }
-}
-
-
-
 

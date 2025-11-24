@@ -12,13 +12,17 @@ export const problem_meta = (() => {
     const p_id = groups.p_id;
 
     return {
+        modes: {
+            create: "create",
+            problems: "problems"
+        },
         /** モード (例: `"problems"`, `"create"`) */
         mode,
         /** 問題ID */
         p_id,
         /** モードが `"create"` なら `true` */
         isCreateMode() {
-            return this.mode === "create";
+            return this.mode === this.modes.create;
         }
     };
 })();
