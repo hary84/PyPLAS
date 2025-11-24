@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 import sqlite3
+from tornado.web import MissingArgumentError
+import json
 
-from .app_handler import DevHandler, InvalidJSONError
+from .app_handler import DevHandler, InvalidJSONError, ApplicationHandler
 from .main_handler import NON_CATEGORIZED_CAT_ID
 from pyplas.utils import globals as g
 
@@ -98,3 +100,37 @@ class ProfileHandler(DevHandler):
             self.logger.error(str(e))
             self.set_status(500, "INTERNAL SERVER ERROR")
             self.finish()
+
+class PracticeHandler(ApplicationHandler):
+    """練習ページ用ハンドラー"""
+
+    def get(self):
+        """
+        練習ページを表示する
+        """
+        query = r"""SELECT cat_id, cat_name FROM categories"""
+        categories = g.db.execute(query)
+        
+
+        try: 
+            p_id = self.get_query_argument("p_id")
+            q_id = self.get_query_argument("q_id")
+        except MissingArgumentError as e:
+            self.render("practice.html", initial=None, categories=categories)
+            return
+        
+        query = r"""SELECT 
+                        J.value AS node
+                    FROM pages, JSON_EACH(JSON_EXTRACT(pages.page, '$.body')) AS J
+                    WHERE p_id = :p_id 
+                    AND  JSON_EXTRACT(node, '$.q_id') = :q_id 
+                """ 
+        res = g.db.execute(query, p_id=p_id, q_id=q_id)
+        if len(res) != 1:
+            self.render("practice.html", initial=None, categories=categories)
+        else:
+            res = res[0]["node"]
+            res = json.loads(res)
+            self.render("practice.html", initial=res, categories=categories)
+
+        

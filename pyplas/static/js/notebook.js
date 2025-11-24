@@ -3,7 +3,7 @@
 import { myNode } from "./modules/nodes.js"
 import * as nodes from "./modules/nodes.js"
 import * as utils from "./modules/utils.js"
-import { notNull } from "./modules/helper.js"
+import { notNull, problem_meta } from "./modules/helper.js"
 import * as helper from "./modules/helper.js"
 import reseter from "./modules/reset-manager.js"
 import * as error from "./modules/error.js"
@@ -19,14 +19,16 @@ document.querySelectorAll("[data-role='node']").forEach(e => {
     }
 })
     
-// markdown.js, highlight.jsの準備
-if (!helper.problem_meta.isCreateMode()) {
-    document.querySelectorAll(".explain:not([data-role='node'])").forEach(elem => {
-        // @ts-ignore marked.js
-        elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML)) })
+if (problem_meta.mode == problem_meta.modes.problems) {
     await userAnswerCompletion()
     helper.addInnerLink(nodesContainer, notNull(document.querySelector("#rightSideBarScrollField")), "beforeend")
 } 
+
+
+// markdown.js, highlight.jsの準備
+document.querySelectorAll(".explain:not([data-role='node'])").forEach(elem => {
+    // @ts-ignore marked.js
+    elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML)) })
 // @ts-ignore highlight.js
 hljs.highlightAll();
 
@@ -75,8 +77,14 @@ document.querySelector("body")?.addEventListener("click", async e => {
             await exeHandler.kh.kernelInterrupt(exeHandler.kernel_id)
         }// ユーザ入力を保存 / 作成した問題を登録
         else if (action == "save") {
-            if (!helper.problem_meta.isCreateMode()) {await utils.saveUserData()}
-            else {await utils.registerProblem()}
+            switch (problem_meta.mode) {
+                case problem_meta.modes.create:
+                    await utils.registerProblem()
+                    break;
+                case problem_meta.modes.problems:
+                    await utils.saveUserData()
+                    break
+            }
         }// ExplainNodeを追加
         else if (action == "add-MD") {
             e.stopPropagation()
@@ -87,7 +95,7 @@ document.querySelector("body")?.addEventListener("click", async e => {
         else if (action == "add-Code") {
             e.stopPropagation()
             const nc = notNull(target.closest(".node-control"))
-            const codeNode = await utils.addCode(nc, "afterend", {user: Number(helper.problem_meta.isCreateMode())})
+            const codeNode = await utils.addCode(nc, "afterend", {user: Number(problem_meta.isCreateMode())})
             myNode.activeNode.node_id = codeNode.node_id
         }// QuestionNodeを追加
         else if (action == "add-Question") {
@@ -140,7 +148,7 @@ document.querySelector("body")?.addEventListener("click", async e => {
                     return
                 }
                 const loc = node.answerField
-                const user = helper.problem_meta.isCreateMode()? 1 : 0
+                const user = problem_meta.isCreateMode()? 1 : 0
                 await utils.loadIpynb(file, loc, user)
             }
         }
@@ -205,7 +213,7 @@ window.addEventListener("keydown", async e => {
             exeHandler.execute(currentActiveNode.node_id)
         }
         else if (currentActiveNode instanceof nodes.QuestionNode) {
-            if (!helper.problem_meta.isCreateMode()) {
+            if (!problem_meta.isCreateMode()) {
                 await currentActiveNode.scoring()
                 const questionNavi = document.querySelector(`#question-nav a[href='#q-id-${currentActiveNode.q_id}']`)
                 if (questionNavi === null) {return}
@@ -238,7 +246,7 @@ window.addEventListener("keydown", async e => {
                 const nodeControl = currentActiveNode.answerField.querySelector(".node-control")
                 if (nodeControl != null) {
                     const nextActiveNode = await utils.addCode(nodeControl, "afterend", {
-                        user: Number(helper.problem_meta.isCreateMode())
+                        user: Number(problem_meta.isCreateMode())
                     })
                     myNode.activeNode.node_id = nextActiveNode.node_id
                 }
@@ -285,10 +293,13 @@ window.addEventListener("keydown", async e => {
      */
     else if (e.ctrlKey && e.key == "s" && e.target?.tagName == "BODY") {
         e.preventDefault()
-        if (!helper.problem_meta.isCreateMode()) {
-            await utils.saveUserData()
-        } else {
-            await utils.registerProblem()
+        switch (problem_meta.mode) {
+            case problem_meta.modes.problems:
+                await utils.saveUserData()
+                break
+            case problem_meta.modes.create:
+                await utils.registerProblem()
+                break
         }
     }
     /**
@@ -475,7 +486,7 @@ function setActiveNodePointer(activeNode, oldNodeId, newNodeId) {
  * APIを通じてユーザー入力を取得し，word testのQuestion Nodeを補完する
  */
 async function userAnswerCompletion() {
-    const res = await fetch(`${window.location.origin}/api/saves/${helper.problem_meta.p_id}`)
+    const res = await fetch(`${window.location.origin}/api/saves/${problem_meta.p_id}`)
     if (res.ok) {
         const json = await res.json()
         

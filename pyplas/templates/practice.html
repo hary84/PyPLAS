@@ -1,0 +1,107 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<title>PyPLAS - edit</title>
+<link rel="stylesheet" href="{{ static_url('css/style2.css') }}">
+<script src="{{ static_url('js/notebook.js') }}" type="module"></script>
+<script src="{{ static_url('js/practice.js') }}" type="module"></script>
+<style>
+    .node {
+        margin-top: 0 !important;
+        margin-bottom: .25rem !important;
+    }
+    #kernel-ops [data-action="save"] {
+        display: none;
+    }
+    .btn-group-addQ {
+        display: none;
+    }
+    #selectedQuestion {
+        text-align: left;
+    }
+
+</style>
+{% end %}
+
+{% block head-nav-li %}
+<li class="nav-item align-self-center">
+    <a href="/" class="nav-link text-light"> Home</a>
+</li>
+{% end %}
+
+{% block side-content %}
+{% module Template('modules/side_kernel_ops.html') %}
+{% module Template("modules/sidebar-documentation.html") %}
+{% end %}
+
+{% block main %}
+<div class="my-3" id="summary">
+    <p class="fs-3 border-bottom border-dark ps-1"> Practice</p>
+    <div class="ps-3">
+        <nav>
+            <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                <button class="nav-link active" id="nav-summary-tab" data-bs-toggle="tab" data-bs-target="#navSummary" type="button" role="tab" aria-controls="navSummary" aria-selected="true">Summary</button>
+                <button class="nav-link disabled" id="nav-data-tab" data-bs-toggle="tab" data-bs-target="#navData" type="button" role="tab" aria-controls="navData" aria-selected="false">Data Source</button>
+                <button class="nav-link disabled" id="nav-env-tab" data-bs-toggle="tab" data-bs-target="#navEnv" type="button" role="tab" aria-controls="navEnv" aria-selected="false">Environment</button>
+            </div>
+        </nav>
+        <div class="tab-content border bg-light" id="nav-tabContent">
+            <div class="tab-pane fade show active p-2" id="navSummary" role="tabpanel" aria-labelledby="nav-summary-tab">
+                {% module Explain(editor=False, content="自由にコードを記述して動作を確かめましょう. <br>練習用のCSVファイルはすべてパス`/pyplas/static/data/`から利用できます．") %}
+            </div>
+            <div class="tab-pane fade p-2" id="navData" role="tabpanel" aria-labelledby="nav-data-tab">
+            </div>
+            <div class="tab-pane fade p-2" id="navEnv" role="tabpanel" aria-labelledby="nav-env-tab">
+            </div>
+        </div>
+    </div>
+    <div class="ms-3 mt-2 border-dark-subtle rounded border">
+        <div class="my-2 mx-auto" style="width: 95%">
+            <label for="SearchCategorySelect">カテゴリから問題を検索</label>
+            <select id="SearchCategorySelect" class="form-select" aria-label="Search Category">
+                <option selected value="-1">Search Categrory</option>
+                {% for cat in categories %}
+                    <option value="{{cat['cat_id']}}">{{cat['cat_name']}}</option>
+                {% end %}
+            </select>
+        </div>
+        <div class="mt-3" id="CategoryMembersLinks"></div>
+    </div>
+</div>
+<div id="sourceCode">
+    <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
+    <div class="dynamic-nodes-container position-relative p-2" id="nodesContainer">
+
+        {% module NodeControl(question=False) %}
+        {% if initial is not None %}
+            <div class="mx-auto border border-success-subtle bg-light rounded border-3 bg-whilte radius-4" id="selectedQuestion" style="width: 90%;">
+                <div class="d-flex">
+                    <div style="width: 95%;">
+                        {% module Explain(content=initial['question']) %}
+                        {% if initial["ptype"] == 1 %}
+                            {% for c in initial['conponent'] %}
+                                {% if c["type"] == "explain" %}
+                                    {% module Explain(**c, editor=False, allow_del=False) %}
+                                {% else %}
+                                    {% module Code(**c, user=1, allow_del=False) %}
+                                {% end %}
+                            {% end %}
+                        {% end %}
+                    </div>
+                    <button class="btn btn-close mt-1" type="button" data-action="remove-question" style="width: 5%;"></button>
+                </div>
+            </div>
+        {% module NodeControl(question=False) %}
+        {% end %}
+        
+        <!-- {% module Code(allow_del=True)%}
+        {% module NodeControl(question=False) %} -->
+
+        <i class="bi bi-file-earmark-code" id="blankIcon"></i>
+    </div>
+</div>
+{% end %}
+
+{% block side-content-r %}
+<h4 class="mb-4"><span class="badge bg-info" id="problemCategory">Practice</span></h4>
+{% end %}

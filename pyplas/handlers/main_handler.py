@@ -1,6 +1,7 @@
 from .app_handler import ApplicationHandler
 from pyplas.utils import globals as g
 
+# どのカテゴリにも属さない場合のカテゴリID
 NON_CATEGORIZED_CAT_ID = "0"       
 
 class TopHandler(ApplicationHandler):

@@ -83,7 +83,9 @@ class ScoringHandler(ApplicationHandler):
 
         p_id, q_idが存在しない場合, `AssertionError`を投げる
         """
-        SQL = r"""SELECT JSON_EXTRACT(answers, '$.' || :q_id) AS answer
+        exp = []
+        SQL = r"""SELECT JSON_EXTRACT(answers, '$.' || :q_id) AS answer,
+                JSON_EXTRACT(explanations, '$.' || :q_id) AS exp
             FROM pages WHERE p_id=:p_id"""
         records:list = g.db.execute(SQL, 
                                     p_id=self.json.p_id,
@@ -101,6 +103,7 @@ class ScoringHandler(ApplicationHandler):
         self.insert_log_and_progress(result, self.json.answers)
         if result:
             self.update_progress()
+            exp = records[0]["exp"]
 
         self.logger.info(f"Scoring question({self.json.p_id}/{self.json.q_id})")
         self.finish({
@@ -108,6 +111,7 @@ class ScoringHandler(ApplicationHandler):
             "q_id": self.json.q_id,
             "html": content,
             "result": result,
+            "explanation": exp,
             "DESCR": f"Scoring question"
         })
 

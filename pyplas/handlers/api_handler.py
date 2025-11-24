@@ -61,3 +61,26 @@ class CategoryInfoHandler(ApplicationHandler):
             record: dict = records[0]
             record["DESCR"] = f"Get the category informations"
             self.write(record)
+
+
+class CategoryMemberInfoHandler(ApplicationHandler):
+    """
+    あるカテゴリに属している問題の情報を提供する
+    """
+    def get(self, cat_id: str):
+
+        query = r"""
+            SELECT 
+                p_id, title, status, register_at,
+                GROUP_CONCAT(JSON_EXTRACT(J.value, '$.q_id')) AS q_id 
+            FROM pages, JSON_EACH(JSON_EXTRACT(pages.page, '$.body')) AS J
+            WHERE category = :cat_id 
+            AND  JSON_EXTRACT(J.value, '$.type') = 'question' 
+            GROUP BY p_id, title, status, register_at
+            """
+        res = g.db.execute(query, cat_id=cat_id)
+        self.write({
+            "cat_id": cat_id,
+            "problems": res,
+            "DESCR": "Get Category Member Problem Info"
+        })
