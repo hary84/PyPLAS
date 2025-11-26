@@ -109,6 +109,7 @@
 						{% elif exp_node["type"] == "code" %}
 							{% module Code(content=exp_node["content"], readonly=user==0, user=user, allow_del=user) %}
 						{% end %}
+						{% module NodeControl(question=False) %}
 					{% end %}
 				</div>
 				{% end %}		
