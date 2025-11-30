@@ -2,6 +2,7 @@
 
 import {problem_meta, notNull} from "./helper.js"
 import * as error from "./error.js"
+import * as utils from "./utils.js"
 
 export const nodeType = {
     /** @type {"code"} */ code: "code",
@@ -290,6 +291,11 @@ export class QuestionNode extends BaseNode {
         return c
     }
 
+    get explanationField() {
+        const c = this.element.querySelector("[data-role='ExplanationNodeContainer']")
+        return c 
+    }
+
     get isEditable() {
         /** @type {HTMLInputElement | null} */
         const c = this.element.querySelector("[data-role='check-editable']")
@@ -388,11 +394,8 @@ export class QuestionNode extends BaseNode {
                         }
                     })
                 }
-                const expContainer = notNull(
-                    this.element.querySelector("[data-role='ExplanationNodeContainer']"),
-                    new NodeStructureError(this.type)
-                )
-                expContainer.querySelectorAll("[data-role='node']").forEach(e => {
+                
+                notNull(this.explanationField).querySelectorAll("[data-role='node']").forEach(e => {
                     const p = getNodeParamsByElement(e)
                     if (p.node_type == nodeType.explain) {
                         explanations.push({
@@ -454,6 +457,35 @@ export class QuestionNode extends BaseNode {
             // トーストを表示してプログレスバーを非表示
             this._showToast(json.html)
             this._hideProgressBar()
+            if (progress == QuestionNode.progress.COMPLETE && this.ptype == QuestionNode.ptypes.CORDTEST) {
+                this.explanationField.innerHTML = ""
+                const exp = JSON.parse(json.explanation)
+                for (var n of exp) {
+                    if (n.type == nodeType.code) {
+                        await utils.addCode(this.explanationField, "beforeend", {
+                            content: n.content,
+                            user: QuestionNode.user.LEANER,
+                            allow_del: false,
+                        })
+                    } else if (n.type == nodeType.explain) {
+                        try {
+                            await utils.addMD(this.explanationField, "beforeend", {
+                                /** @ts-ignore highlight.js, marked.js */
+                                content: marked.parse(n.content),
+                                allow_del: false,
+                                editor: false
+                            })
+                        } catch (e) {
+                            if (e instanceof NodeError) {}
+                            else {throw e}
+                        }
+                    }
+                }
+                this.explanationField?.querySelectorAll("pre code").forEach(e => {
+                    // @ts-ignore highlight.js
+                    hljs.highlightElement(e);
+                })
+            }
         }
         else if (res.ok && res.status == 202) {}
         else { 

@@ -19,19 +19,18 @@ document.querySelectorAll("[data-role='node']").forEach(e => {
     }
 })
     
+// markdown.js, highlight.jsの準備
+document.querySelectorAll(".explain:not([data-role='node'])").forEach(elem => {
+    // @ts-ignore marked.js
+    elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML)) 
+})
+// @ts-ignore highlight.js
+hljs.highlightAll();
+
 if (problem_meta.mode == problem_meta.modes.problems) {
     await userAnswerCompletion()
     helper.addInnerLink(nodesContainer, notNull(document.querySelector("#rightSideBarScrollField")), "beforeend")
 } 
-
-
-// markdown.js, highlight.jsの準備
-document.querySelectorAll(".explain:not([data-role='node'])").forEach(elem => {
-    // @ts-ignore marked.js
-    elem.innerHTML = marked.parse(helper.unescapeHTML(elem.innerHTML)) })
-// @ts-ignore highlight.js
-hljs.highlightAll();
-
 
 
 // カーネルの起動・WebSocketの接続・プロパティの監視
