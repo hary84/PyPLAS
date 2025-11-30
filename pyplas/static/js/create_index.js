@@ -15,7 +15,7 @@ let subWindow = null
 observeForm(tableElement)
 
 // paginationを埋め込む
-helper.pagination.init("#problemList", itemsPerPage)
+helper.pagination.init(tableElement, itemsPerPage)
 
 // カテゴリーフィルターの有効化
 activateCategoryTagFilter(tableElement)
@@ -123,6 +123,7 @@ async function updateProfiles() {
  */
 function observeForm(tableElement) {
     const initialFormValue = {}
+    // テーブル内のすべてのINPUT, SELECTタグの初期値を列ごとに管理する
     tableElement.querySelectorAll("input, select").forEach(elem => {
         const p_id = notNull(elem.closest("tr")?.getAttribute("target"))
         if (typeof p_id === "string" && !(p_id in initialFormValue)) {
@@ -185,9 +186,10 @@ function activateCategoryTagFilter(tableElement) {
             // 該当するカテゴリの列のみを表示する
             Array.from(tableElement.querySelectorAll("tr")).slice(1, ).forEach(e => {
                 const registeredCat = e.querySelector("select.select-category")?.value
+                // カテゴリが選択されたときは選択されたカテゴリと一致しない列を非表示にする
                 if (btn.classList.contains("active")) {
                     e.classList.toggle("d-none", registeredCat !== cat_id)
-                }
+                } // カテゴリ選択が解除されたときはすべての列を表示する
                 else if (!btn.classList.contains("active")) {
                     e.classList.remove("d-none")
                 }

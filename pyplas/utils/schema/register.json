@@ -32,13 +32,26 @@
         "answers": {
             "type": "object",
             "additionalProperties": {
-                "anyOf": [{
-                    "type": "array",
-                    "items": {"type": "string"}
-                }]
+                "type": "array",
+                "items": {"type": "string"}
+            }
+        },
+        "explanations": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "anyOf": [
+                        {"$ref": "#/definitions/code"},
+                        {"$ref": "#/definitions/explain"}
+                    ]
+                }
             }
         }
     },
+    "additionalProperties": false,
+    "required": ["title", "page", "answers", "explanations"],
+
     "definitions": {
         "code": {
             "type": "object",

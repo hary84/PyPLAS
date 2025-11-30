@@ -16,7 +16,7 @@ class ProblemInfoHandler(ApplicationHandler):
         problem_records = g.db.execute(SQL, p_id=p_id)
         
         if len(problem_records) == 0:
-            self.set_status(404, f"Problem(p_id='{p_id}') is not found.")
+            self.set_status(404, f"PROBLEM({p_id}) NOT FOUND")
             self.finish()
 
         else:
@@ -35,7 +35,7 @@ class UserInputHandler(ApplicationHandler):
         records = g.db.execute(SQL, p_id=p_id)
 
         if len(records) == 0:
-            self.set_status(404, f"Problem(p_id='{p_id}') is not found.")
+            self.set_status(404, f"PROBLEM({p_id}) NOT FOUND")
             self.finish()
         else:
             record: dict = records[0]
@@ -55,9 +55,32 @@ class CategoryInfoHandler(ApplicationHandler):
         records = g.db.execute(SQL, cat_id=cat_id)
 
         if len(records) == 0:
-            self.set_status(404, f"Category(cat_id='{cat_id}') is not found.")
+            self.set_status(404, f"CATEGORY({cat_id}) NOT FOUND")
             self.finish()
         else:
             record: dict = records[0]
             record["DESCR"] = f"Get the category informations"
             self.write(record)
+
+
+class CategoryMemberInfoHandler(ApplicationHandler):
+    """
+    あるカテゴリに属している問題の情報を提供する
+    """
+    def get(self, cat_id: str):
+
+        query = r"""
+            SELECT 
+                p_id, title, status, register_at,
+                GROUP_CONCAT(JSON_EXTRACT(J.value, '$.q_id')) AS q_id 
+            FROM pages, JSON_EACH(JSON_EXTRACT(pages.page, '$.body')) AS J
+            WHERE category = :cat_id 
+            AND  JSON_EXTRACT(J.value, '$.type') = 'question' 
+            GROUP BY p_id, title, status, register_at
+            """
+        res = g.db.execute(query, cat_id=cat_id)
+        self.write({
+            "cat_id": cat_id,
+            "problems": res,
+            "DESCR": "Get Category Member Problem Info"
+        })

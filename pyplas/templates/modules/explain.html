@@ -1,10 +1,12 @@
 {% if editor %}
-<div class="explain node my-3 pe-2" node-id="{{node_id}}" style="padding-left: .5rem;">
+<div class="explain node my-3 pe-2" data-role="node" 
+    data-node-id="{{ node_id }}" data-node-type="explain"
+    data-node-config='{"allow_del": {{"true" if allow_del else "false"}}}'>
     {% module Template("modules/MDE.html",
                         content=content, 
                         has_del=allow_del,
                         ) %}
 </div>
 {% else %}
-<div class="explain static my-3 pe-2" style="padding-left: .5rem;">{% raw content %}</div>
+<div class="explain static my-3 pe-2">{% raw content %}</div>
 {% end %}

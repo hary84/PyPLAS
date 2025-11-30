@@ -1,104 +1,123 @@
-<div class="node question card my-2 mx-2 position-relative {{'editable' if editable else ''}} accordion" node-id="{{ node_id }}"
-			id="q-id-{{ q_id }}" q-id="{{ q_id }}" ptype="{{ ptype }}" progress="{{ progress }}">
+<div class="node question card my-2 mx-2 position-relative accordion" id="q-id-{{ q_id }}"
+	data-role="node" data-node-type="question" data-node-id="{{ node_id }}" data-q-progress="{{ progress }}" data-q-id="{{q_id}}"
+	data-q-ptype="{{ptype}}">
 	<div class="card-header bg-success-subtle d-flex">
 		<button class="accordion-button bg-success-subtle" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{q_id}}" style="padding: 0;">
 			Question <span class="ms-2 fw-bold text-secondary">{{"Word Test" if ptype==0 else "Code Test"}}</span>
 		</button>
-		{% if user == 0 %}
-		<span class="progress-badge badge rounded-pill ms-3"> </span>
-		{% elif user == 1 %}
-		<div class="ms-3 d-flex">
+		<span class="progress-badge badge rounded-pill ms-3 {{'d-none' if user == 1 else ''}}"> </span>
+		<div class="ms-3 {{'d-none' if user == 0 else 'd-flex'}}">
 			{% if ptype == 1 %}
 			<div class="form-check form-switch">
-				<input class="form-check-input editable-flag" type="checkbox" role="switch" {{'checked' if editable else "" }}>
+				<input class="form-check-input editable-flag" type="checkbox" role="switch" {{'checked' if editable else "" }} data-role="check-editable">
 				<label class="form-check-label" >Editable</label>
 			</div>
 			{% end %}
 			<div class="vr mx-2 my-1"></div>
 			<button type="button" class="btn btn-danger" data-action="del-node"><i class="bi bi-trash"></i></button>
 		</div>	
-		{% end %}
 		<div class="for-toast">
 			{% module Template("modules/toast.html") %}
 		</div>
 	</div>
 
 	<div class="card-body py-2 position-relative pt-2">
-		<div class="question-info">
-			<div class="mb-0 d-flex">
-				<span class="badge bg-success me-auto" style="align-self: center;">Question</span>
-				<div class="dropdown question-options">
-					<button class="btn btn-sm btn-light dropdown-toggle border" type="button" data-bs-toggle="dropdown" aria-expanded="false" tabindex="-1">
-						<i class="bi bi-justify"></i> 
-					</button>
-					<ul class="dropdown-menu">
-					  {% if ptype == 1 %}
-						<li><a class="dropdown-item" data-action="exec-all">Execute All</a></li>
-					  {% end %}
-					  {% if ptype == 1 and (editable == True or user == 1) %}
-						<li><a class="dropdown-item" data-action="load-ipynb">load Jupyter Notebook</a></li>
-					  {% end %}
-					  {% if user == 0 %}
-					  	<li><a class="dropdown-item" data-action="reset-input">Reset Input</a></li>
-					  {% end %}
-					</ul>
+		{% if ptype == 1 %}
+			<ul class="nav nav-tabs nav-justified">
+				<li class="nav-item"><a href="#" class="nav-link active question-tabpane-switch" data-bs-toggle="tab" data-bs-target="#QuestionPane-{{ node_id }}" aria-current="page">Your Answer</a></li>
+				<li class="nav-item"><a href="#" class="nav-link explanation-tabpane-switch {{ 'allways-active' if user==1 else '' }}" data-bs-toggle="tab" data-bs-target="#ExplanationPane-{{ node_id }}">Explanation</a></li>
+			</ul>
+		{% end %}
+		<div class="tab-content p-1">
+			<div class="tab-pane fade show active" id="QuestionPane-{{ node_id }}" role="tabpanel">
+				<div class="question-info" data-role="question-field">
+					<div class="mb-0 d-flex">
+						<span class="badge bg-success me-auto" style="align-self: center;">Question</span>
+						<div class="dropdown question-options">
+							<button class="btn btn-sm btn-light dropdown-toggle border" type="button" data-bs-toggle="dropdown" aria-expanded="false" tabindex="-1">
+								<i class="bi bi-justify"></i> 
+							</button>
+							<ul class="dropdown-menu">
+							  {% if ptype == 1 %}
+								<li><a class="dropdown-item" data-action="exec-all">Execute All</a></li>
+							  {% end %}
+							  {% if ptype == 1 and (editable == True or user == 1) %}
+								<li><a class="dropdown-item" data-action="load-ipynb">load Jupyter Notebook</a></li>
+							  {% end %}
+							  {% if user == 0 %}
+								  <li><a class="dropdown-item" data-action="reset-input">Reset Input</a></li>
+							  {% end %}
+							</ul>
+						</div>
+					</div>
+					{% module Explain(editor=user, content=question, allow_del=False) %}
 				</div>
-			</div>
-			{% if ptype == 1 %}
-				{% module Explain(editor=user, content=question, allow_del=False) %}
-			{% end %}
-		</div>
-
-		<div class="answer-content mx-1 p-2 {{ 'dynamic-nodes-container' if ptype==1 else '' }} collapse show" id="collapse-{{q_id}}">
-			{% if ptype == 0 %} 
-				{% module Explain(editor=user, content=question, allow_del=False) %}
-
-			{% elif ptype == 1 %}
-				{% if user == 1 %}
-					{% module NodeControl(question=False) %}
-					{% for d in conponent %}
-						{% if d.get("type", None) == "explain" %}
-							{% module Explain(**d, editor=True, allow_del=True) %}
-						{% elif d.get("type", None) == "code" %}
-							{% module Code(**d, user=user, allow_del=True) %}
-						{% end %}
-						{% module NodeControl(question=False) %}
-					{% end %}
-
-				{% elif (user == 0) and (editable) %}
-					{% module NodeControl(question=False, explain=False) %}
-					{% for ans in saved_answers %}
-						{% module Code(content=ans, allow_del=True) %}
-						{% module NodeControl(question=False, explain=False) %}
-					{% end %}
-
-				{% elif (user == 0) and (not editable) %}
-					{% set i = 0 %}
-					{% for d in conponent %}
-						{% if d["type"] == "explain" %}
-							{% module Explain(**d) %}
-						{% elif d["type"] == "code" %}
-							{% if len(saved_answers) > i %}
-								{% module Code(content=saved_answers[i], ) %}
-								{% set i = i + 1%}
-							{% else %}
-								{% module Code(**d) %}
+		
+				{% if ptype == 1 %}
+					<div class="answer-content mx-1 p-2 dynamic-nodes-container collapse show" id="collapse-{{q_id}}" data-role="answer-field">
+						{% if user == 1 %}
+							{% module NodeControl(question=False) %}
+							{% for d in conponent %}
+								{% if d.get("type", None) == "explain" %}
+									{% module Explain(**d, editor=True, allow_del=True) %}
+								{% elif d.get("type", None) == "code" %}
+									{% module Code(**d, user=user, allow_del=True) %}
+								{% end %}
+								{% module NodeControl(question=False) %}
+							{% end %}
+		
+						{% elif (user == 0) and (editable) %}
+							{% module NodeControl(question=False, explain=False) %}
+							{% for ans in saved_answers %}
+								{% module Code(content=ans, allow_del=True) %}
+								{% module NodeControl(question=False, explain=False) %}
+							{% end %}
+		
+						{% elif (user == 0) and (not editable) %}
+							{% set i = 0 %}
+							{% for d in conponent %}
+								{% if d["type"] == "explain" %}
+									{% module Explain(**d) %}
+								{% elif d["type"] == "code" %}
+									{% if len(saved_answers) > i %}
+										{% module Code(content=saved_answers[i], ) %}
+										{% set i = i + 1%}
+									{% else %}
+										{% module Code(**d) %}
+									{% end %}
+								{% end %}
 							{% end %}
 						{% end %}
+					</div>
+					{% if user == 1 %}
+						<div class="test-code mt-2" data-role="test-code">
+							<p class="mb-2"><span class="badge bg-danger">Test Code</span></p>
+							{% module Code(content=answers[0] if len(answers) > 0 else "", allow_del=False, user=0) %}
+						</div>
 					{% end %}
 				{% end %}
-			{% end %}
-		</div>
-
-		{% if (user == 1) and (ptype == 1) %}
-			<div class="test-code mt-2">
-				<p class="mb-2"><span class="badge bg-danger">Test Code</span></p>
-				{% module Code(content=answers[0] if len(answers) > 0 else "", allow_del=False, user=0) %}
 			</div>
-		{% end %}
+			<div class="tab-pane fade" id="ExplanationPane-{{ node_id }}" role="tabpanel">
+				{% if ptype == 1 %}
+				<div class="mx-1 p-2 dynamic-nodes-container explanation-content" data-role="ExplanationNodeContainer">
+					{% if user == 1 or progress == 2 %}
+						{% module NodeControl(question=False) %}
+						{% for exp_node in explanation %}
+							{% if exp_node["type"] == "explain" %}
+								{% module Explain(content=exp_node["content"], allow_del=(user==1), editor=(user==1)) %}
+							{% elif exp_node["type"] == "code" %}
+								{% module Code(content=exp_node["content"], readonly=(user==0), user=user, allow_del=(user==1)) %}
+							{% end %}
+							{% module NodeControl(question=False) %}
+						{% end %}
+					{% end %}
+				</div>
+				{% end %}		
+			</div>
+		</div>
 	</div>
 
-	<div class="progress position-relative d-none" role="progressbar" aria-label="scoring progress bar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style="height: 0.5rem">
+	<div class="progress position-relative d-none" role="progressbar" aria-label="scoring progress bar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" style="height: 0.5rem" data-role="progress-bar">
 		<div class="progress-bar position-absolute h-100" style="width: 20%"></div>
 	</div>
 

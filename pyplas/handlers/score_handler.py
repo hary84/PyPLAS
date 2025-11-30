@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+import sqlite3
 import tempfile
 from typing import Tuple
 
@@ -36,6 +37,7 @@ class ScoringHandler(ApplicationHandler):
         if len(cls.job_pool.values()) != 0:
             print("All Subprocesses are killed")    
 
+    # POST
     async def post(self):
         """
         問題ページ内の質問の採点を行う
@@ -43,21 +45,22 @@ class ScoringHandler(ApplicationHandler):
         try:
             self.json = ScoringBody(**self.decode_request_body(validate="scoring.json"))
             if self.json.job_id in self.job_pool.keys():
-                self.set_status(202, reason=f"This question is currently being scored.")
+                self.set_status(202, reason=f"ACCEPTED (IN SCORING)")
                 self.finish()
-                return
-            await self.scoring()
+            else:
+                await self.scoring()
         except AssertionError as e:
-            self.set_status(400, reason=str(e))
+            self.set_status(404, reason="QUESTION NOT FOUND")
             self.finish()
         except InvalidJSONError:
-            self.set_status(400, reason="Invalid request body")
+            self.set_status(400, reason="BAD REQUEST (INVALID REQUEST BODY)")
             self.finish()
         except Exception as e:
             self.logger.error(e, exc_info=True)
-            self.set_status(500, reason="internal server error")
+            self.set_status(500, reason="INTERNAL SERVER ERROR")
             self.finish()
 
+    # DELETE
     async def delete(self):
         """
         採点を中断する
@@ -80,7 +83,9 @@ class ScoringHandler(ApplicationHandler):
 
         p_id, q_idが存在しない場合, `AssertionError`を投げる
         """
-        SQL = r"""SELECT JSON_EXTRACT(answers, '$.' || :q_id) AS answer
+        exp = []
+        SQL = r"""SELECT JSON_EXTRACT(answers, '$.' || :q_id) AS answer,
+                JSON_EXTRACT(explanations, '$.' || :q_id) AS exp
             FROM pages WHERE p_id=:p_id"""
         records:list = g.db.execute(SQL, 
                                     p_id=self.json.p_id,
@@ -98,6 +103,7 @@ class ScoringHandler(ApplicationHandler):
         self.insert_log_and_progress(result, self.json.answers)
         if result:
             self.update_progress()
+            exp = records[0]["exp"]
 
         self.logger.info(f"Scoring question({self.json.p_id}/{self.json.q_id})")
         self.finish({
@@ -105,6 +111,7 @@ class ScoringHandler(ApplicationHandler):
             "q_id": self.json.q_id,
             "html": content,
             "result": result,
+            "explanation": exp,
             "DESCR": f"Scoring question"
         })
 
@@ -216,7 +223,7 @@ class ScoringHandler(ApplicationHandler):
             """
         ]
         g.db.executes(SQL,
-                      content=json.dumps(content),
+                      content=json.dumps(content, ensure_ascii=False),
                       result=result_int,
                       **asdict(self.json))
         

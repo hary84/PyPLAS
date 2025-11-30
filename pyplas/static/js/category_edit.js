@@ -58,15 +58,20 @@ document.addEventListener("click", async e => {
     const action = btn.dataset.action 
     const catId = modalElement.dataset.shownCatId 
     if (catId === undefined || action === undefined) {return}
-    switch (action) {
-        case "update-category":
-            await updateCategory(catId)
-            break;
-        case "delete-category":
-            const agree = confirm("Do you really want to delete it?")
-            if (agree) {
-                await deleteCategory(catId)
-            }
+    try {
+        switch (action) {
+            case "update-category":
+                await updateCategory(catId)
+                break;
+            case "delete-category":
+                const agree = confirm("Do you really want to delete it?")
+                if (agree) {
+                    await deleteCategory(catId)
+                }
+        }
+    } catch (e) {
+        alert(e.message)
+        console.error(e)
     }
 })
 // モーダル中のselectタグが変化したときのイベント

@@ -2,7 +2,7 @@ from logging import Logger
 import os 
 import signal
 import sqlite3
-from typing import Any, Literal, Optional, Sequence, Union
+from typing import Any, Optional, Sequence
 
 from pyplas.utils.log import get_logger
 from .. import config as cfg
@@ -11,107 +11,89 @@ class InvalidDBSchema(Exception):
     """DBの構造が無効"""
 
 
-def create_problem_db(path: str):
-    """
-    スキーマ定義ファイルに基づいて, 空の問題DBを作成する. 
-    
-    Parameters
-    ----------
-    path: str
-        DBの保存先パス
-    """
-    with open(os.path.join(cfg.SCHEMA_PATH, "categories.sql"), "r", encoding="utf-8") as f:
-        categories = f.read(-1)
-
-    with open(os.path.join(cfg.SCHEMA_PATH, "pages.sql"), "r", encoding="utf-8") as f:
-        pages = f.read(-1)
-
-    with sqlite3.connect(path) as conn:
-        conn.executescript(categories)
-        conn.executescript(pages)
-        conn.commit()
-
-def create_user_db(path: str):
-    """
-    スキーマ定義ファイルに基づいて, 空のユーザDBを作成する. 
-    
-    Parameters
-    ----------
-    path: str
-        DBの保存先パス
-    """
-    with open(os.path.join(cfg.SCHEMA_PATH, "logs.sql"), "r", encoding="utf-8") as f:
-        logs = f.read(-1)
-
-    with open(os.path.join(cfg.SCHEMA_PATH, "progress.sql"), "r", encoding="utf-8") as f:
-        progress = f.read(-1)
-
-    with sqlite3.connect(path) as conn:
-        conn.executescript(logs)
-        conn.executescript(progress)
-        conn.commit()
-
-def check_db_schema(
-        db_path: str, 
-        table_name: list[Literal["categories", "pages", "progress", "logs"]]
-    ):
-    """
-    DBのschemaが正しいかをチェックする. 正しくない場合, `InvalidDBSchema`エラーを発生させる. 
-    """
-    for tname in table_name:
-        with sqlite3.connect(db_path) as conn:
-            cur = conn.execute(r"SELECT sql FROM sqlite_master WHERE name = :name",
-                        {"name": tname})
-            actual: Optional[tuple] = cur.fetchone()
-            
-        with open(os.path.join(cfg.SCHEMA_PATH, f"{tname}.sql"), "r", encoding="utf-8") as f:
-            correct = f.read(-1)
-
-        if (actual is None) or (actual[0] != correct):
-            raise InvalidDBSchema
-
 class DBHandler:
     """
     DBに関わる処理を行うクラス
     """
+    # DBのテーブル名
+    PAGE_TNAME = ["categories", "pages"]
+    USER_TNAME = ["logs", "progress"]
+
     def __init__(self):
         self.conn:Optional[sqlite3.Connection] = None
         self.logger: Logger = get_logger(self.__class__.__name__)
+        self.page_path = cfg.PROBLEM_DB_PATH
 
     def setup(self, dev_mode:bool=False):
-        """ユーザDBへのパスを設定し, 問題DBに接続する."""
+        """
+        ユーザDBへのパスを設定し, 問題DBに接続する.
+        """
         self.dev_mode = dev_mode
 
-        self.page_path = cfg.PROBLEM_DB_PATH
         if self.dev_mode:
             self.user_path = cfg.DEV_USER_DB_PATH
         else:            
             self.user_path = cfg.USER_DB_PATH
 
-        self.logger.info("Sets the Database paths")
+        self.logger.info("Set the Database paths")
+        self._validation_db()
         self._connect()
 
-    def _connect(self):
+    def create_problem_db(self):
         """
-        問題DBに接続し, ユーザDBをATTACHする.   
-        問題/ユーザDBが存在しない, またはschemaが異なる場合, 空の問題/ユーザDBを作成する. 
+        スキーマ定義ファイルに基づいて, 空の問題DBを作成する
+        """
+        with open(os.path.join(cfg.SCHEMA_PATH, "categories.sql"), "r", encoding="utf-8") as f:
+            categories = f.read(-1)
 
-        このメソッドは直接呼び出さない.
+        with open(os.path.join(cfg.SCHEMA_PATH, "pages.sql"), "r", encoding="utf-8") as f:
+            pages = f.read(-1)
+
+        with sqlite3.connect(self.page_path) as conn:
+            conn.executescript(categories)
+            conn.executescript(pages)
+            conn.commit()
+
+
+    def create_user_db(self):
+        """
+        スキーマ定義ファイルに基づいて, 空のユーザDBを作成する
+        """
+        with open(os.path.join(cfg.SCHEMA_PATH, "logs.sql"), "r", encoding="utf-8") as f:
+            logs = f.read(-1)
+
+        with open(os.path.join(cfg.SCHEMA_PATH, "progress.sql"), "r", encoding="utf-8") as f:
+            progress = f.read(-1)
+
+        with sqlite3.connect(self.user_path) as conn:
+            conn.executescript(logs)
+            conn.executescript(progress)
+            conn.commit()
+
+    def _validation_db(self):
+        """
+        DBファイルが存在するかを確認し、DBのスキーマが正しいかを検証する
+        
+        検証に失敗した場合、エラーログを表示してアプリを強制終了する
         """
         try:
-            _current_path = self.page_path
-            if not os.path.exists(self.page_path):
-                create_problem_db(self.page_path)
-                self.logger.info(f"Create problem DB ({self.page_path})")
-            else:
-                check_db_schema(self.page_path, ["categories", "pages"])
+            # DBが存在する場合
+            if os.path.exists(self.page_path) and os.path.exists(self.user_path):
+                self._check_db_schema()
+                self.logger.info(f"Verify that the DBs exist and have the correct schema.")
 
-            _current_path = self.user_path
-            if not os.path.exists(self.user_path):
-                create_user_db(self.user_path)
-                self.logger.info(f"Create user DB ({self.user_path})")
+            # 存在しない場合
             else:
-                check_db_schema(self.user_path, ["logs", "progress"])
+                _current_path = self.page_path
+                if not os.path.exists(self.page_path):
+                    self.create_problem_db()
+                    self.logger.info(f"Create problem DB ({self.page_path})")
+
+                _current_path = self.user_path
+                if not os.path.exists(self.user_path):
+                    self.create_user_db()
+                    self.logger.info(f"Create user DB ({self.user_path})")
+
         except InvalidDBSchema as e:
             self.logger.critical("\n".join([
                 e.__class__.__name__,
@@ -131,13 +113,36 @@ class DBHandler:
             os.kill(os.getpid(), signal.SIGTERM)
             return
 
+    def _connect(self):
+        """
+        問題DBに接続し, ユーザDBをATTACHする
+        """
         self.conn = sqlite3.connect(self.page_path)
         self.conn.row_factory = self._dict_factory
         self.conn.execute(r"ATTACH DATABASE :user_path AS user", 
                           {"user_path": self.user_path})
         self.conn.execute(r"PRAGMA foreign_keys=ON")
         self.conn.commit()
-        self.logger.info(f"connect with DB({self.page_path} and {self.user_path})")
+        self.logger.info(f"Connect with DB({self.page_path} and {self.user_path})")
+
+    def _check_db_schema(self):
+        """
+        DBのschemaが正しいかをチェックする. 正しくない場合, `InvalidDBSchema`エラーを発生させる. 
+        """
+        query = r"SELECT sql FROM sqlite_master WHERE name = :name"
+
+        for (path, tnames) in zip([self.page_path, self.user_path], [self.PAGE_TNAME, self.USER_TNAME]):
+            with sqlite3.connect(path) as conn:
+                for tname in tnames:
+                    cur = conn.execute(query, {"name": tname})
+                    actual = cur.fetchone()
+
+                    with open(os.path.join(cfg.SCHEMA_PATH, f"{tname}.sql"), "r", encoding="utf-8") as f:
+                        correct = f.read(-1)
+
+                    if (actual is None) or (actual[0] != correct):
+                        raise InvalidDBSchema
+
 
     def _dict_factory(self, cursor, row):
         """

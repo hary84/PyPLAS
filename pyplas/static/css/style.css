@@ -124,8 +124,8 @@
       opacity: 0.6;
   }
 } 
-/* when there are not Nodes in (with .answer-content) */
-.dynamic-nodes-container.answer-content:not(:has(.node)) {
+/* when there are not Nodes in (with .answer-content or example-answer-content) */
+.dynamic-nodes-container:is(.answer-content, .explanation-content):not(:has(.node)) {
   .node-control {
     .btn {
       display: inline;
@@ -141,7 +141,7 @@
 ============== */
 .editor {
   height: auto;
-  padding-bottom: 1rem;
+  padding-bottom: 1.5rem;
   box-sizing: content-box;
 }
 
@@ -150,7 +150,8 @@
   Code Node
 ============= */
 .code {
-  .node-side {
+  padding-left: .5rem;
+  .node-toolbar {
       padding-top: 0.15rem;
       .btn {
         padding: 0rem;
@@ -169,7 +170,7 @@
       }
       .btn-interrupt {padding: 0rem 0.2rem;}
   }
-  .node-prime {
+  .node-main {
       .code-config {
         height: 1.7rem;
         border-radius: 5px;
@@ -222,20 +223,26 @@
       }
   }
 }
-.code[run-state] > .node-side {
+.code[data-run-state] > .node-toolbar {
   .btn-exec {display: block;}
   .executing {display: none;}
   .waiting {display: none;}
 }
-.code[run-state="running"] > .node-side {
+.code[data-run-state="running"] > .node-toolbar {
   .btn-exec {display: none;}
   .executing {display: block;}
   .waiting {display: none;}
 }
-.code[run-state="suspending"] > .node-side {
+.code[data-run-state="queued"] > .node-toolbar {
   .btn-exec {display: none;}
   .executing {display: none;}
   .waiting {display: block;}
+}
+.code[data-run-state='complete'] > .node-toolbar {
+  background-color: var(--bs-success-bg-subtle) !important;
+  .btn-exec {display: block;}
+  .executing {display: none;}
+  .waiting {display: none;}
 }
 
 
@@ -270,6 +277,13 @@
   .card-body {
     .only-inq { display: block !important;} 
     .node-control .toggle-addQ {display: none !important;}
+    .explanation-content {
+      .code.node {
+        .dropdown.code-options {
+          display: none;
+        }
+      }
+    }
     .question-info {
       .dropdown.question-options {
         .dropdown-toggle::after {
@@ -280,10 +294,17 @@
         display: none;
       }
     }
+    .test-code {
+      .code.node {
+        .dropdown.code-options {
+          display: none;
+        }
+      }
+    }
   }
 }
 /* when answers is wrong */
-.question[progress="1"] {
+.question[data-q-progress="1"] {
   .toast {
     border: solid var(--bs-danger);
     background-color: #ffdddd;
@@ -297,7 +318,7 @@
   }
 }
 /* when answers is correct */
-.question[progress="2"] {
+.question[data-q-progress="2"] {
   .toast {
     border: solid var(--bs-success);
     background-color: rgb(182 216 182);
@@ -313,7 +334,7 @@
 
 
 /* progress badge */
-*[progress="0"] {
+*[data-q-progress="0"] {
   .progress-badge {
     background-color: var(--bs-gray-300);
     color: var(--bs-dark);
@@ -321,8 +342,12 @@
       content: "Untried";
     }
   }
+  a.explanation-tabpane-switch:not(.allways-active) {
+    color: gray;
+    pointer-events: none;
+  }
 }
-*[progress="1"] {
+*[data-q-progress="1"] {
   .progress-badge {
     background-color: var(--bs-warning);
     color: var(--bs-dark);
@@ -330,8 +355,12 @@
       content: "Tried"
     }
   }
+  a.explanation-tabpane-switch:not(.allways-active) {
+    color: gray;
+    pointer-events: none;
+  }
 }
-*[progress="2"] {
+*[data-q-progress="2"] {
   .progress-badge {
     background-color: var(--bs-success);
     &::before {

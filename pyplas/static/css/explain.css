@@ -1,3 +1,7 @@
+.explain {
+    padding-left: .5rem;
+}
+
 .explain.static, .mde-container > .for-preview {
     word-break: break-word;
     p {

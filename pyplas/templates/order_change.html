@@ -34,7 +34,7 @@
             <td>{{ d['title'] }}</td>
             <td>{{ d['cat_name'] }}</td>
             <td>{{ "公開中" if d['status'] == 1 else "非公開" }}</td>
-            <td class="d-flex mx-auto">{{ d['register_at'].split(" ")[0] }}</td>
+            <td class="mx-auto">{{ d['register_at'].split(" ")[0] }}</td>
           </tr>
         {% end %}
         </tbody>

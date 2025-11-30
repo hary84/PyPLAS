@@ -1,6 +1,7 @@
 from .app_handler import ApplicationHandler
 from pyplas.utils import globals as g
 
+# どのカテゴリにも属さない場合のカテゴリID
 NON_CATEGORIZED_CAT_ID = "0"       
 
 class TopHandler(ApplicationHandler):
@@ -26,29 +27,26 @@ class ProblemListHandler(ApplicationHandler):
             condition = r"pages.category IS NULL"
         else:
             condition = r"pages.category = :cat_id"
-        SQLs = [
-            rf"""SELECT cat_name FROM categories
-            WHERE cat_id=:cat_id"""
-            ,
-            f"""SELECT pages.p_id, pages.title, 
-            COALESCE(user.progress.p_status, 0) AS p_status
-            FROM pages
-            LEFT OUTER JOIN categories AS cat ON pages.category = cat.cat_id
-            LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
-            WHERE {condition} AND pages.status = 1
-            ORDER BY order_index ASC, register_at ASC
-            """
-        ]
-        # データを取得
-        categories, problems = g.db.executes(SQLs, cat_id=cat_id)
 
-        if len(categories) > 0:
-            category_name = categories[0]["cat_name"]
-        elif len(categories) == 0 and (cat_id != NON_CATEGORIZED_CAT_ID):
-            self.write_error(404, reason=f"Category(cat_id={cat_id}) is not found.")
-            return 
+        q1 = r"SELECT cat_name FROM categories WHERE cat_id=:cat_id"
+        categories = g.db.execute(q1, cat_id=cat_id)
+
+        q2 = f"""SELECT pages.p_id, pages.title, 
+                COALESCE(user.progress.p_status, 0) AS p_status
+                FROM pages
+                LEFT OUTER JOIN user.progress ON pages.p_id = user.progress.p_id
+                WHERE {condition} AND pages.status = 1
+                ORDER BY order_index ASC, register_at ASC
+            """
+        problems = g.db.execute(q2, cat_id=cat_id)
+
+        if cat_id == NON_CATEGORIZED_CAT_ID:
+            category_name = "None"
+        elif len(categories) == 1:
+            category_name:str = categories[0]["cat_name"]
         else:
-            category_name = None
+            self.write_error(404, reason=f"CATEGORY({cat_id}) NOT FOUND")
+            return 
         
         self.render("problems_index.html",
                     problems = problems,

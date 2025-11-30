@@ -10,19 +10,13 @@
 
 
 {% block side-content %}
-  {% if is_dev_mode %}
-      <p class="fs-4 text-secondary border-bottom border-dark">For Developer</p>
-      <div class="mb-2">
-          <a href="/create" class="btn btn-danger mx-1">Go to create page</a>
-      </div>
-  {% end %}
   {% module Template("modules/sidebar-documentation.html") %}
 {% end %}
 
 {% block main %}
   <div class="px-2 mt-3" id="progress">
     <p class="fs-3 border-bottom border-dark fw-bold"><i class="bi bi-bookmarks"></i>
-      {{category_name + " - " if category_name is not None else ""}}Problems
+      {{f"[{category_name}] - Problems" }}
     </p>
     {% if len(problems) != 0 %}
       <table class="table table-hover mb-5">

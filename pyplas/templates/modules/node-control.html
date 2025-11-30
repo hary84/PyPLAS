@@ -1,4 +1,4 @@
-<div class="node-control text-center my-1">
+<div class="node-control text-center my-1" data-role="node-control">
     <div class="btn-group btn-group-sm" role="group" aria-label="Button group with nested dropdown">
         {% if explain %}
             <button type="button" class="btn btn-secondary btn-addMD" data-action="add-MD" tabindex="-1">+  <i class="bi bi-filetype-md"></i></button>
@@ -7,7 +7,7 @@
             <button type="button" class="btn btn-primary btn-addCode" data-action="add-Code" tabindex="-1">+  <i class="bi bi-code-slash"></i></button>
         {% end %}
         {% if question %}
-            <div class="btn-group btn-group-sm" role="group">
+            <div class="btn-group btn-group-sm btn-group-addQ" role="group">
                 <button class="btn btn-success dropdown-toggle toggle-addQ" type="button" data-bs-toggle="dropdown" aria-expanded="false" tabindex="-1">
                     +  <i class="bi bi-question-octagon"></i>
                 </button>

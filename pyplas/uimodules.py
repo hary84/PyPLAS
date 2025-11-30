@@ -71,7 +71,8 @@ class Explain(UIModule):
 class Question(UIModule):
     def render(self, q_id:str, ptype:int=0, user:int=0, conponent:list=[], question:str="",
                answers:list=[], saved_answers:list=[], 
-               editable:bool=False, progress:int=0, node_id:Optional[str]=None, **kwargs) -> bytes:
+               editable:bool=False, progress:int=0, node_id:Optional[str]=None, 
+               explanation:list=[], **kwargs) -> bytes:
         """
         Parameters
         ----------
@@ -104,6 +105,8 @@ class Question(UIModule):
             2: complete  
         node_id: str 
             ramdom uuid4
+        explanation: list
+            explanation for this question
         """
         if ptype == 0 and user == 0:
             try:
@@ -122,7 +125,8 @@ class Question(UIModule):
                                   conponent=conponent,
                                   editable=editable,
                                   progress=progress,
-                                  node_id=node_id
+                                  node_id=node_id,
+                                  explanation=explanation
                                   )
     
     def ans_attr_deleted_html(self, string: str) -> str:

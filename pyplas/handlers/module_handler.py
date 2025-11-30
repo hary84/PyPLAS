@@ -29,11 +29,10 @@ class ModuleHandler(ApplicationHandler):
         elif node == "Code":
             _html = strfmodule(Code(self), **kwargs)
         elif node == "Question":
-            _html = strfmodule(Question(self), q_id="temp", user=1, editable=True, 
-                               **kwargs)
+            _html = strfmodule(Question(self), user=1, **kwargs)
         else:
             raise KeyError
-        _nc = strfmodule(NodeControl(self), **kwargs)
+        _nc = strfmodule(NodeControl(self))
             
         return _html + "\n" + _nc 
 

@@ -4,10 +4,13 @@
 <title>PyPLAS - {{ title }}</title>
 <style>
     .node-control .btn-addMD {display: none !important;}
-    .question[ptype="1"] > .card-body > .answer-content > .code.node {
+    .question[data-q-ptype="1"]  .card-body  .answer-content  .code.node {
         .dropdown.code-options {
             display: none;
         }
+    }
+    .question [data-role='ExplanationNodeContainer'] .node-control{
+        display: none;
     }
 </style>
 <script src="{{ static_url('js/notebook.js') }}" type="module"></script>
@@ -61,7 +64,9 @@
                 {% module Explain(**d) %}
             {% elif d["type"] == "question" %}
                 {% module Question(**d, progress=q_status.get(str(d['q_id']), 0),
-                                    saved_answers=q_content.get(str(d['q_id']), [])) %}
+                                    saved_answers=q_content.get(str(d['q_id']), []),
+                                    explanation=explanations.get(str(d['q_id']), [])
+                                  ) %}
             {% end %}
         {% end %}
 </div>
@@ -77,7 +82,7 @@
             {% set i = 1%}
             {% for d in page["body"] %}
                 {% if d["type"] == "question" %}
-                    <a class="nav-link position-relative" href="#q-id-{{ d['q_id'] }}" progress="{{ q_status.get(str(d['q_id']), 0) }}">
+                    <a class="nav-link position-relative" href="#q-id-{{ d['q_id'] }}" data-q-progress="{{ q_status.get(str(d['q_id']), 0) }}">
                         Q. {{ i }}
                         <span class="progress-badge badge position-absolute" style="right: 5%;"> </span>
                     </a>
