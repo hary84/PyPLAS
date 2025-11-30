@@ -100,14 +100,15 @@
 			<div class="tab-pane fade" id="ExplanationPane-{{ node_id }}" role="tabpanel">
 				{% if ptype == 1 %}
 				<div class="mx-1 p-2 dynamic-nodes-container explanation-content" data-role="ExplanationNodeContainer">
-					{% if user == 1 %}
+					{% if user == 1 or progress == 2 %}
 						{% module NodeControl(question=False) %}
-					{% end %}
-					{% for exp_node in explanation %}
-						{% if exp_node["type"] == "explain" %}
-							{% module Explain(content=exp_node["content"], allow_del=user, editor=user) %}
-						{% elif exp_node["type"] == "code" %}
-							{% module Code(content=exp_node["content"], readonly=user==0, user=user, allow_del=user) %}
+						{% for exp_node in explanation %}
+							{% if exp_node["type"] == "explain" %}
+								{% module Explain(content=exp_node["content"], allow_del=(user==1), editor=(user==1)) %}
+							{% elif exp_node["type"] == "code" %}
+								{% module Code(content=exp_node["content"], readonly=(user==0), user=user, allow_del=(user==1)) %}
+							{% end %}
+							{% module NodeControl(question=False) %}
 						{% end %}
 					{% end %}
 				</div>

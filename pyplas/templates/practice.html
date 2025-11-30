@@ -71,9 +71,9 @@
 <div id="sourceCode">
     <p class="fs-3 border-bottom border-dark ps-1">The Source Code</p>
     <div class="dynamic-nodes-container position-relative p-2" id="nodesContainer">
-
-        {% module NodeControl(question=False) %}
-        {% if initial is not None %}
+        {% if initial is None %}           
+            {% module NodeControl(question=False) %}
+        {% elif initial is not None %}
             <div class="mx-auto border border-success-subtle bg-light rounded border-3 bg-whilte radius-4" id="selectedQuestion" style="width: 90%;">
                 <div class="d-flex">
                     <div style="width: 95%;">
@@ -93,9 +93,6 @@
             </div>
         {% module NodeControl(question=False) %}
         {% end %}
-        
-        <!-- {% module Code(allow_del=True)%}
-        {% module NodeControl(question=False) %} -->
 
         <i class="bi bi-file-earmark-code" id="blankIcon"></i>
     </div>

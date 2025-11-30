@@ -211,6 +211,7 @@ export function addInnerLink(linksContainer, ankerLoc, position) {
     const ul = document.createElement("ul")
     ul.style.fontSize = "0.9rem"
     ul.classList.add("list-unstyled")
+    console.log(linksContainer)
 
     linksContainer.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach(e => {
         e.id = "_" + e.textContent
